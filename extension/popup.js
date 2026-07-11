@@ -1,0 +1,318 @@
+/**
+ * Reviewer — Popup logic
+ * Handles Google OAuth via Supabase and user settings.
+ */
+
+// Supabase project values
+const SUPABASE_URL = 'https://lgbzpwzpkzbquuwwhbin.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_emIKVbAyzrSC7O9za7Gzdg_eVslO14T';
+
+const FREE_REPLY_LIMIT = 5;
+
+// DOM Elements
+const authSection = document.getElementById('auth-section');
+const settingsSection = document.getElementById('settings-section');
+const readySection = document.getElementById('ready-section');
+const paywallSection = document.getElementById('paywall-section');
+const globalFooter = document.getElementById('global-footer');
+const statusMessage = document.getElementById('status-message');
+const progressSteps = document.querySelectorAll('.progress-step');
+const progressLines = document.querySelectorAll('.progress-line');
+
+const signInBtn = document.getElementById('sign-in-btn');
+const signOutBtn = document.getElementById('sign-out-btn');
+const saveBtn = document.getElementById('save-btn');
+const setupForm = document.getElementById('setup-form');
+const editSettingsBtn = document.getElementById('edit-settings-btn');
+const upgradeMonthlyBtn = document.getElementById('upgrade-monthly-btn');
+const upgradeLifetimeBtn = document.getElementById('upgrade-lifetime-btn');
+
+const userEmailEl = document.getElementById('user-email');
+const businessNameInput = document.getElementById('business-name');
+const signOffInput = document.getElementById('sign-off');
+const toneSelect = document.getElementById('tone');
+const negativeStrategySelect = document.getElementById('negative-strategy');
+const customInstructionsInput = document.getElementById('custom-instructions');
+const usageText = document.getElementById('usage-text');
+
+// --- Supabase Client ---
+let supabaseClient = null;
+
+async function initSupabase() {
+  if (supabaseClient) return supabaseClient;
+  
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('Supabase credentials not configured');
+    return null;
+  }
+  
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return supabaseClient;
+}
+
+// --- UI Helpers ---
+
+function setStatus(message, isError = false) {
+  statusMessage.textContent = message;
+  statusMessage.classList.toggle('is-error', isError);
+}
+
+function updateProgress(activeView) {
+  const order = ['auth', 'setup', 'ready'];
+  const activeIndex = order.indexOf(activeView);
+
+  progressSteps.forEach((step, index) => {
+    step.classList.remove('is-active', 'is-complete');
+
+    if (index < activeIndex) {
+      step.classList.add('is-complete');
+    } else if (index === activeIndex) {
+      step.classList.add('is-active');
+    }
+  });
+
+  progressLines.forEach((line, index) => {
+    line.classList.toggle('is-complete', index < activeIndex);
+  });
+}
+
+function showSection(section) {
+  authSection.hidden = section !== 'auth';
+  settingsSection.hidden = section !== 'setup';
+  readySection.hidden = section !== 'ready';
+  paywallSection.hidden = section !== 'paywall';
+
+  globalFooter.hidden = section === 'auth';
+  updateProgress(section === 'paywall' ? 'ready' : section);
+}
+
+function isSetupComplete(user) {
+  return Boolean(user?.business_name?.trim());
+}
+
+// --- Local Storage ---
+
+async function getLocalUser() {
+  const { user } = await chrome.storage.local.get('user');
+  return user ?? null;
+}
+
+async function saveLocalUser(user) {
+  await chrome.storage.local.set({ user });
+}
+
+async function clearLocalUser() {
+  await chrome.storage.local.remove('user');
+}
+
+// --- UI Updates ---
+
+function updateUsageText(user) {
+  if (user.is_paid) {
+    usageText.textContent = 'Plan: Pro — unlimited replies';
+    return;
+  }
+
+  const remaining = Math.max(FREE_REPLY_LIMIT - (user.replies_count ?? 0), 0);
+  usageText.textContent = `You have ${remaining} free ${remaining === 1 ? 'reply' : 'replies'} left.`;
+}
+
+function hydrateSettingsForm(user) {
+  userEmailEl.textContent = user.email ?? '';
+  businessNameInput.value = user.business_name ?? '';
+  signOffInput.value = user.sign_off ?? '';
+  toneSelect.value = user.tone ?? 'friendly';
+  negativeStrategySelect.value = user.negative_strategy ?? 'apologize';
+  customInstructionsInput.value = user.custom_instructions ?? '';
+}
+
+async function render() {
+  const user = await getLocalUser();
+
+  if (!user) {
+    showSection('auth');
+    return;
+  }
+
+  if (!user.is_paid && user.replies_count >= FREE_REPLY_LIMIT) {
+    showSection('paywall');
+    return;
+  }
+
+  if (isSetupComplete(user)) {
+    updateUsageText(user);
+    showSection('ready');
+    return;
+  }
+
+  showSection('setup');
+  hydrateSettingsForm(user);
+}
+
+function setSaveLoading(isLoading) {
+  saveBtn.disabled = isLoading;
+  saveBtn.classList.toggle('is-loading', isLoading);
+}
+
+// --- Auth (Supabase Google OAuth) ---
+
+function signInWithGoogle() {
+  setStatus('Opening Google sign-in...');
+  signInBtn.disabled = true;
+
+  const redirectUri = chrome.identity.getRedirectURL();
+  const authUrl = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUri)}`;
+
+  chrome.identity.launchWebAuthFlow(
+    {
+      url: authUrl,
+      interactive: true,
+    },
+    async (redirectUrl) => {
+      if (chrome.runtime.lastError || !redirectUrl) {
+        const msg = chrome.runtime.lastError?.message || 'Sign-in was cancelled.';
+        setStatus(msg, true);
+        signInBtn.disabled = false;
+        return;
+      }
+
+      try {
+        const url = new URL(redirectUrl);
+        const rawHash = url.hash.substring(1);
+        const rawQuery = url.search.substring(1);
+        const combined = rawHash || rawQuery;
+        const params = new URLSearchParams(combined);
+
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+
+        if (!accessToken || !refreshToken) {
+          throw new Error('No tokens received from auth.');
+        }
+
+        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+
+        const localUser = {
+          id: payload.sub,
+          email: payload.email || '',
+          access_token: accessToken,
+          refresh_token: refreshToken,
+          replies_count: 0,
+          is_paid: false,
+          business_name: '',
+          sign_off: '',
+          tone: 'friendly',
+          negative_strategy: 'apologize',
+          custom_instructions: '',
+        };
+
+        await saveLocalUser(localUser);
+        setStatus('');
+        signInBtn.disabled = false;
+        await render();
+      } catch (err) {
+        setStatus(err.message || 'Failed to complete sign-in.', true);
+        signInBtn.disabled = false;
+      }
+    }
+  );
+}
+
+async function signOut() {
+  const client = await initSupabase();
+  
+  if (client) {
+    try {
+      await client.auth.signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+  }
+  
+  await clearLocalUser();
+  setStatus('Signed out.');
+  await render();
+}
+
+// --- Settings ---
+
+async function saveSettings(event) {
+  event.preventDefault();
+
+  const businessName = businessNameInput.value.trim();
+  if (!businessName) {
+    setStatus('Please enter your business name.', true);
+    businessNameInput.focus();
+    return;
+  }
+
+  const user = await getLocalUser();
+  if (!user) return;
+
+  setSaveLoading(true);
+  setStatus('');
+
+  const settings = {
+    business_name: businessName,
+    sign_off: signOffInput.value.trim(),
+    tone: toneSelect.value,
+    negative_strategy: negativeStrategySelect.value,
+    custom_instructions: customInstructionsInput.value.trim(),
+    is_configured: true,
+  };
+
+  // Save locally
+  const updatedUser = { ...user, ...settings };
+  await saveLocalUser(updatedUser);
+
+  // Upsert to Supabase
+  try {
+    const client = await initSupabase();
+    if (client) {
+      const { error } = await client
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          business_name: settings.business_name,
+          sign_off: settings.sign_off,
+          tone: settings.tone,
+          negative_strategy: settings.negative_strategy,
+          custom_instructions: settings.custom_instructions,
+        }, { onConflict: 'id' });
+
+      if (error) console.warn('Supabase upsert failed:', error.message);
+    }
+  } catch (err) {
+    console.warn('Supabase upsert error:', err.message);
+  }
+
+  setSaveLoading(false);
+  setStatus('');
+  await render();
+}
+
+// --- Paywall ---
+
+function openCheckout(plan) {
+  setStatus(`Checkout (${plan}) not configured yet. Add Paddle links.`, true);
+  // TODO: Open Paddle checkout URL for monthly or lifetime plan.
+}
+
+// --- Events ---
+
+signInBtn.addEventListener('click', signInWithGoogle);
+signOutBtn.addEventListener('click', signOut);
+setupForm.addEventListener('submit', saveSettings);
+editSettingsBtn.addEventListener('click', () => {
+  getLocalUser().then((user) => {
+    if (!user) return;
+    showSection('setup');
+    hydrateSettingsForm(user);
+  });
+});
+upgradeMonthlyBtn.addEventListener('click', () => openCheckout('monthly'));
+upgradeLifetimeBtn.addEventListener('click', () => openCheckout('lifetime'));
+
+// Initialize
+render();

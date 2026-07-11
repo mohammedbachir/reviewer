@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build / deploy
+.vercel
+dist/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+
+# Extension packaging
+*.zip
