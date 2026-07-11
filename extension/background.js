@@ -3,7 +3,7 @@
  * Routes API calls from content script and keeps auth token in sync.
  */
 
-const API_BASE_URL = ''; // TODO: Set Vercel deployment URL, e.g. https://reviewer.vercel.app
+const API_BASE_URL = 'https://reviewer-lovat.vercel.app';
 
 // Handle messages from content script and callback page
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -39,7 +39,10 @@ async function handleAuthSuccess({ accessToken, refreshToken }) {
     replies_count: 0,
     is_paid: false,
     business_name: '',
-    tone: 'professional',
+    sign_off: '',
+    tone: 'friendly',
+    negative_strategy: 'apologize',
+    custom_instructions: '',
   };
 
   await chrome.storage.local.set({ user: localUser });

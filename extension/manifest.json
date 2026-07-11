@@ -6,7 +6,8 @@
   "permissions": ["storage", "identity"],
   "host_permissions": [
     "*://business.google.com/reviews/*",
-    "*://*.supabase.co/*"
+    "*://*.supabase.co/*",
+    "*://*.vercel.app/*"
   ],
   "action": {
     "default_popup": "popup.html",
