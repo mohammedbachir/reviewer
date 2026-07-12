@@ -46,7 +46,10 @@
         return;
       }
 
-      Paddle.Initialize({ seller: 75274, sandbox: true });
+      Paddle.Environment.set('sandbox');
+      Paddle.Initialize({
+        token: 'test_287183302a6cea9e032ce3ddcdb',
+      });
       Paddle.Checkout.open({ transactionId: txnId });
     })();
   </script>
