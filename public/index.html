@@ -22,54 +22,43 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     #error-msg { color: #DC2626; display: none; }
-    .success-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(249,250,251,0.97);
-      z-index: 9999;
-      flex-direction: column; align-items: center; justify-content: center;
-    }
-    .success-overlay.visible { display: flex; }
-    .success-check {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      background: #ECFDF5;
+    #success-view { display: none; text-align: center; }
+    #success-view .check {
+      width: 64px; height: 64px; border-radius: 50%; background: #ECFDF5;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1.5rem;
+      margin: 0 auto 1.5rem;
     }
-    .success-overlay h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #059669; }
-    .success-overlay p { color: #374151; font-size: 0.95rem; }
-    .success-overlay .subtext { color: #6B7280; font-size: 0.85rem; margin-top: 0.25rem; }
-    .success-overlay .btn {
+    #success-view h2 { color: #059669; font-size: 1.5rem; margin-bottom: 0.5rem; }
+    #success-view p { color: #374151; }
+    #success-view .sub { color: #6B7280; font-size: 0.85rem; margin-top: 0.25rem; }
+    #success-view .btn {
       display: inline-block; margin-top: 1.5rem;
       padding: 0.75rem 1.5rem; background: #1F2937; color: #fff;
       border: none; border-radius: 8px; font-size: 0.9rem;
       cursor: pointer; text-decoration: none;
     }
-    .success-overlay .btn:hover { background: #111827; }
+    #success-view .btn:hover { background: #111827; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Reviewer</h1>
-    <div id="loading">
+    <div id="loading-view">
+      <h1>Reviewer</h1>
       <div class="spinner"></div>
       <p>Opening checkout...</p>
     </div>
     <div id="error-msg"><p>Could not open checkout. Please close this tab and try again.</p></div>
-  </div>
-
-  <!-- Success overlay shown after payment -->
-  <div class="success-overlay" id="success-overlay">
-    <div class="success-check">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M10 16l5 5 8-8" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
+    <div id="success-view">
+      <div class="check">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+          <path d="M10 16l5 5 8-8" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h2>Payment Successful!</h2>
+      <p>You now have <strong>unlimited replies</strong>.</p>
+      <p class="sub">You can close this tab and go back to Google Reviews.</p>
+      <a class="btn" href="https://www.google.com/maps" target="_self">Go to Google Maps</a>
     </div>
-    <h2>Payment Successful!</h2>
-    <p>You now have unlimited replies.</p>
-    <p class="subtext">Open the Reviewer extension and start replying to reviews.</p>
-    <a class="btn" href="https://www.google.com/maps" target="_self">Go to Google Maps</a>
   </div>
 
   <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
@@ -78,25 +67,35 @@
       var params = new URLSearchParams(window.location.search);
       var txnId = params.get('_ptxn');
 
-      if (!txnId || typeof Paddle === 'undefined') {
-        document.getElementById('loading').style.display = 'none';
+      if (!txnId) {
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('error-msg').style.display = 'block';
+        return;
+      }
+
+      if (typeof Paddle === 'undefined') {
+        document.getElementById('loading-view').style.display = 'none';
         document.getElementById('error-msg').style.display = 'block';
         return;
       }
 
       Paddle.Environment.set('sandbox');
+
       Paddle.Initialize({
         token: 'test_287183302a6cea9e032ce3ddcdb',
+        eventCallback: function(event) {
+          if (event.name === 'checkout.completed') {
+            showSuccess();
+          }
+        }
       });
+
       Paddle.Checkout.open({ transactionId: txnId });
 
-      Paddle.Completed(function(data) {
-        showSuccess();
-      });
-
       function showSuccess() {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('success-overlay').classList.add('visible');
+        document.getElementById('loading-view').style.display = 'none';
+        document.getElementById('error-msg').style.display = 'none';
+        document.getElementById('success-view').style.display = 'block';
       }
     })();
   </script>

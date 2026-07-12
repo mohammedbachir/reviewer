@@ -449,7 +449,10 @@ async function openCheckout(plan) {
     }
 
     if (data.checkout_url) {
-      chrome.tabs.create({ url: data.checkout_url });
+      // Open OUR index.html with the transaction ID (not Paddle's hosted page)
+      // This way Paddle.Checkout.open() runs in our page and we catch Paddle.Completed
+      const checkoutPage = `${API_BASE}/?_ptxn=${data.transaction_id}`;
+      chrome.tabs.create({ url: checkoutPage });
       setStatus(t('checkoutOpened'));
 
       // Poll for payment status every 5 seconds for up to 2 minutes
