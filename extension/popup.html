@@ -20,8 +20,8 @@
     <!-- 1. Login View -->
     <section id="auth-section" class="view" data-view="auth">
       <header class="view-header">
-        <h1 class="app-title">Reviewer</h1>
-        <p class="app-subtext">Reply to Google reviews in seconds with smart responses that sound like you.</p>
+        <h1 class="app-title" data-i18n="appTitle"></h1>
+        <p class="app-subtext" data-i18n="appSubtext"></p>
       </header>
 
       <button id="sign-in-btn" class="btn btn-google" type="button">
@@ -31,77 +31,77 @@
           <path fill="#FBBC05" d="M4.38 10.1A5.41 5.41 0 0 1 3.96 9c0-.52.07-1.03.2-1.52V5.15H2.18A8.99 8.99 0 0 0 1 9c0 1.48.36 2.88 1.18 4.12l2.2-2.02z"/>
           <path fill="#EA4335" d="M9 3.58c1.23 0 2.34.42 3.21 1.25l2.41-2.41C13.13.89 11.25 0 9 0A8.99 8.99 0 0 0 2.18 5.15l2.2 2.33C4.03 5.03 5.85 3.58 9 3.58z"/>
         </svg>
-        Sign in with Google
+        <span data-i18n="signInGoogle"></span>
       </button>
 
-      <p class="trust-note">Your data stays private. We only access your review settings.</p>
+      <p class="trust-note" data-i18n="trustNote"></p>
     </section>
 
     <!-- 2. Setup View -->
     <section id="settings-section" class="view" data-view="setup" hidden>
       <header class="view-header">
-        <p class="step-label">Step 1 of 1</p>
-        <h2 class="view-heading">Business Profile</h2>
+        <p class="step-label" data-i18n="stepLabel"></p>
+        <h2 class="view-heading" data-i18n="businessProfile"></h2>
         <p id="user-email" class="user-email"></p>
       </header>
 
       <form id="setup-form" class="form" novalidate>
         <div class="field">
-          <label class="field-label" for="business-name">Business Name</label>
+          <label class="field-label" for="business-name" data-i18n="businessName"></label>
           <input
             id="business-name"
             class="field-input"
             type="text"
-            placeholder="e.g. Cafe Morning"
+            data-i18n-placeholder="businessNamePlaceholder"
             autocomplete="organization"
             required
           >
         </div>
 
         <div class="field">
-          <label class="field-label" for="sign-off">Sign-off</label>
+          <label class="field-label" for="sign-off" data-i18n="signOff"></label>
           <input
             id="sign-off"
             class="field-input"
             type="text"
-            placeholder="e.g. Best, The Cafe Team"
+            data-i18n-placeholder="signOffPlaceholder"
           >
-          <span class="field-hint">How should replies end?</span>
+          <span class="field-hint" data-i18n="signOffHint"></span>
         </div>
 
         <div class="field">
-          <label class="field-label" for="tone">Reply Tone</label>
+          <label class="field-label" for="tone" data-i18n="replyTone"></label>
           <select id="tone" class="field-input field-select">
-            <option value="friendly">Friendly &amp; Warm</option>
-            <option value="professional">Professional &amp; Formal</option>
-            <option value="casual">Casual &amp; Witty</option>
-            <option value="human">Real &amp; Natural</option>
+            <option value="friendly" data-i18n="toneFriendly"></option>
+            <option value="professional" data-i18n="toneProfessional"></option>
+            <option value="casual" data-i18n="toneCasual"></option>
+            <option value="human" data-i18n="toneHuman"></option>
           </select>
         </div>
 
         <div class="field">
-          <label class="field-label" for="negative-strategy">Negative Review Strategy</label>
+          <label class="field-label" for="negative-strategy" data-i18n="negativeStrategy"></label>
           <select id="negative-strategy" class="field-input field-select">
-            <option value="apologize">Just apologize</option>
-            <option value="email">Ask them to email us</option>
-            <option value="discount">Offer a 10% discount</option>
+            <option value="apologize" data-i18n="strategyApologize"></option>
+            <option value="email" data-i18n="strategyEmail"></option>
+            <option value="discount" data-i18n="strategyDiscount"></option>
           </select>
-          <span class="field-hint">What to do if rating is 1 or 2 stars?</span>
+          <span class="field-hint" data-i18n="negativeHint"></span>
         </div>
 
         <div class="field">
-          <label class="field-label" for="custom-instructions">Custom Instructions</label>
+          <label class="field-label" for="custom-instructions" data-i18n="customInstructions"></label>
           <textarea
             id="custom-instructions"
             class="field-input field-textarea"
             rows="3"
-            placeholder="e.g. Never mention competitors. We are closed on Sundays."
+            data-i18n-placeholder="customPlaceholder"
           ></textarea>
-          <span class="field-hint">Any specific rules the replies should follow?</span>
+          <span class="field-hint" data-i18n="customHint"></span>
         </div>
 
         <button id="save-btn" class="btn btn-primary" type="submit">
-          <span class="btn-label">Save &amp; Continue</span>
+          <span class="btn-label" data-i18n="saveContinue"></span>
           <span class="btn-spinner" hidden aria-hidden="true"></span>
         </button>
       </form>
@@ -116,52 +116,50 @@
         </svg>
       </div>
 
-      <h2 class="view-heading">You're all set</h2>
-      <p class="ready-text">
-        Go to your Google Business Reviews and click the Smart Reply button.
-      </p>
+      <h2 class="view-heading" data-i18n="allSet"></h2>
+      <p class="ready-text" data-i18n="readyText"></p>
 
       <footer class="ready-footer">
-        <p id="usage-text" class="usage-text">You have 5 free replies left.</p>
-        <button id="edit-settings-btn" class="btn-link" type="button">Edit settings</button>
+        <p id="usage-text" class="usage-text"></p>
+        <button id="edit-settings-btn" class="btn-link" type="button" data-i18n="editSettings"></button>
       </footer>
     </section>
 
     <!-- Paywall View -->
     <section id="paywall-section" class="view" data-view="paywall" hidden>
       <header class="view-header">
-        <h2 class="view-heading">Upgrade to Reply Pro</h2>
-        <p class="app-subtext">You've used all 5 free replies. Unlock the full power of Reviewer.</p>
+        <h2 class="view-heading" data-i18n="upgradeTitle"></h2>
+        <p class="app-subtext" data-i18n="upgradeSubtext"></p>
       </header>
 
       <ul class="feature-list">
         <li class="feature-item">
           <svg class="feature-check" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#ECFDF5"/><path d="M5 8.2l2 2 4-4" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Unlimited smart replies to all reviews</span>
+          <span data-i18n="featureUnlimited"></span>
         </li>
         <li class="feature-item">
           <svg class="feature-check" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#ECFDF5"/><path d="M5 8.2l2 2 4-4" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Matches your brand tone and style</span>
+          <span data-i18n="featureTone"></span>
         </li>
         <li class="feature-item">
           <svg class="feature-check" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#ECFDF5"/><path d="M5 8.2l2 2 4-4" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Auto-replies in Arabic and English</span>
+          <span data-i18n="featureLanguages"></span>
         </li>
         <li class="feature-item">
           <svg class="feature-check" width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="8" fill="#ECFDF5"/><path d="M5 8.2l2 2 4-4" stroke="#059669" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          <span>Negative review handling strategies</span>
+          <span data-i18n="featureNegative"></span>
         </li>
       </ul>
 
       <div class="plan-list">
         <button id="upgrade-monthly-btn" class="plan-card" type="button">
-          <span class="plan-name">Monthly</span>
-          <span class="plan-price">$19<span class="plan-period">/mo</span></span>
+          <span class="plan-name" data-i18n="monthly"></span>
+          <span class="plan-price">$19<span class="plan-period" data-i18n="perMonth"></span></span>
         </button>
         <button id="upgrade-lifetime-btn" class="plan-card plan-card-featured" type="button">
-          <span class="plan-badge">Best value</span>
-          <span class="plan-name">Lifetime</span>
-          <span class="plan-price">$99<span class="plan-period"> once</span></span>
+          <span class="plan-badge" data-i18n="bestValue"></span>
+          <span class="plan-name" data-i18n="lifetime"></span>
+          <span class="plan-price">$99<span class="plan-period" data-i18n="once"></span></span>
         </button>
       </div>
     </section>
@@ -170,10 +168,11 @@
     <p id="status-message" class="status-message" role="status" aria-live="polite"></p>
 
     <footer id="global-footer" class="global-footer" hidden>
-      <button id="sign-out-btn" class="btn-link btn-link-muted" type="button">Sign out</button>
+      <button id="sign-out-btn" class="btn-link btn-link-muted" type="button" data-i18n="signOut"></button>
     </footer>
   </main>
 
+  <script src="lib/i18n.js"></script>
   <script src="lib/supabase.min.js"></script>
   <script src="popup.js"></script>
 </body>

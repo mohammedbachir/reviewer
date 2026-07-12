@@ -1,4 +1,4 @@
-/* Reviewer — Extension popup design system */
+/* --- Reviewer — Extension popup design system --- */
 
 *,
 *::before,
@@ -545,4 +545,29 @@ body {
 .reviewer-copy-btn:hover {
   background: #F3F4F6;
   border-color: #9CA3AF;
+}
+
+/* --- RTL Support (Arabic) --- */
+
+[dir="rtl"] .form {
+  text-align: right;
+}
+
+[dir="rtl"] .field-select {
+  background-position: left 12px center;
+  padding-right: 12px;
+  padding-left: 36px;
+}
+
+[dir="rtl"] .feature-item {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .plan-card {
+  text-align: right;
+}
+
+[dir="rtl"] .plan-badge {
+  right: auto;
+  left: 12px;
 }

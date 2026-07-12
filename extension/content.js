@@ -197,8 +197,8 @@ function createButton(reviewText, rating, language) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = BUTTON_CLASS;
-  btn.textContent = 'Give it Answer';
-  btn.title = 'Reply with Reviewer';
+  btn.textContent = t('giveAnswer');
+  btn.title = t('giveAnswer');
   btn.setAttribute('data-review-text', reviewText);
 
   btn.addEventListener('click', (e) => {
@@ -214,13 +214,13 @@ async function handleClick(button, reviewText, rating, language) {
   const { user } = await chrome.storage.local.get('user');
 
   if (!user?.access_token) {
-    showResult(button, 'Please sign in from the extension popup first.', 'error');
+    showResult(button, t('signInFirst'), 'error');
     return;
   }
 
   if (button.disabled) return;
   button.disabled = true;
-  button.textContent = 'Let me think...';
+  button.textContent = t('letMeThink');
 
   try {
     const response = await chrome.runtime.sendMessage({
@@ -233,13 +233,13 @@ async function handleClick(button, reviewText, rating, language) {
       if (response?.error === 'PAYWALL') {
         const { user } = await chrome.storage.local.get('user');
         if (user?.email) {
-          showResult(button, 'You\'ve used all 5 free replies. Upgrade to Reply Pro for unlimited smart responses to all your Google reviews.', 'error');
+          showResult(button, t('paywallMessage'), 'error');
           chrome.runtime.sendMessage({
             type: 'OPEN_CHECKOUT',
             payload: { email: user.email },
           });
         } else {
-          showResult(button, 'Please sign in from the extension popup.', 'error');
+          showResult(button, t('signInRequired'), 'error');
         }
         return;
       }
@@ -250,7 +250,7 @@ async function handleClick(button, reviewText, rating, language) {
     showResult(button, error.message, 'error');
   } finally {
     button.disabled = false;
-    button.textContent = 'Give it Answer';
+    button.textContent = t('giveAnswer');
   }
 }
 
@@ -267,12 +267,12 @@ function showResult(button, text, type) {
   } else {
     result.style.color = '#374151';
     const copyBtn = document.createElement('button');
-    copyBtn.textContent = 'Copy';
+    copyBtn.textContent = t('copy');
     copyBtn.className = 'reviewer-copy-btn';
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(text).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        copyBtn.textContent = t('copied');
+        setTimeout(() => { copyBtn.textContent = t('copy'); }, 2000);
       });
     });
     result.appendChild(copyBtn);

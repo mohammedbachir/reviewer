@@ -35,17 +35,33 @@ const negativeStrategySelect = document.getElementById('negative-strategy');
 const customInstructionsInput = document.getElementById('custom-instructions');
 const usageText = document.getElementById('usage-text');
 
+// --- i18n: Apply translations to all elements with data-i18n ---
+
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    const key = el.getAttribute('data-i18n');
+    const val = t(key);
+    if (val !== key) el.textContent = val;
+  });
+
+  document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    const val = t(key);
+    if (val !== key) el.placeholder = val;
+  });
+}
+
 // --- Supabase Client ---
 let supabaseClient = null;
 
 async function initSupabase() {
   if (supabaseClient) return supabaseClient;
-  
+
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn('Supabase credentials not configured');
     return null;
   }
-  
+
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // Restore session from storage
@@ -132,12 +148,12 @@ async function clearLocalUser() {
 
 function updateUsageText(user) {
   if (user.is_paid) {
-    usageText.textContent = 'Plan: Pro — unlimited replies';
+    usageText.textContent = t('planPro');
     return;
   }
 
   const remaining = Math.max(FREE_REPLY_LIMIT - (user.replies_count ?? 0), 0);
-  usageText.textContent = `You have ${remaining} free ${remaining === 1 ? 'reply' : 'replies'} left.`;
+  usageText.textContent = t('freeRepliesLeft')(remaining);
 }
 
 function hydrateSettingsForm(user) {
@@ -180,7 +196,7 @@ function setSaveLoading(isLoading) {
 // --- Auth (Supabase Google OAuth) ---
 
 function signInWithGoogle() {
-  setStatus('Opening Google sign-in...');
+  setStatus(t('signInGoogle') + '...');
   signInBtn.disabled = true;
 
   const redirectUri = chrome.identity.getRedirectURL();
@@ -243,7 +259,7 @@ function signInWithGoogle() {
 
 async function signOut() {
   const client = await initSupabase();
-  
+
   if (client) {
     try {
       await client.auth.signOut();
@@ -251,9 +267,8 @@ async function signOut() {
       console.error('Sign out error:', err);
     }
   }
-  
+
   await clearLocalUser();
-  setStatus('Signed out.');
   await render();
 }
 
@@ -264,7 +279,7 @@ async function saveSettings(event) {
 
   const businessName = businessNameInput.value.trim();
   if (!businessName) {
-    setStatus('Please enter your business name.', true);
+    setStatus(t('enterBusinessName'), true);
     businessNameInput.focus();
     return;
   }
@@ -322,7 +337,7 @@ const API_BASE = 'https://reviewer-lovat.vercel.app';
 async function openCheckout(plan) {
   const user = await getLocalUser();
   if (!user?.access_token) {
-    setStatus('Please sign in first.', true);
+    setStatus(t('pleaseSignIn'), true);
     return;
   }
 
@@ -340,7 +355,7 @@ async function openCheckout(plan) {
     console.warn('Session refresh failed:', e.message);
   }
 
-  setStatus(`Opening ${plan} checkout...`);
+  setStatus(t('openingCheckout')(plan));
   upgradeMonthlyBtn.disabled = true;
   upgradeLifetimeBtn.disabled = true;
 
@@ -362,7 +377,7 @@ async function openCheckout(plan) {
 
     if (data.checkout_url) {
       chrome.tabs.create({ url: data.checkout_url });
-      setStatus('Checkout opened in a new tab. Complete your payment there.');
+      setStatus(t('checkoutOpened'));
     } else {
       throw new Error('No checkout URL received.');
     }
@@ -390,4 +405,5 @@ upgradeMonthlyBtn.addEventListener('click', () => openCheckout('monthly'));
 upgradeLifetimeBtn.addEventListener('click', () => openCheckout('lifetime'));
 
 // Initialize
+applyTranslations();
 render();

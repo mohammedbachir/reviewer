@@ -24,7 +24,7 @@
         "*://www.google.com/maps/*",
         "*://maps.google.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["lib/i18n.js", "content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }
