@@ -12,9 +12,9 @@
   --color-text: #111827;
   --color-text-muted: #6B7280;
   --color-border: #D1D5DB;
-  --color-accent: #4F46E5;
-  --color-accent-hover: #4338CA;
-  --color-accent-ring: rgba(79, 70, 229, 0.2);
+  --color-accent: #1F2937;
+  --color-accent-hover: #111827;
+  --color-accent-ring: rgba(31, 41, 55, 0.2);
   --color-success: #059669;
   --color-success-bg: #ECFDF5;
   --color-error: #DC2626;
@@ -213,7 +213,7 @@ body {
   margin: 0;
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-accent);
+  color: #6B7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -305,7 +305,7 @@ body {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-accent);
+  color: #374151;
   font-family: inherit;
   font-size: 13px;
   font-weight: 500;
@@ -314,7 +314,7 @@ body {
 }
 
 .btn-link:hover {
-  color: var(--color-accent-hover);
+  color: #111827;
   text-decoration: underline;
 }
 
@@ -392,7 +392,7 @@ body {
 }
 
 .plan-card-featured {
-  border-color: var(--color-accent);
+  border-color: #1F2937;
 }
 
 .plan-badge {
@@ -400,7 +400,7 @@ body {
   top: -8px;
   right: 12px;
   padding: 2px 8px;
-  background: var(--color-accent);
+  background: #1F2937;
   color: #FFFFFF;
   font-size: 10px;
   font-weight: 600;
@@ -449,4 +449,78 @@ body {
 
 .global-footer[hidden] {
   display: none !important;
+}
+
+/* --- Google Maps content script styles --- */
+
+.reviewer-fast-reply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  margin-top: 8px;
+  background: #1F2937;
+  color: #FFFFFF;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 9999;
+  position: relative;
+  clear: both;
+}
+
+.reviewer-fast-reply-btn:hover {
+  background: #111827;
+  border-color: #1F2937;
+}
+
+.reviewer-fast-reply-btn:active {
+  transform: scale(0.97);
+}
+
+.reviewer-fast-reply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reviewer-reply-result {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: #F9FAFB;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 400px;
+  word-wrap: break-word;
+  color: #374151;
+  clear: both;
+}
+
+.reviewer-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 5px 12px;
+  background: #FFFFFF;
+  color: #374151;
+  border: 1px solid #D1D5DB;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.reviewer-copy-btn:hover {
+  background: #F3F4F6;
+  border-color: #9CA3AF;
 }

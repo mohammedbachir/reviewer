@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Reviewer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Smart replies for Google Business reviews.",
   "permissions": ["storage", "identity"],
   "host_permissions": [
-    "*://business.google.com/reviews/*",
+    "*://www.google.com/maps/*",
+    "*://maps.google.com/*",
     "*://*.supabase.co/*",
     "*://*.vercel.app/*"
   ],
@@ -19,7 +20,10 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://business.google.com/reviews/*"],
+      "matches": [
+        "*://www.google.com/maps/*",
+        "*://maps.google.com/*"
+      ],
       "js": ["content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"

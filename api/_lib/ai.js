@@ -3,7 +3,7 @@
  * Uses google/gemma-2-9b-it:free for human-like replies.
  */
 
-const OPENROUTER_MODEL = 'google/gemma-2-9b-it:free';
+const OPENROUTER_MODEL = 'openrouter/free';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const TONE_MAP = {

@@ -47,6 +47,29 @@ async function initSupabase() {
   }
   
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Restore session from storage
+  const { user } = await chrome.storage.local.get('user');
+  if (user?.access_token && user?.refresh_token) {
+    try {
+      const { data, error } = await supabaseClient.auth.setSession({
+        access_token: user.access_token,
+        refresh_token: user.refresh_token,
+      });
+
+      // Save refreshed tokens back to storage
+      if (data?.session?.access_token) {
+        await saveLocalUser({
+          ...user,
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to restore Supabase session:', e.message);
+    }
+  }
+
   return supabaseClient;
 }
 
@@ -294,9 +317,61 @@ async function saveSettings(event) {
 
 // --- Paywall ---
 
-function openCheckout(plan) {
-  setStatus(`Checkout (${plan}) not configured yet. Add Paddle links.`, true);
-  // TODO: Open Paddle checkout URL for monthly or lifetime plan.
+const API_BASE = 'https://reviewer-lovat.vercel.app';
+
+async function openCheckout(plan) {
+  const user = await getLocalUser();
+  if (!user?.access_token) {
+    setStatus('Please sign in first.', true);
+    return;
+  }
+
+  // Ensure we have a fresh token via Supabase session refresh
+  let freshToken = user.access_token;
+  try {
+    const client = await initSupabase();
+    if (client) {
+      const { data } = await client.auth.getSession();
+      if (data?.session?.access_token) {
+        freshToken = data.session.access_token;
+      }
+    }
+  } catch (e) {
+    console.warn('Session refresh failed:', e.message);
+  }
+
+  setStatus(`Opening ${plan} checkout...`);
+  upgradeMonthlyBtn.disabled = true;
+  upgradeLifetimeBtn.disabled = true;
+
+  try {
+    const response = await fetch(`${API_BASE}/api/create-checkout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${freshToken}`,
+      },
+      body: JSON.stringify({ plan }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to create checkout.');
+    }
+
+    if (data.checkout_url) {
+      chrome.tabs.create({ url: data.checkout_url });
+      setStatus('Checkout opened in a new tab. Complete your payment there.');
+    } else {
+      throw new Error('No checkout URL received.');
+    }
+  } catch (error) {
+    setStatus(error.message, true);
+  } finally {
+    upgradeMonthlyBtn.disabled = false;
+    upgradeLifetimeBtn.disabled = false;
+  }
 }
 
 // --- Events ---

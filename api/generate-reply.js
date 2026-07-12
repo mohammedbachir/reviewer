@@ -17,10 +17,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. استقبال البيانات من الإضافة
-    const { reviewText, rating, businessName, tone, signOff, negativeStrategy, customInstructions } = req.body;
+    const { reviewText, rating, language } = req.body;
 
-    // استخراج توكن المستخدم
+    if (!reviewText || reviewText.length < 5) {
+      return res.status(400).json({ error: 'Review text is required.' });
+    }
+
     const authHeader = req.headers.authorization;
     const token = authHeader ? authHeader.replace('Bearer ', '') : null;
 
@@ -28,27 +30,36 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized: No token provided' });
     }
 
-    // 2. التحقق من هوية المستخدم عبر Supabase
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    // 3. جلب بيانات المستخدم
-    const { data: userData, error: dbError } = await supabase
+    // Fetch user settings + usage from DB (with fallback defaults)
+    let userData = { replies_count: 0, is_paid: false, business_name: '', sign_off: '', tone: 'friendly', negative_strategy: 'apologize', custom_instructions: '' };
+
+    const { data: dbUser } = await supabase
       .from('users')
-      .select('replies_count, is_paid')
+      .select('*')
       .eq('id', user.id)
       .single();
 
-    if (dbError) throw dbError;
+    if (dbUser) {
+      userData = { ...userData, ...dbUser };
+    } else {
+      // First time: create user record
+      await supabase.from('users').upsert({
+        id: user.id,
+        email: user.email,
+        replies_count: 0,
+        is_paid: false,
+      }, { onConflict: 'id' });
+    }
 
-    // 4. فحص حاجز الدفع (Paywall)
     if (!userData.is_paid && userData.replies_count >= FREE_REPLY_LIMIT) {
       return res.status(403).json({ error: 'PAYWALL' });
     }
 
-    // 5. بناء الـ Prompt
     const toneMap = {
       friendly: 'Friendly & Warm',
       professional: 'Professional & Formal',
@@ -62,9 +73,9 @@ export default async function handler(req, res) {
       discount: 'Offer a 10% discount on their next visit',
     };
 
-    const prompt = `You are a customer service agent for ${businessName || 'Local business'}. The customer wrote: "${reviewText}" with a ${rating || 'not provided'}-star rating. Write a reply in a ${toneMap[tone] || tone || 'Friendly & Warm'} tone. CRITICAL RULES: Be human, concise, and empathetic if the review is negative. Do NOT use robotic phrases like 'We apologize' or 'Thank you for your feedback'. Speak like a real person talking to another person. Output the reply directly with no quotation marks.${rating && rating <= 2 && negativeStrategy ? ` If the review is negative, follow this strategy: ${strategyMap[negativeStrategy] || negativeStrategy}.` : ''}${signOff ? ` End with this sign-off: ${signOff}` : ''}${customInstructions ? ` Additional instructions: ${customInstructions}` : ''}`;
+    const replyLang = language === 'ar' ? 'Arabic' : 'English';
+    const prompt = `You are a customer service agent for ${userData.business_name || 'Local business'}. The customer wrote: "${reviewText}" with a ${rating || 'not provided'}-star rating. Write a reply in ${replyLang} language in a ${toneMap[userData.tone] || 'Friendly & Warm'} tone. CRITICAL RULES: Be human, concise, and empathetic if the review is negative. Do NOT use robotic phrases like 'We apologize' or 'Thank you for your feedback'. Speak like a real person talking to another person. Output the reply directly with no quotation marks.${rating && rating <= 2 && userData.negative_strategy ? ` If the review is negative, follow this strategy: ${strategyMap[userData.negative_strategy] || userData.negative_strategy}.` : ''}${userData.sign_off ? ` End with this sign-off: ${userData.sign_off}` : ''}${userData.custom_instructions ? ` Additional instructions: ${userData.custom_instructions}` : ''}`;
 
-    // 6. استدعاء OpenRouter
     const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -72,7 +83,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'google/gemma-2-9b-it:free',
+        model: 'openrouter/free',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.8,
       }),
@@ -80,27 +91,26 @@ export default async function handler(req, res) {
 
     const aiData = await aiResponse.json();
 
-    // 7. التحقق من صحة الرد
     if (!aiData.choices || !aiData.choices[0]) {
       console.error('AI Error Details:', JSON.stringify(aiData));
-      throw new Error('AI failed to generate a reply');
+      throw new Error(aiData.error?.message || 'AI failed to generate a reply');
     }
 
     const generatedReply = aiData.choices[0].message.content.trim();
 
-    // 8. زيادة عداد الردود للمستخدم المجاني
     if (!userData.is_paid) {
+      const newCount = userData.replies_count + 1;
       await supabase
         .from('users')
-        .update({ replies_count: userData.replies_count + 1 })
+        .update({ replies_count: newCount })
         .eq('id', user.id);
+      return res.status(200).json({ reply: generatedReply, replies_count: newCount });
     }
 
-    // 9. إرجاع الرد
-    return res.status(200).json({ reply: generatedReply, replies_count: userData.is_paid ? userData.replies_count : userData.replies_count + 1 });
+    return res.status(200).json({ reply: generatedReply, replies_count: userData.replies_count });
 
   } catch (error) {
-    console.error('Server Error:', error.message);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Server Error:', error.message, error.stack);
+    return res.status(500).json({ error: error.message || 'Internal Server Error' });
   }
 }
