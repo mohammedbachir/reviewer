@@ -34,27 +34,36 @@ setTimeout(scanAndInject, 2000);
 setTimeout(scanAndInject, 4000);
 
 // =============================================
-// Core scan
+// Core scan — multiple selectors for robustness
 // =============================================
 
 function scanAndInject() {
-  const reviewCards = document.querySelectorAll('[data-review-id]');
+  // Try multiple selectors to find review cards
+  const selectors = [
+    '[data-review-id]',
+    '[data-href*="review"]',
+    '.review-item',
+    '[class*="review"][class*="card"]',
+    '[jscontroller*="review"]',
+  ];
+
+  const reviewCards = new Set();
+  for (const sel of selectors) {
+    try {
+      document.querySelectorAll(sel).forEach((el) => reviewCards.add(el));
+    } catch (_) { /* ignore invalid selectors */ }
+  }
 
   for (const card of reviewCards) {
-    // CHECK 1: Flag on the CARD itself (not the text)
     if (card.getAttribute(INJECTED_ATTR) === 'true') continue;
-
-    // CHECK 2: Button already inside this card
     if (card.querySelector(`.${BUTTON_CLASS}`)) {
       card.setAttribute(INJECTED_ATTR, 'true');
       continue;
     }
 
-    // Extract review text for the API call
     const reviewText = extractReviewText(card);
     if (!reviewText || reviewText.length < 10) continue;
 
-    // CHECK 3: Global fingerprint
     const fp = normalize(reviewText).substring(0, 80);
     let isDup = false;
     for (const btn of document.querySelectorAll(`.${BUTTON_CLASS}`)) {
@@ -70,16 +79,12 @@ function scanAndInject() {
       continue;
     }
 
-    // ---- ALL CLEAR — inject ----
-
-    // Flag the CARD first
     card.setAttribute(INJECTED_ATTR, 'true');
 
     const rating = extractRating(card);
-    const language = detectLanguage(reviewText);
-    const button = createButton(reviewText, rating, language);
+    const lang = reviewDetectLanguage(reviewText);
+    const button = createButton(reviewText, rating, lang);
 
-    // Find the action bar and insert AFTER it
     const anchor = findActionbar(card);
     anchor.appendChild(button);
   }
@@ -87,29 +92,22 @@ function scanAndInject() {
 
 // =============================================
 // Find the action bar (Like / Share / Flag row)
-// and return it as the injection point.
-// This survives "Show more" because the action bar
-// is structural — it doesn't change when text expands.
 // =============================================
 
 function findActionbar(card) {
-  // Look for the action row — it's a div containing multiple small buttons
-  // (Like, Share, Flag, etc.) typically at the bottom of the review
   const allBtns = card.querySelectorAll('button, [role="button"], span[role="button"]');
   let lastActionBtn = null;
 
-  // Arabic + English action keywords
   const keywords = [
     'like', 'share', 'flag', 'report',
     'أعجبني', 'مشاركة', 'إبلاغ', 'إبلاغ عن',
-    'helpful', 'useful'
+    'helpful', 'useful',
   ];
 
   for (const btn of allBtns) {
-    const t = (btn.textContent?.trim().toLowerCase()) || '';
-    // Check aria-label too (Google Maps often uses aria for these)
+    const txt = (btn.textContent?.trim().toLowerCase()) || '';
     const aria = (btn.getAttribute('aria-label') || '').toLowerCase();
-    const combined = t + ' ' + aria;
+    const combined = txt + ' ' + aria;
 
     for (const kw of keywords) {
       if (combined.includes(kw)) {
@@ -120,7 +118,6 @@ function findActionbar(card) {
   }
 
   if (lastActionBtn) {
-    // The action ROW is the parent div that contains this button
     const row = lastActionBtn.closest('div[class]') || lastActionBtn.parentElement;
     if (row?.parentElement) {
       const wrapper = document.createElement('div');
@@ -130,7 +127,6 @@ function findActionbar(card) {
     }
   }
 
-  // Fallback: create wrapper at the very end of the card
   const wrapper = document.createElement('div');
   wrapper.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid #E5E7EB;clear:both;';
   card.appendChild(wrapper);
@@ -167,17 +163,19 @@ function extractReviewText(card) {
 
 function extractRating(card) {
   for (const el of card.querySelectorAll('[aria-label]')) {
-    const m = (el.getAttribute('aria-label') || '').match(/(\d)\s*star/i);
+    const label = el.getAttribute('aria-label') || '';
+    const m = label.match(/(\d)\s*star/i);
     if (m) return Number(m[1]);
   }
   return null;
 }
 
 // =============================================
-// Language detection
+// Language detection (for review content)
 // =============================================
 
-function detectLanguage(text) {
+function reviewDetectLanguage(text) {
+  if (!text || typeof text !== 'string') return 'en';
   const m = text.match(/[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]/g);
   const arabic = m ? m.length : 0;
   const total = text.replace(/\s/g, '').length;
@@ -190,10 +188,11 @@ function detectLanguage(text) {
 // =============================================
 
 function normalize(text) {
+  if (!text || typeof text !== 'string') return '';
   return text.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-function createButton(reviewText, rating, language) {
+function createButton(reviewText, rating, lang) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = BUTTON_CLASS;
@@ -204,13 +203,13 @@ function createButton(reviewText, rating, language) {
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    handleClick(btn, reviewText, rating, language);
+    handleClick(btn, reviewText, rating, lang);
   });
 
   return btn;
 }
 
-async function handleClick(button, reviewText, rating, language) {
+async function handleClick(button, reviewText, rating, lang) {
   const { user } = await chrome.storage.local.get('user');
 
   if (!user?.access_token) {
@@ -225,11 +224,10 @@ async function handleClick(button, reviewText, rating, language) {
   try {
     const response = await chrome.runtime.sendMessage({
       type: 'GENERATE_REPLY',
-      payload: { reviewText, rating, language },
+      payload: { reviewText, rating, language: lang },
     });
 
     if (!response?.ok) {
-      // PAYWALL — open Paddle checkout in a new tab
       if (response?.error === 'PAYWALL') {
         const { user } = await chrome.storage.local.get('user');
         if (user?.email) {
@@ -247,7 +245,7 @@ async function handleClick(button, reviewText, rating, language) {
     }
     showResult(button, response.reply, 'success');
   } catch (error) {
-    showResult(button, error.message, 'error');
+    showResult(button, error.message || 'Something went wrong.', 'error');
   } finally {
     button.disabled = false;
     button.textContent = t('giveAnswer');
@@ -255,7 +253,8 @@ async function handleClick(button, reviewText, rating, language) {
 }
 
 function showResult(button, text, type) {
-  const prev = button.parentElement?.querySelector(`.${RESULT_CLASS}`);
+  if (!button?.parentElement) return;
+  const prev = button.parentElement.querySelector(`.${RESULT_CLASS}`);
   if (prev) prev.remove();
 
   const result = document.createElement('div');

@@ -149,23 +149,24 @@ const TRANSLATIONS = {
   },
 };
 
-function detectLanguage() {
+function getBrowserLang() {
   const lang = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
   return lang.startsWith('ar') ? 'ar' : 'en';
 }
 
 function t(key) {
-  const lang = detectLanguage();
+  const lang = getBrowserLang();
   const val = TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.en[key] ?? key;
   return typeof val === 'function' ? val : val;
 }
 
 function setDir() {
-  document.documentElement.dir = detectLanguage() === 'ar' ? 'rtl' : 'ltr';
-  document.documentElement.lang = detectLanguage();
+  if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.dir = getBrowserLang() === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = getBrowserLang();
+  }
 }
 
-// Auto-set direction on load
 if (typeof document !== 'undefined') {
   setDir();
 }

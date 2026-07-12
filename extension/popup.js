@@ -303,7 +303,7 @@ async function saveSettings(event) {
   const updatedUser = { ...user, ...settings };
   await saveLocalUser(updatedUser);
 
-  // Upsert to Supabase
+  // Upsert to Supabase (best-effort — local save is primary)
   try {
     const client = await initSupabase();
     if (client) {
@@ -319,10 +319,12 @@ async function saveSettings(event) {
           custom_instructions: settings.custom_instructions,
         }, { onConflict: 'id' });
 
-      if (error) console.warn('Supabase upsert failed:', error.message);
+      if (error) {
+        console.warn('[Reviewer] Supabase upsert skipped:', error.message);
+      }
     }
   } catch (err) {
-    console.warn('Supabase upsert error:', err.message);
+    console.warn('[Reviewer] Supabase upsert skipped:', err.message);
   }
 
   setSaveLoading(false);
