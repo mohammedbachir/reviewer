@@ -360,6 +360,28 @@ body {
 
 /* --- Paywall --- */
 
+.feature-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.feature-check {
+  flex-shrink: 0;
+}
+
 .plan-list {
   display: flex;
   flex-direction: column;

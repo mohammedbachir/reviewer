@@ -233,7 +233,7 @@ async function handleClick(button, reviewText, rating, language) {
       if (response?.error === 'PAYWALL') {
         const { user } = await chrome.storage.local.get('user');
         if (user?.email) {
-          showResult(button, 'Free replies used up. Opening checkout...', 'error');
+          showResult(button, 'You\'ve used all 5 free replies. Upgrade to Reply Pro for unlimited smart responses to all your Google reviews.', 'error');
           chrome.runtime.sendMessage({
             type: 'OPEN_CHECKOUT',
             payload: { email: user.email },
