@@ -8,6 +8,7 @@ const SUPABASE_URL = 'https://lgbzpwzpkzbquuwwhbin.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_emIKVbAyzrSC7O9za7Gzdg_eVslO14T';
 
 const FREE_REPLY_LIMIT = 5;
+const API_BASE = 'https://reviewer-lovat.vercel.app';
 
 // DOM Elements
 const authSection = document.getElementById('auth-section');
@@ -180,56 +181,32 @@ async function loadAndRender() {
 
 async function syncPaymentStatus() {
   try {
-    const client = getSupabase();
-    if (!client) return;
-
-    // Restore session
     const { user } = await chrome.storage.local.get('user');
-    if (!user?.access_token || !user?.refresh_token) return;
+    if (!user?.access_token) return;
 
-    const { error: sessErr } = await client.auth.setSession({
-      access_token: user.access_token,
-      refresh_token: user.refresh_token,
+    // Call check-payment API which checks BOTH Supabase AND Paddle API
+    const res = await fetch(`${API_BASE}/api/check-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${user.access_token}`,
+      },
     });
-    if (sessErr) return;
 
-    // Save refreshed tokens
-    const { data: sessData } = await client.auth.getSession();
-    if (sessData?.session?.access_token && sessData.session.access_token !== user.access_token) {
-      await saveLocalUser({
+    const data = await res.json();
+
+    if (data.is_paid && !user.is_paid) {
+      const updatedUser = {
         ...user,
-        access_token: sessData.session.access_token,
-        refresh_token: sessData.session.refresh_token,
-      });
-    }
-
-    const { data: { user: authUser } } = await client.auth.getUser();
-    if (!authUser) return;
-
-    const { data: profile } = await client
-      .from('users')
-      .select('is_paid, subscription_type, replies_count')
-      .eq('id', authUser.id)
-      .single();
-
-    if (profile) {
-      const localUser = await getLocalUser();
-      if (!localUser) return;
-
-      if (profile.is_paid !== localUser.is_paid || profile.replies_count !== localUser.replies_count) {
-        const updatedUser = {
-          ...localUser,
-          is_paid: profile.is_paid,
-          subscription_type: profile.subscription_type,
-          replies_count: profile.replies_count,
-        };
-        await saveLocalUser(updatedUser);
-        _cachedUser = updatedUser;
-        render();
-      }
+        is_paid: true,
+        subscription_type: data.subscription_type,
+      };
+      await saveLocalUser(updatedUser);
+      _cachedUser = updatedUser;
+      render();
     }
   } catch (e) {
-    console.warn('[Reviewer] Background sync skipped:', e.message);
+    console.warn('[Reviewer] Payment sync skipped:', e.message);
   }
 }
 
@@ -400,8 +377,6 @@ async function saveSettings(event) {
 }
 
 // --- Paywall ---
-
-const API_BASE = 'https://reviewer-lovat.vercel.app';
 
 async function openCheckout(plan) {
   const user = await getLocalUser();
