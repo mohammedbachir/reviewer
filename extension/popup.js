@@ -451,6 +451,9 @@ async function openCheckout(plan) {
     if (data.checkout_url) {
       chrome.tabs.create({ url: data.checkout_url });
       setStatus(t('checkoutOpened'));
+
+      // Poll for payment status every 5 seconds for up to 2 minutes
+      startPaymentPoll(freshToken);
     } else {
       throw new Error('No checkout URL received.');
     }
@@ -460,6 +463,59 @@ async function openCheckout(plan) {
     upgradeMonthlyBtn.disabled = false;
     upgradeLifetimeBtn.disabled = false;
   }
+}
+
+// Poll for payment status after checkout
+let _paymentPollTimer = null;
+
+function startPaymentPoll(token) {
+  if (_paymentPollTimer) clearInterval(_paymentPollTimer);
+
+  let attempts = 0;
+  const maxAttempts = 24; // 24 * 5s = 2 minutes
+
+  _paymentPollTimer = setInterval(async () => {
+    attempts++;
+    if (attempts > maxAttempts) {
+      clearInterval(_paymentPollTimer);
+      _paymentPollTimer = null;
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/check-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (data.is_paid) {
+        clearInterval(_paymentPollTimer);
+        _paymentPollTimer = null;
+
+        // Update local user
+        const localUser = await getLocalUser();
+        if (localUser) {
+          const updatedUser = {
+            ...localUser,
+            is_paid: true,
+            subscription_type: data.subscription_type,
+          };
+          await saveLocalUser(updatedUser);
+          _cachedUser = updatedUser;
+          render();
+        }
+
+        setStatus(t('checkoutOpened'));
+      }
+    } catch (e) {
+      // Silently continue polling
+    }
+  }, 5000);
 }
 
 // --- Events ---
