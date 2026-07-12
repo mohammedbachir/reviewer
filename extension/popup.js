@@ -54,38 +54,10 @@ function applyTranslations() {
 // --- Supabase Client ---
 let supabaseClient = null;
 
-async function initSupabase() {
+function getSupabase() {
   if (supabaseClient) return supabaseClient;
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn('Supabase credentials not configured');
-    return null;
-  }
-
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase) return null;
   supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  // Restore session from storage
-  const { user } = await chrome.storage.local.get('user');
-  if (user?.access_token && user?.refresh_token) {
-    try {
-      const { data, error } = await supabaseClient.auth.setSession({
-        access_token: user.access_token,
-        refresh_token: user.refresh_token,
-      });
-
-      // Save refreshed tokens back to storage
-      if (data?.session?.access_token) {
-        await saveLocalUser({
-          ...user,
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
-      }
-    } catch (e) {
-      console.warn('Failed to restore Supabase session:', e.message);
-    }
-  }
-
   return supabaseClient;
 }
 
@@ -102,7 +74,6 @@ function updateProgress(activeView) {
 
   progressSteps.forEach((step, index) => {
     step.classList.remove('is-active', 'is-complete');
-
     if (index < activeIndex) {
       step.classList.add('is-complete');
     } else if (index === activeIndex) {
@@ -165,42 +136,14 @@ function hydrateSettingsForm(user) {
   customInstructionsInput.value = user.custom_instructions ?? '';
 }
 
-async function render() {
-  const user = await getLocalUser();
+// --- Render (simple, no blocking async calls) ---
+
+function render() {
+  const user = getLocalUserFromCache();
 
   if (!user) {
     showSection('auth');
     return;
-  }
-
-  // Re-check payment status from Supabase (in case webhook upgraded user)
-  if (user.access_token && user.refresh_token) {
-    try {
-      const client = await initSupabase();
-      if (client) {
-        const { data: { user: authUser } } = await client.auth.getUser();
-        if (authUser) {
-          const { data: profile } = await client
-            .from('users')
-            .select('is_paid, subscription_type, replies_count')
-            .eq('id', authUser.id)
-            .single();
-
-          if (profile && (profile.is_paid !== user.is_paid || profile.replies_count !== user.replies_count)) {
-            const updatedUser = {
-              ...user,
-              is_paid: profile.is_paid,
-              subscription_type: profile.subscription_type,
-              replies_count: profile.replies_count,
-            };
-            await saveLocalUser(updatedUser);
-            return render(); // re-render with fresh data
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[Reviewer] Payment status check skipped:', e.message);
-    }
   }
 
   if (!user.is_paid && user.replies_count >= FREE_REPLY_LIMIT) {
@@ -216,6 +159,78 @@ async function render() {
 
   showSection('setup');
   hydrateSettingsForm(user);
+}
+
+// Cache for synchronous access
+let _cachedUser = null;
+
+function getLocalUserFromCache() {
+  return _cachedUser;
+}
+
+async function loadAndRender() {
+  _cachedUser = await getLocalUser();
+  render();
+
+  // Background: check Supabase for fresh payment status (non-blocking)
+  if (_cachedUser?.access_token) {
+    syncPaymentStatus();
+  }
+}
+
+async function syncPaymentStatus() {
+  try {
+    const client = getSupabase();
+    if (!client) return;
+
+    // Restore session
+    const { user } = await chrome.storage.local.get('user');
+    if (!user?.access_token || !user?.refresh_token) return;
+
+    const { error: sessErr } = await client.auth.setSession({
+      access_token: user.access_token,
+      refresh_token: user.refresh_token,
+    });
+    if (sessErr) return;
+
+    // Save refreshed tokens
+    const { data: sessData } = await client.auth.getSession();
+    if (sessData?.session?.access_token && sessData.session.access_token !== user.access_token) {
+      await saveLocalUser({
+        ...user,
+        access_token: sessData.session.access_token,
+        refresh_token: sessData.session.refresh_token,
+      });
+    }
+
+    const { data: { user: authUser } } = await client.auth.getUser();
+    if (!authUser) return;
+
+    const { data: profile } = await client
+      .from('users')
+      .select('is_paid, subscription_type, replies_count')
+      .eq('id', authUser.id)
+      .single();
+
+    if (profile) {
+      const localUser = await getLocalUser();
+      if (!localUser) return;
+
+      if (profile.is_paid !== localUser.is_paid || profile.replies_count !== localUser.replies_count) {
+        const updatedUser = {
+          ...localUser,
+          is_paid: profile.is_paid,
+          subscription_type: profile.subscription_type,
+          replies_count: profile.replies_count,
+        };
+        await saveLocalUser(updatedUser);
+        _cachedUser = updatedUser;
+        render();
+      }
+    }
+  } catch (e) {
+    console.warn('[Reviewer] Background sync skipped:', e.message);
+  }
 }
 
 function setSaveLoading(isLoading) {
@@ -261,24 +276,37 @@ function signInWithGoogle() {
 
         const payload = JSON.parse(atob(accessToken.split('.')[1]));
 
+        // Check if user already has settings from a previous session
+        const existingUser = await getLocalUser();
+        const existingSettings = existingUser?.id === payload.sub ? {
+          business_name: existingUser.business_name,
+          sign_off: existingUser.sign_off,
+          tone: existingUser.tone,
+          negative_strategy: existingUser.negative_strategy,
+          custom_instructions: existingUser.custom_instructions,
+          replies_count: existingUser.replies_count,
+          is_paid: existingUser.is_paid,
+        } : {};
+
         const localUser = {
           id: payload.sub,
           email: payload.email || '',
           access_token: accessToken,
           refresh_token: refreshToken,
-          replies_count: 0,
-          is_paid: false,
-          business_name: '',
-          sign_off: '',
-          tone: 'friendly',
-          negative_strategy: 'apologize',
-          custom_instructions: '',
+          replies_count: existingSettings.replies_count ?? 0,
+          is_paid: existingSettings.is_paid ?? false,
+          business_name: existingSettings.business_name ?? '',
+          sign_off: existingSettings.sign_off ?? '',
+          tone: existingSettings.tone ?? 'friendly',
+          negative_strategy: existingSettings.negative_strategy ?? 'apologize',
+          custom_instructions: existingSettings.custom_instructions ?? '',
         };
 
         await saveLocalUser(localUser);
+        _cachedUser = localUser;
         setStatus('');
         signInBtn.disabled = false;
-        await render();
+        render();
       } catch (err) {
         setStatus(err.message || 'Failed to complete sign-in.', true);
         signInBtn.disabled = false;
@@ -288,18 +316,25 @@ function signInWithGoogle() {
 }
 
 async function signOut() {
-  const client = await initSupabase();
-
-  if (client) {
-    try {
-      await client.auth.signOut();
-    } catch (err) {
-      console.error('Sign out error:', err);
+  try {
+    const client = getSupabase();
+    if (client) {
+      const { user } = await chrome.storage.local.get('user');
+      if (user?.access_token && user?.refresh_token) {
+        await client.auth.setSession({
+          access_token: user.access_token,
+          refresh_token: user.refresh_token,
+        });
+        await client.auth.signOut();
+      }
     }
+  } catch (err) {
+    console.warn('[Reviewer] Sign out error (non-fatal):', err.message);
   }
 
   await clearLocalUser();
-  await render();
+  _cachedUser = null;
+  render();
 }
 
 // --- Settings ---
@@ -329,14 +364,18 @@ async function saveSettings(event) {
     is_configured: true,
   };
 
-  // Save locally
   const updatedUser = { ...user, ...settings };
   await saveLocalUser(updatedUser);
+  _cachedUser = updatedUser;
 
-  // Upsert to Supabase (best-effort — local save is primary)
+  // Upsert to Supabase (best-effort)
   try {
-    const client = await initSupabase();
-    if (client) {
+    const client = getSupabase();
+    if (client && user.access_token && user.refresh_token) {
+      await client.auth.setSession({
+        access_token: user.access_token,
+        refresh_token: user.refresh_token,
+      });
       const { error } = await client
         .from('users')
         .upsert({
@@ -349,9 +388,7 @@ async function saveSettings(event) {
           custom_instructions: settings.custom_instructions,
         }, { onConflict: 'id' });
 
-      if (error) {
-        console.warn('[Reviewer] Supabase upsert skipped:', error.message);
-      }
+      if (error) console.warn('[Reviewer] Supabase upsert skipped:', error.message);
     }
   } catch (err) {
     console.warn('[Reviewer] Supabase upsert skipped:', err.message);
@@ -359,7 +396,7 @@ async function saveSettings(event) {
 
   setSaveLoading(false);
   setStatus('');
-  await render();
+  render();
 }
 
 // --- Paywall ---
@@ -373,18 +410,22 @@ async function openCheckout(plan) {
     return;
   }
 
-  // Ensure we have a fresh token via Supabase session refresh
+  // Ensure we have a fresh token
   let freshToken = user.access_token;
   try {
-    const client = await initSupabase();
+    const client = getSupabase();
     if (client) {
+      await client.auth.setSession({
+        access_token: user.access_token,
+        refresh_token: user.refresh_token,
+      });
       const { data } = await client.auth.getSession();
       if (data?.session?.access_token) {
         freshToken = data.session.access_token;
       }
     }
   } catch (e) {
-    console.warn('Session refresh failed:', e.message);
+    console.warn('[Reviewer] Session refresh failed:', e.message);
   }
 
   setStatus(t('openingCheckout')(plan));
@@ -427,15 +468,14 @@ signInBtn.addEventListener('click', signInWithGoogle);
 signOutBtn.addEventListener('click', signOut);
 setupForm.addEventListener('submit', saveSettings);
 editSettingsBtn.addEventListener('click', () => {
-  getLocalUser().then((user) => {
-    if (!user) return;
-    showSection('setup');
-    hydrateSettingsForm(user);
-  });
+  const user = getLocalUserFromCache();
+  if (!user) return;
+  showSection('setup');
+  hydrateSettingsForm(user);
 });
 upgradeMonthlyBtn.addEventListener('click', () => openCheckout('monthly'));
 upgradeLifetimeBtn.addEventListener('click', () => openCheckout('lifetime'));
 
 // Initialize
 applyTranslations();
-render();
+loadAndRender();

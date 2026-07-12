@@ -40,6 +40,13 @@
     .success-overlay h2 { font-size: 1.5rem; margin-bottom: 0.5rem; color: #059669; }
     .success-overlay p { color: #374151; font-size: 0.95rem; }
     .success-overlay .subtext { color: #6B7280; font-size: 0.85rem; margin-top: 0.25rem; }
+    .success-overlay .btn {
+      display: inline-block; margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem; background: #1F2937; color: #fff;
+      border: none; border-radius: 8px; font-size: 0.9rem;
+      cursor: pointer; text-decoration: none;
+    }
+    .success-overlay .btn:hover { background: #111827; }
   </style>
 </head>
 <body>
@@ -61,7 +68,8 @@
     </div>
     <h2>Payment Successful!</h2>
     <p>You now have unlimited replies.</p>
-    <p class="subtext">You can close this tab and go back to Google Reviews.</p>
+    <p class="subtext">Open the Reviewer extension and start replying to reviews.</p>
+    <a class="btn" href="https://www.google.com/maps" target="_self">Go to Google Maps</a>
   </div>
 
   <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
@@ -69,13 +77,6 @@
     (function() {
       var params = new URLSearchParams(window.location.search);
       var txnId = params.get('_ptxn');
-
-      // If this is a success page redirect (no txn id)
-      if (!txnId && window.location.pathname.indexOf('success') !== -1) {
-        document.getElementById('loading').style.display = 'none';
-        showSuccess();
-        return;
-      }
 
       if (!txnId || typeof Paddle === 'undefined') {
         document.getElementById('loading').style.display = 'none';
@@ -89,7 +90,6 @@
       });
       Paddle.Checkout.open({ transactionId: txnId });
 
-      // Listen for checkout completion
       Paddle.Completed(function(data) {
         showSuccess();
       });
@@ -97,10 +97,6 @@
       function showSuccess() {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('success-overlay').classList.add('visible');
-        // Auto-close tab after 5 seconds
-        setTimeout(function() {
-          try { window.close(); } catch(e) {}
-        }, 5000);
       }
     })();
   </script>

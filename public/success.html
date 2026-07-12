@@ -14,9 +14,7 @@
     }
     .container { text-align: center; padding: 2rem; max-width: 400px; }
     .check-circle {
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      background: #ECFDF5;
+      width: 80px; height: 80px; border-radius: 50%; background: #ECFDF5;
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 1.5rem;
     }
@@ -24,16 +22,10 @@
     p { color: #374151; margin-bottom: 0.75rem; line-height: 1.6; }
     .subtext { color: #6B7280; font-size: 0.85rem; }
     .btn {
-      display: inline-block;
-      margin-top: 1.5rem;
-      padding: 0.75rem 1.5rem;
-      background: #1F2937;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      cursor: pointer;
-      text-decoration: none;
+      display: inline-block; margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem; background: #1F2937; color: #fff;
+      border: none; border-radius: 8px; font-size: 0.9rem;
+      cursor: pointer; text-decoration: none;
     }
     .btn:hover { background: #111827; }
   </style>
@@ -47,15 +39,8 @@
     </div>
     <h1>Payment Successful!</h1>
     <p>You now have <strong>unlimited replies</strong> to all your Google reviews.</p>
-    <p class="subtext">You can close this tab and go back to Google Reviews to start replying.</p>
-    <button class="btn" onclick="window.close()">Close this tab</button>
+    <p class="subtext">Open the Reviewer extension and start replying to reviews.</p>
+    <a class="btn" href="https://www.google.com/maps" target="_self">Go to Google Maps</a>
   </div>
-
-  <script>
-    // Auto-close after 8 seconds
-    setTimeout(function() {
-      try { window.close(); } catch(e) {}
-    }, 8000);
-  </script>
 </body>
 </html>
