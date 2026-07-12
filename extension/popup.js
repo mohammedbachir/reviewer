@@ -173,6 +173,36 @@ async function render() {
     return;
   }
 
+  // Re-check payment status from Supabase (in case webhook upgraded user)
+  if (user.access_token && user.refresh_token) {
+    try {
+      const client = await initSupabase();
+      if (client) {
+        const { data: { user: authUser } } = await client.auth.getUser();
+        if (authUser) {
+          const { data: profile } = await client
+            .from('users')
+            .select('is_paid, subscription_type, replies_count')
+            .eq('id', authUser.id)
+            .single();
+
+          if (profile && (profile.is_paid !== user.is_paid || profile.replies_count !== user.replies_count)) {
+            const updatedUser = {
+              ...user,
+              is_paid: profile.is_paid,
+              subscription_type: profile.subscription_type,
+              replies_count: profile.replies_count,
+            };
+            await saveLocalUser(updatedUser);
+            return render(); // re-render with fresh data
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Reviewer] Payment status check skipped:', e.message);
+    }
+  }
+
   if (!user.is_paid && user.replies_count >= FREE_REPLY_LIMIT) {
     showSection('paywall');
     return;

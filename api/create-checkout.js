@@ -47,6 +47,10 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Price not configured.' });
     }
 
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'https://reviewer-lovat.vercel.app';
+
     // Create Paddle transaction (checkout)
     const paddleResponse = await fetch(`${PADDLE_API_URL}/transactions`, {
       method: 'POST',
@@ -66,6 +70,12 @@ export default async function handler(req, res) {
         custom_data: {
           user_id: user.id,
           email: user.email,
+          plan: plan,
+        },
+        checkout: {
+          settings: {
+            success_url: `${baseUrl}/success.html`,
+          },
         },
       }),
     });
