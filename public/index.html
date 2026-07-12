@@ -15,10 +15,7 @@
       min-height: 100vh;
       color: #1F2937;
     }
-    .container {
-      text-align: center;
-      padding: 2rem;
-    }
+    .container { text-align: center; padding: 2rem; }
     h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
     p { color: #6B7280; margin-bottom: 1rem; }
     .spinner {
@@ -30,7 +27,8 @@
       margin: 1rem auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .error { color: #DC2626; display: none; }
+    #error-msg { color: #DC2626; display: none; }
+    #debug { color: #9CA3AF; font-size: 12px; margin-top: 2rem; text-align: left; max-width: 400px; }
   </style>
 </head>
 <body>
@@ -40,31 +38,42 @@
       <div class="spinner"></div>
       <p>Opening checkout...</p>
     </div>
-    <div id="error-msg" class="error">
-      <p>Could not open checkout. Please try again.</p>
-    </div>
+    <div id="error-msg"><p>Could not open checkout.</p></div>
+    <div id="debug"></div>
   </div>
 
-  <!-- Paddle.js v2 (sandbox) -->
   <script src="https://sandboxcdn.paddle.com/paddle/paddle.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var params = new URLSearchParams(window.location.search);
-      var txnId = params.get('_ptxn');
+    var log = '';
+    function debug(msg) { log += msg + '\n'; document.getElementById('debug').textContent = log; }
 
-      if (!txnId) {
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('error-msg').style.display = 'block';
-        return;
-      }
+    function showError() {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error-msg').style.display = 'block';
+    }
 
-      // Initialize Paddle in sandbox mode
-      Paddle.Environment.set('sandbox');
-      Paddle.Setup({ seller: 75274 });
+    var params = new URLSearchParams(window.location.search);
+    var txnId = params.get('_ptxn');
+    debug('Transaction: ' + (txnId || 'NONE'));
 
-      // Open checkout for this transaction
-      Paddle.Checkout.open({ transactionId: txnId });
+    if (!txnId) { showError(); return; }
+
+    if (typeof Paddle === 'undefined') {
+      debug('ERROR: Paddle.js not loaded');
+      showError();
+      return;
+    }
+
+    debug('Paddle loaded: v' + (Paddle.version || 'unknown'));
+
+    Paddle.Setup({
+      seller: 75274,
+      checkout: { shareRevenue: false }
     });
+    debug('Paddle.Setup done');
+
+    Paddle.Checkout.open({ transactionId: txnId });
+    debug('Checkout.open called');
   </script>
 </body>
 </html>
