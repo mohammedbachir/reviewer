@@ -11,6 +11,36 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const FREE_REPLY_LIMIT = 5;
 
+function cleanReply(text) {
+  if (!text) return text;
+
+  // Remove trailing lines that look like random gibberish
+  // (short strings with high consonant ratio, no real words)
+  const lines = text.split('\n').filter(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return true; // keep empty lines
+    // If line is short (< 8 chars) and has mostly consonants, skip it
+    if (trimmed.length < 8 && /^[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ\s]{3,}$/.test(trimmed)) {
+      return false;
+    }
+    return true;
+  });
+
+  let result = lines.join('\n').trim();
+
+  // Remove trailing gibberish after last punctuation (period, exclamation, question mark)
+  // e.g. "Great review! trhrth" → "Great review!"
+  result = result.replace(/([.!?؟！])([^.!?؟！\n]{0,30})$/s, (match, punct, tail) => {
+    // If tail has no spaces or is very short and looks random, drop it
+    if (tail.trim().length < 5 || /^[^\s]{3,}$/.test(tail.trim())) {
+      return punct;
+    }
+    return match;
+  });
+
+  return result.trim();
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
@@ -96,7 +126,10 @@ export default async function handler(req, res) {
       throw new Error(aiData.error?.message || 'AI failed to generate a reply');
     }
 
-    const generatedReply = aiData.choices[0].message.content.trim();
+    let generatedReply = aiData.choices[0].message.content.trim();
+
+    // Clean up AI artifacts: remove trailing gibberish (random chars, repeated letters, etc.)
+    generatedReply = cleanReply(generatedReply);
 
     if (!userData.is_paid) {
       const newCount = userData.replies_count + 1;
