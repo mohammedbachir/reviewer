@@ -5,8 +5,7 @@
   "description": "Smart replies for Google Business reviews.",
   "permissions": ["storage", "identity"],
   "host_permissions": [
-    "*://www.google.com/maps/*",
-    "*://maps.google.com/*",
+    "*://business.google.com/*",
     "*://*.supabase.co/*",
     "*://*.vercel.app/*"
   ],
@@ -21,8 +20,7 @@
   "content_scripts": [
     {
       "matches": [
-        "*://www.google.com/maps/*",
-        "*://maps.google.com/*"
+        "*://business.google.com/*"
       ],
       "js": ["lib/i18n.js", "content.js"],
       "css": ["styles.css"],
