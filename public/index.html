@@ -34,7 +34,7 @@
     <div id="error-msg"><p>Could not open checkout. Please close this tab and try again.</p></div>
   </div>
 
-  <script src="https://cdn.paddle.com/paddle/paddle.js"></script>
+  <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
   <script>
     (function() {
       var params = new URLSearchParams(window.location.search);
@@ -46,8 +46,7 @@
         return;
       }
 
-      Paddle.Environment.set('sandbox');
-      Paddle.Setup({ seller: 75274 });
+      Paddle.Initialize({ seller: 75274, sandbox: true });
       Paddle.Checkout.open({ transactionId: txnId });
     })();
   </script>
