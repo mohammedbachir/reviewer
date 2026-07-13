@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reviewer — Instant replies to your Google reviews</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2B21;
+    --ink-2:#0f1912;
+    --paper:#EDE5CF;
+    --paper-2:#E3D9BE;
+    --paper-light:#F7F2E4;
+    --white:#FFFDF7;
+    --brick:#A63E2E;
+    --brick-dark:#7f2f22;
+    --gold:#C89A3A;
+    --cream-text:#F1EADA;
+    --text-dark:#1C2B21;
+    --text-muted: rgba(28,43,33,0.64);
+    --rule: rgba(28,43,33,0.22);
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:'IBM Plex Sans', sans-serif;
+    background:var(--paper-light);
+    color:var(--text-dark);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.display{ font-family:'Fraunces', serif; font-weight:700; }
+  a{color:inherit; text-decoration:none;}
+  img,svg{display:block;}
+  .wrap{max-width:1160px; margin:0 auto; padding:0 32px;}
+  button{font-family:inherit;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; scroll-behavior:auto !important;}
+  }
+
+  /* ---------- STAMP BUTTON (shared) ---------- */
+  .stampbtn{
+    display:inline-flex; align-items:center; gap:10px;
+    background:var(--brick);
+    color:var(--cream-text);
+    border:1.5px solid var(--ink);
+    padding:15px 28px;
+    border-radius:2px;
+    font-weight:600;
+    font-size:15.5px;
+    cursor:pointer;
+    box-shadow:4px 4px 0 var(--ink);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .stampbtn:hover{transform:translate(-2px,-2px); box-shadow:6px 6px 0 var(--ink);}
+  .stampbtn:active{transform:translate(0,0); box-shadow:0 0 0 var(--ink);}
+  .textlink{
+    font-weight:600; font-size:15px;
+    display:inline-flex; align-items:center; gap:6px;
+    border-bottom:1.5px solid currentColor;
+    padding-bottom:2px;
+  }
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:fixed; top:0; right:0; left:0; z-index:50;
+    background:var(--ink);
+    border-bottom:1px solid rgba(241,234,218,0.1);
+  }
+  .nav-inner{display:flex; align-items:center; justify-content:space-between; padding:16px 0;}
+  .wordmark{
+    font-family:'Fraunces',serif; font-weight:700; font-size:23px; color:var(--cream-text);
+    position:relative; display:flex; align-items:center; gap:10px;
+  }
+  .wordmark .swash{ color:var(--brick); }
+  .wordmark svg{ width:32px; height:32px; flex-shrink:0; }
+  .nav-cta{
+    background:none; border:1.5px solid var(--cream-text);
+    color:var(--cream-text); padding:9px 20px; border-radius:2px;
+    font-weight:600; font-size:14px; cursor:pointer;
+    transition:background .2s ease, color .2s ease;
+  }
+  .nav-cta:hover{background:var(--cream-text); color:var(--ink);}
+
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;
+    background:var(--ink);
+    color:var(--cream-text);
+    padding:150px 0 0;
+    overflow:hidden;
+  }
+  .hero-head{ padding-bottom:64px; }
+  .tag-stamp{
+    display:inline-block;
+    font-size:12.5px; font-weight:700; color:var(--gold);
+    border:1px solid rgba(200,154,58,0.55);
+    padding:5px 12px;
+    transform:rotate(-2deg);
+    margin-bottom:26px;
+    letter-spacing:.04em;
+    opacity:0; animation:riseIn .7s ease .1s forwards;
+  }
+  .hero h1{
+    font-size:clamp(32px, 5vw, 58px);
+    line-height:1.2;
+    max-width:900px;
+    margin-bottom:26px;
+    opacity:0; transform:translateY(14px);
+    animation:riseIn .8s ease .22s forwards;
+  }
+  .hero h1 em{ font-style:italic; color:var(--gold); }
+  .hero p.lead{
+    font-size:18px; line-height:1.85;
+    color:rgba(241,234,218,0.72);
+    max-width:520px; margin-bottom:34px;
+    opacity:0; transform:translateY(14px);
+    animation:riseIn .8s ease .36s forwards;
+  }
+  .hero-ctas{
+    display:flex; gap:22px; align-items:center; flex-wrap:wrap;
+    opacity:0; transform:translateY(14px);
+    animation:riseIn .8s ease .5s forwards;
+  }
+  @keyframes riseIn{to{opacity:1; transform:translateY(0);}}
+
+  /* asymmetric artifact row: card pinned off to one side */
+  .hero-artifact-row{
+    position:relative;
+    display:flex; justify-content:flex-end;
+    padding:0 0 0;
+  }
+  .pinned-card{
+    position:relative;
+    width:340px;
+    background:var(--paper-light);
+    color:var(--text-dark);
+    padding:22px 22px 24px;
+    transform:rotate(-3deg) translateY(30px);
+    box-shadow:0 20px 40px rgba(0,0,0,0.35);
+    margin-right:14%;
+    opacity:0;
+    animation:cardIn .9s cubic-bezier(.2,.8,.2,1) .55s forwards;
+  }
+  @keyframes cardIn{
+    from{opacity:0; transform:rotate(-3deg) translateY(70px);}
+    to{opacity:1; transform:rotate(-3deg) translateY(30px);}
+  }
+  .tape{
+    position:absolute; top:-14px; left:36px;
+    width:64px; height:26px;
+    background:rgba(200,154,58,0.55);
+    transform:rotate(4deg);
+    box-shadow:0 2px 4px rgba(0,0,0,0.15);
+  }
+  .review-top{display:flex; align-items:center; gap:11px; margin-bottom:10px;}
+  .avatar{ width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#c9a15a,#8f6236); flex-shrink:0; }
+  .reviewer-name{font-weight:600; font-size:14px;}
+  .stars{display:flex; gap:3px; margin-top:2px;}
+  .review-text{ font-size:14px; line-height:1.75; color:rgba(28,43,33,0.82); margin-bottom:14px; }
+  .reply-box{
+    border-top:1px dashed var(--rule);
+    padding-top:12px;
+    font-size:13.5px; line-height:1.8; color:var(--ink);
+    min-height:58px; position:relative;
+  }
+  .reply-label{ font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  .caret{display:inline-block; width:2px; height:13px; background:var(--brick); vertical-align:middle; animation:blink 0.9s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .stamp-wrap{
+    position:absolute; top:-30px; right:-36px;
+    width:118px; height:118px;
+    opacity:0; transform:scale(2.2) rotate(18deg);
+    pointer-events:none;
+  }
+  .stamp-wrap.dropped{ animation:stampDrop .55s cubic-bezier(.2,1.4,.4,1) forwards; }
+  @keyframes stampDrop{
+    0%{opacity:0; transform:scale(2.4) rotate(24deg);}
+    55%{opacity:1; transform:scale(0.86) rotate(11deg);}
+    75%{transform:scale(1.06) rotate(13deg);}
+    100%{opacity:1; transform:scale(1) rotate(12deg);}
+  }
+
+  .hero-floor{ height:90px; }
+
+  /* ---------- SECTION shared ---------- */
+  .section{padding:110px 0;}
+  .section-head{max-width:600px; margin-bottom:56px;}
+  .kicker{
+    font-size:13px; font-weight:700; color:var(--brick);
+    margin-bottom:14px; text-transform:uppercase; letter-spacing:.06em;
+  }
+  .section-head h2{font-size:clamp(27px,3.2vw,40px); line-height:1.28; color:var(--ink);}
+  .section-head p{font-size:16px; line-height:1.8; color:var(--text-muted); margin-top:16px; max-width:500px;}
+
+  /* ---------- RECEIPT ---------- */
+  .receipt{
+    background:var(--white);
+    max-width:600px; margin:0 auto;
+    padding:40px 40px 34px;
+    box-shadow:0 1px 0 var(--rule), 0 18px 40px rgba(28,43,33,0.1);
+    position:relative;
+    font-family:'IBM Plex Sans', sans-serif;
+  }
+  .receipt::before, .receipt::after{
+    content:""; position:absolute; right:0; left:0; height:11px;
+    background-image: radial-gradient(circle at 10px 6px, var(--paper-light) 6px, transparent 7px);
+    background-size:22px 11px; background-repeat:repeat-x;
+  }
+  .receipt::before{top:-5px;}
+  .receipt::after{bottom:-5px; transform:rotate(180deg);}
+  .receipt-title{
+    font-family:'Fraunces',serif; font-weight:700; font-size:15px;
+    text-align:center; color:var(--ink);
+    padding-bottom:18px; margin-bottom:20px;
+    border-bottom:1px dashed var(--rule);
+    letter-spacing:.04em;
+  }
+  .receipt-line{
+    display:flex; align-items:baseline; gap:8px;
+    font-size:14.5px; color:var(--text-dark); padding:12px 0;
+    opacity:0; transform:translateY(10px);
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .receipt-line.visible{opacity:1; transform:translateY(0);}
+  .receipt-line .fill{flex:1; border-bottom:1px dotted var(--rule); height:0; margin-bottom:5px;}
+  .receipt-line .val{white-space:nowrap; font-weight:700; font-size:14.5px;}
+  .receipt-line .val.bad{color:var(--brick);}
+  .receipt-line .val.good{color:#3d6b4c;}
+  .receipt-total{
+    margin-top:12px; padding-top:18px; border-top:1.5px solid var(--ink);
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:'Fraunces',serif; font-weight:700; font-size:16.5px; color:var(--ink);
+    opacity:0; transform:translateY(10px);
+    transition:opacity .5s ease .1s, transform .5s ease .1s;
+  }
+  .receipt-total.visible{opacity:1; transform:translateY(0);}
+
+  /* ---------- LEDGER FEATURE LIST ---------- */
+  .pile-section{background:var(--paper); padding:120px 0;}
+  .pile-wrap{ display:grid; grid-template-columns:1fr 1.05fr; gap:70px; align-items:start; }
+
+  .pile-stage{ position:relative; height:400px; }
+  .mini-card{
+    position:absolute; width:74%; max-width:300px;
+    background:var(--white); padding:15px 17px;
+    box-shadow:0 8px 18px rgba(28,43,33,0.16);
+    transition:transform .7s cubic-bezier(.2,.8,.2,1), filter .7s ease;
+    filter:grayscale(0.4) opacity(0.8);
+  }
+  .mini-card .review-text{font-size:12.5px; margin-bottom:8px;}
+  .mini-card .stars svg{width:12px; height:12px;}
+  .mini-card.stamped{ filter:grayscale(0) opacity(1); }
+  .mini-card .tick{
+    position:absolute; top:10px; right:12px;
+    display:flex; align-items:center; gap:5px;
+    font-size:10px; font-weight:700; color:var(--brick);
+    opacity:0; transition:opacity .4s ease .25s;
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .mini-card.stamped .tick{opacity:1;}
+
+  .ledger-list{ margin-top:6px; }
+  .ledger-row{
+    display:flex; gap:18px; align-items:flex-start;
+    padding:22px 0; border-top:1px solid var(--rule);
+  }
+  .ledger-row:last-child{ border-bottom:1px solid var(--rule); }
+  .ledger-mark{
+    font-family:'Fraunces',serif; font-weight:700; font-size:15px; color:var(--brick);
+    flex-shrink:0; width:26px; padding-top:2px;
+  }
+  .ledger-row h4{font-family:'Fraunces',serif; font-weight:700; font-size:16.5px; color:var(--ink); margin-bottom:6px;}
+  .ledger-row p{font-size:14.5px; line-height:1.75; color:var(--text-muted);}
+
+  /* ---------- FINAL CTA ---------- */
+  .cta-section{
+    background:var(--ink);
+    color:var(--cream-text);
+    padding:120px 0 50px;
+    position:relative;
+  }
+  .cta-row{
+    display:flex; align-items:center; justify-content:space-between; gap:40px;
+    flex-wrap:wrap; margin-bottom:80px;
+  }
+  .cta-section h2{ font-size:clamp(27px,3.6vw,42px); line-height:1.3; max-width:640px; }
+  .cta-section h2 em{ font-style:italic; color:var(--gold); }
+  .cta-stamp{ width:96px; height:96px; flex-shrink:0; }
+
+  .footer-bottom{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;
+    border-top:1px solid rgba(241,234,218,0.14); padding-top:24px;
+    font-size:13px; color:rgba(241,234,218,0.45);
+  }
+  .footer-word{ font-family:'Fraunces',serif; font-weight:700; color:rgba(241,234,218,0.75); font-size:15px; display:flex; align-items:center; gap:8px; }
+  .footer-word svg{ width:24px; height:24px; flex-shrink:0; }
+
+  .reveal{opacity:0; transform:translateY(22px); transition:opacity .7s ease, transform .7s ease;}
+  .reveal.visible{opacity:1; transform:translateY(0);}
+
+  @media (max-width:920px){
+    .pile-wrap{grid-template-columns:1fr;}
+    .hero{padding:120px 0 0;}
+    .hero-artifact-row{ justify-content:center; }
+    .pinned-card{ margin-right:0; }
+    .pile-stage{height:320px; margin-bottom:10px;}
+    .wrap{padding:0 20px;}
+    .section{padding:76px 0;}
+    .pile-section{padding:76px 0;}
+    .cta-section{padding:80px 0 40px;}
+    .cta-row{flex-direction:column; align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <filter id="ink1"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3.2"/></filter>
+</svg>
+
+<!-- ============ NAV ============ -->
+<nav>
+  <div class="wrap nav-inner">
+    <div class="wordmark">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="200" height="200" rx="38" fill="#1C2B21"/>
+        <g mask="url(#starCut)">
+          <g transform="rotate(-7 100 100)" fill="#A63E2E">
+            <rect x="51" y="30" width="18" height="140" rx="9"/>
+            <rect x="60" y="30" width="72" height="66" rx="31"/>
+            <line x1="86" y1="93" x2="132" y2="170" stroke="#A63E2E" stroke-width="30" stroke-linecap="round"/>
+          </g>
+        </g>
+        <defs>
+          <mask id="starCut">
+            <rect x="0" y="0" width="200" height="200" fill="white"/>
+            <g transform="rotate(-7 100 100)">
+              <polygon fill="black" points="96,40.4 104.7,58.6 124.7,61.4 110.4,75.3 113.8,95.2 96,85.8 78.2,95.2 81.6,75.3 67.3,61.4 87.3,58.6"/>
+            </g>
+          </mask>
+        </defs>
+      </svg>
+      <span>Reviewer</span>
+    </div>
+    <button class="nav-cta" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">Install extension</button>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <div class="wrap hero-head">
+    <div class="tag-stamp">CHROME EXTENSION · GOOGLE BUSINESS PROFILE</div>
+    <h1>Reply to every review in <em>seconds</em>, not fifteen minutes</h1>
+    <p class="lead">Reviewer reads your customers' Google reviews and drafts a reply that's ready to post. You just approve — and it stamps it sent.</p>
+    <div class="hero-ctas">
+      <button class="stampbtn" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">Install Reviewer — it's free</button>
+      <a class="textlink" href="#how">See how it works ↓</a>
+    </div>
+  </div>
+
+  <div class="wrap hero-artifact-row">
+    <div class="pinned-card">
+      <div class="tape"></div>
+      <div class="review-top">
+        <div class="avatar"></div>
+        <div>
+          <div class="reviewer-name">Sarah B.</div>
+          <div class="stars" id="stars-hero"></div>
+        </div>
+      </div>
+      <p class="review-text">Great place, fast service — would love to see the owner reply to reviews sometimes 🙂</p>
+      <div class="reply-box">
+        <div class="reply-label">Suggested reply from Reviewer</div>
+        <span id="typewriter"></span><span class="caret" id="caret"></span>
+      </div>
+      <div class="stamp-wrap" id="stamp-hero">
+        <svg viewBox="0 0 120 120">
+          <g filter="url(#ink1)">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#A63E2E" stroke-width="5"/>
+            <circle cx="60" cy="60" r="40" fill="none" stroke="#A63E2E" stroke-width="1.6" stroke-dasharray="3 4"/>
+            <text x="60" y="53" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="14" fill="#A63E2E">REPLIED</text>
+            <text x="60" y="78" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="22" fill="#A63E2E">✓</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div class="hero-floor"></div>
+</header>
+
+<!-- ============ RECEIPT / VALUE SECTION ============ -->
+<section class="section" id="how">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="kicker">The math is simple</div>
+      <h2>Your time is worth more than this</h2>
+      <p>Every review left unanswered is a missed chance. Reviewer turns the math from minutes into seconds — so you stay focused on your business, not your screen.</p>
+    </div>
+
+    <div class="receipt reveal">
+      <div class="receipt-title">TIME RECEIPT — BEFORE &amp; AFTER</div>
+      <div class="receipt-line"><span class="label">Manual reply to one review</span><span class="fill"></span><span class="val bad">12–15 min</span></div>
+      <div class="receipt-line"><span class="label">Reply with Reviewer</span><span class="fill"></span><span class="val good">under 15 sec</span></div>
+      <div class="receipt-line"><span class="label">Reviews left unanswered, monthly</span><span class="fill"></span><span class="val bad">lost trust, lost customers</span></div>
+      <div class="receipt-line"><span class="label">Languages supported</span><span class="fill"></span><span class="val good">English · Spanish · French · German</span></div>
+      <div class="receipt-total"><span>Total</span><span>More time for your business, not Google</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PILE -> STAMPED DEMO + LEDGER LIST ============ -->
+<section class="pile-section">
+  <div class="wrap pile-wrap">
+    <div class="pile-stage" id="pile-stage"></div>
+
+    <div class="reveal">
+      <div class="kicker">How it works</div>
+      <h2 style="font-family:'Fraunces',serif; font-weight:700; font-size:clamp(26px,3.2vw,38px); color:var(--ink); line-height:1.3;">From review chaos to an organized inbox</h2>
+      <p style="color:var(--text-muted); font-size:16px; line-height:1.8; margin-top:14px; max-width:460px;">Reviewer opens right next to every review on your Google Business page, reads the tone and content, and drafts a natural reply — not a robotic copy-paste.</p>
+
+      <div class="ledger-list">
+        <div class="ledger-row">
+          <div class="ledger-mark">A</div>
+          <div><h4>Works right inside your page</h4><p>No copy-pasting, no switching between tabs and apps.</p></div>
+        </div>
+        <div class="ledger-row">
+          <div class="ledger-mark">B</div>
+          <div><h4>Reads the tone before it writes</h4><p>Formal, friendly, or apologetic — matched to the review.</p></div>
+        </div>
+        <div class="ledger-row">
+          <div class="ledger-mark">C</div>
+          <div><h4>You always have the final say</h4><p>Reviewer drafts it. You edit or approve before anything gets posted.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FINAL CTA ============ -->
+<section class="cta-section" id="cta-final">
+  <div class="wrap">
+    <div class="cta-row">
+      <h2>Let Google see a business owner who <em>replies</em>, not one who's drowning</h2>
+      <svg class="cta-stamp" viewBox="0 0 120 120">
+        <g filter="url(#ink1)">
+          <circle cx="60" cy="60" r="52" fill="none" stroke="#C89A3A" stroke-width="4"/>
+          <text x="60" y="53" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="15" fill="#C89A3A">READY</text>
+          <text x="60" y="78" text-anchor="middle" font-family="Fraunces" font-weight="700" font-size="20" fill="#C89A3A">✓</text>
+        </g>
+      </svg>
+    </div>
+    <button class="stampbtn" onclick="alert('Chrome Web Store link goes here')" style="margin-bottom:70px;">Install Reviewer from the Chrome Web Store</button>
+
+    <div class="footer-bottom">
+      <div class="footer-word">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <rect x="0" y="0" width="200" height="200" rx="38" fill="#1C2B21"/>
+          <g mask="url(#starCutFooter)">
+            <g transform="rotate(-7 100 100)" fill="#A63E2E">
+              <rect x="51" y="30" width="18" height="140" rx="9"/>
+              <rect x="60" y="30" width="72" height="66" rx="31"/>
+              <line x1="86" y1="93" x2="132" y2="170" stroke="#A63E2E" stroke-width="30" stroke-linecap="round"/>
+            </g>
+          </g>
+          <defs>
+            <mask id="starCutFooter">
+              <rect x="0" y="0" width="200" height="200" fill="white"/>
+              <g transform="rotate(-7 100 100)">
+                <polygon fill="black" points="96,40.4 104.7,58.6 124.7,61.4 110.4,75.3 113.8,95.2 96,85.8 78.2,95.2 81.6,75.3 67.3,61.4 87.3,58.6"/>
+              </g>
+            </mask>
+          </defs>
+        </svg>
+        Reviewer
+      </div>
+      <div>© 2026 Reviewer — every reply, your time saved.</div>
+    </div>
+  </div>
+</section>
+
+<script>
+function starSVG(filled){
+  return `<svg viewBox="0 0 20 20" width="14" height="14">
+    <path d="M10 1.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9L10 14.9l-5.2 2.9 1-5.9L1.5 7.7l5.9-.8z"
+    fill="${filled? '#C89A3A':'none'}" stroke="#C89A3A" stroke-width="1"/></svg>`;
+}
+document.getElementById('stars-hero').innerHTML = [1,1,1,1,0].map(v=>starSVG(v)).join('');
+
+const replyText = "Thank you so much for the kind review! We're thrilled you had a great experience with us, and we hope to see you again soon 🌿";
+const twEl = document.getElementById('typewriter');
+const caret = document.getElementById('caret');
+const stampHero = document.getElementById('stamp-hero');
+
+function typeWriter(el, text, speed, done){
+  let i = 0;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){ el.textContent = text; if(done) done(); return; }
+  function step(){
+    if(i <= text.length){ el.textContent = text.slice(0, i); i++; setTimeout(step, speed); }
+    else if(done){ done(); }
+  }
+  step();
+}
+setTimeout(()=>{
+  typeWriter(twEl, replyText, 24, ()=>{
+    caret.style.display='none';
+    setTimeout(()=>{ stampHero.classList.add('dropped'); }, 250);
+  });
+}, 1400);
+
+const revealEls = document.querySelectorAll('.receipt-line, .receipt-total, .reveal');
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const el = entry.target;
+      const siblings = Array.from(el.parentElement.children).filter(c=>c.classList.contains('receipt-line')||c.classList.contains('receipt-total'));
+      const delay = (el.classList.contains('receipt-line') || el.classList.contains('receipt-total')) ? siblings.indexOf(el) * 90 : 0;
+      setTimeout(()=> el.classList.add('visible'), delay);
+      io.unobserve(el);
+    }
+  });
+}, {threshold:0.2});
+revealEls.forEach(el=>io.observe(el));
+
+const pileData = [
+  {name:"Jason M.", text:"Fair prices, great quality — would recommend.", stars:[1,1,1,1,0]},
+  {name:"Priya K.", text:"Friendly staff, but delivery took a bit long.", stars:[1,1,1,0,0]},
+  {name:"Daniel R.", text:"Best experience I've had all year, thank you!", stars:[1,1,1,1,1]},
+  {name:"Emma L.", text:"Quick service and the place was spotless.", stars:[1,1,1,1,0]},
+];
+const rotations = [-9, 6, -4, 10];
+const stage = document.getElementById('pile-stage');
+pileData.forEach((d, i)=>{
+  const card = document.createElement('div');
+  card.className = 'mini-card';
+  card.style.transform = `rotate(${rotations[i]}deg) translate(${i*14}px, ${i*10}px)`;
+  card.style.zIndex = i;
+  card.innerHTML = `
+    <div class="tick">✓ Replied</div>
+    <div class="review-top" style="margin-bottom:6px;">
+      <div class="avatar" style="width:24px;height:24px;"></div>
+      <div>
+        <div class="reviewer-name" style="font-size:12px;">${d.name}</div>
+        <div class="stars">${d.stars.map(v=>starSVG(v)).join('')}</div>
+      </div>
+    </div>
+    <p class="review-text">${d.text}</p>
+  `;
+  stage.appendChild(card);
+});
+const pileObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    if(entry.isIntersecting){
+      const cards = stage.querySelectorAll('.mini-card');
+      cards.forEach((card, i)=>{
+        setTimeout(()=>{
+          card.style.transform = `rotate(0deg) translate(0px, ${i*10}px)`;
+          card.classList.add('stamped');
+        }, i*250);
+      });
+      pileObserver.unobserve(stage);
+    }
+  });
+}, {threshold:0.35});
+pileObserver.observe(stage);
+</script>
+</body>
+</html>
