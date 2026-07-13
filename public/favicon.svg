@@ -1,0 +1,34 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <clipPath id="rGlyph">
+      <g transform="rotate(-7 100 100)">
+        <rect x="51" y="30" width="18" height="140"/>
+        <rect x="60" y="30" width="72" height="66" rx="31"/>
+        <line x1="86" y1="93" x2="132" y2="170" stroke="black" stroke-width="30" stroke-linecap="round"/>
+        <!-- star punched via evenodd on a combined path below is simpler; using mask instead -->
+      </g>
+    </clipPath>
+    <mask id="starCut">
+      <rect x="0" y="0" width="200" height="200" fill="white"/>
+      <g transform="rotate(-7 100 100)">
+        <polygon fill="black" points="
+          96,40.4
+          104.7,58.6 124.7,61.4
+          110.4,75.3 113.8,95.2
+          96,85.8 78.2,95.2
+          81.6,75.3 67.3,61.4
+          87.3,58.6" />
+      </g>
+    </mask>
+  </defs>
+
+  <rect x="0" y="0" width="200" height="200" rx="38" fill="#1C2B21"/>
+
+  <g mask="url(#starCut)">
+    <g transform="rotate(-7 100 100)" fill="#A63E2E">
+      <rect x="51" y="30" width="18" height="140" rx="9"/>
+      <rect x="60" y="30" width="72" height="66" rx="31"/>
+      <line x1="86" y1="93" x2="132" y2="170" stroke="#A63E2E" stroke-width="30" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
