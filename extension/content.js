@@ -38,13 +38,14 @@ setTimeout(scanAndInject, 4000);
 // =============================================
 
 function scanAndInject() {
-  // Try multiple selectors to find review cards
   const selectors = [
     '[data-review-id]',
     '[data-href*="review"]',
     '.review-item',
     '[class*="review"][class*="card"]',
     '[jscontroller*="review"]',
+    'div[data-reviewid]',
+    '.review-row',
   ];
 
   const reviewCards = new Set();
@@ -52,6 +53,24 @@ function scanAndInject() {
     try {
       document.querySelectorAll(sel).forEach((el) => reviewCards.add(el));
     } catch (_) { /* ignore invalid selectors */ }
+  }
+
+  // Fallback: find review cards by star rating aria-labels
+  if (reviewCards.size === 0) {
+    document.querySelectorAll('[aria-label]').forEach((el) => {
+      const label = el.getAttribute('aria-label') || '';
+      if (/^\d\s*star/i.test(label)) {
+        let card = el.parentElement;
+        // Walk up to find a reasonable container (max 5 levels)
+        for (let i = 0; i < 5 && card; i++) {
+          if (card.textContent && card.textContent.length > 30) {
+            reviewCards.add(card);
+            break;
+          }
+          card = card.parentElement;
+        }
+      }
+    });
   }
 
   for (const card of reviewCards) {
@@ -102,6 +121,7 @@ function findActionbar(card) {
     'like', 'share', 'flag', 'report',
     'أعجبني', 'مشاركة', 'إبلاغ', 'إبلاغ عن',
     'helpful', 'useful',
+    'reply', 'respond', 'رد',
   ];
 
   for (const btn of allBtns) {
@@ -139,6 +159,7 @@ function findActionbar(card) {
 
 function extractReviewText(card) {
   let longest = '';
+  // Try spans first (Maps style)
   for (const span of card.querySelectorAll('span')) {
     const text = span.textContent?.trim() || '';
     if (
@@ -150,6 +171,22 @@ function extractReviewText(card) {
       !/^\d+ (minute|hour|day|week|month|year)s? ago$/i.test(text) &&
       !span.closest(`.${BUTTON_CLASS}`) &&
       !span.closest(`.${RESULT_CLASS}`)
+    ) {
+      longest = text;
+    }
+  }
+  if (longest) return longest;
+  // Fallback: try divs with long text (Business Profile style)
+  for (const div of card.querySelectorAll('div')) {
+    const text = div.textContent?.trim() || '';
+    if (
+      text.length > 20 &&
+      text.length > longest.length &&
+      text.length < 5000 &&
+      div.children.length < 3 &&
+      !/^\d+\s*star/i.test(text) &&
+      !div.closest(`.${BUTTON_CLASS}`) &&
+      !div.closest(`.${RESULT_CLASS}`)
     ) {
       longest = text;
     }
