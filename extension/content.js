@@ -265,19 +265,20 @@ async function handleClick(button, reviewText, rating, lang) {
     });
 
     if (!response?.ok) {
-      if (response?.error === 'PAYWALL') {
-        const { user } = await chrome.storage.local.get('user');
-        if (user?.email) {
-          showResult(button, t('paywallMessage'), 'error');
-          chrome.runtime.sendMessage({
-            type: 'OPEN_CHECKOUT',
-            payload: { email: user.email },
-          });
-        } else {
-          showResult(button, t('signInRequired'), 'error');
-        }
-        return;
-      }
+      // PAYWALL DISABLED — app is free for now
+      // if (response?.error === 'PAYWALL') {
+      //   const { user } = await chrome.storage.local.get('user');
+      //   if (user?.email) {
+      //     showResult(button, t('paywallMessage'), 'error');
+      //     chrome.runtime.sendMessage({
+      //       type: 'OPEN_CHECKOUT',
+      //       payload: { email: user.email },
+      //     });
+      //   } else {
+      //     showResult(button, t('signInRequired'), 'error');
+      //   }
+      //   return;
+      // }
       throw new Error(response?.error || 'Unknown error');
     }
     showResult(button, response.reply, 'success');

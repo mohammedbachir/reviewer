@@ -119,13 +119,17 @@ async function clearLocalUser() {
 // --- UI Updates ---
 
 function updateUsageText(user) {
-  if (user.is_paid) {
-    usageText.textContent = t('planPro');
-    return;
-  }
+  // PAYWALL DISABLED — app is free for now
+  usageText.textContent = t('planPro');
+  return;
 
-  const remaining = Math.max(FREE_REPLY_LIMIT - (user.replies_count ?? 0), 0);
-  usageText.textContent = t('freeRepliesLeft')(remaining);
+  // if (user.is_paid) {
+  //   usageText.textContent = t('planPro');
+  //   return;
+  // }
+
+  // const remaining = Math.max(FREE_REPLY_LIMIT - (user.replies_count ?? 0), 0);
+  // usageText.textContent = t('freeRepliesLeft')(remaining);
 }
 
 function hydrateSettingsForm(user) {
@@ -147,10 +151,11 @@ function render() {
     return;
   }
 
-  if (!user.is_paid && user.replies_count >= FREE_REPLY_LIMIT) {
-    showSection('paywall');
-    return;
-  }
+  // PAYWALL DISABLED — app is free for now
+  // if (!user.is_paid && user.replies_count >= FREE_REPLY_LIMIT) {
+  //   showSection('paywall');
+  //   return;
+  // }
 
   if (isSetupComplete(user)) {
     updateUsageText(user);

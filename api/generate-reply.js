@@ -86,9 +86,10 @@ export default async function handler(req, res) {
       }, { onConflict: 'id' });
     }
 
-    if (!userData.is_paid && userData.replies_count >= FREE_REPLY_LIMIT) {
-      return res.status(403).json({ error: 'PAYWALL' });
-    }
+    // PAYWALL DISABLED — app is free for now
+    // if (!userData.is_paid && userData.replies_count >= FREE_REPLY_LIMIT) {
+    //   return res.status(403).json({ error: 'PAYWALL' });
+    // }
 
     const toneMap = {
       friendly: 'Friendly & Warm',
