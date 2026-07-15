@@ -311,35 +311,105 @@
   }
   .modal-overlay.open{display:flex;}
   .modal-box{
-    background:var(--white); max-width:520px; width:90%; max-height:85vh;
-    overflow-y:auto; padding:36px 32px; position:relative;
+    background:var(--bg,#FFFDF7); max-width:600px; width:92%; max-height:85vh;
+    overflow-y:auto; border-radius:18px; position:relative;
     box-shadow:0 20px 60px rgba(0,0,0,0.3);
-    border:1px solid var(--rule);
+    padding:32px 30px 26px;
   }
   .modal-close{
     position:absolute; top:14px; right:16px; background:none; border:none;
-    font-size:22px; cursor:pointer; color:var(--text-muted); line-height:1;
+    font-size:22px; cursor:pointer; color:var(--text-muted); line-height:1; z-index:2;
   }
   .modal-close:hover{color:var(--ink);}
-  .modal-box h3{font-family:'Fraunces',serif; font-weight:700; font-size:22px; color:var(--ink); margin-bottom:6px;}
-  .modal-box .modal-sub{font-size:14px; color:var(--text-muted); margin-bottom:24px;}
-  .install-step{
-    display:flex; gap:14px; align-items:flex-start; padding:14px 0;
-    border-bottom:1px solid var(--rule);
+  .modal-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;}
+  .modal-brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; color:var(--ink);}
+  .modal-brand .dot{width:9px;height:9px;border-radius:3px;background:var(--brick); transform:rotate(45deg);}
+  .modal-stepcount{font-size:12.5px; color:var(--text-muted); font-weight:600;}
+  .modal-dots{display:flex; gap:7px; margin-bottom:26px;}
+  .modal-dots span{
+    flex:1; height:5px; border-radius:3px; background:var(--rule); cursor:pointer;
+    transition:background .3s ease;
   }
-  .install-step:last-child{border-bottom:none;}
-  .step-num{
-    flex-shrink:0; width:28px; height:28px; border-radius:50%;
-    background:var(--brick); color:var(--cream-text);
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:13px;
+  .modal-dots span.done{background:var(--brick-dark);}
+  .modal-dots span.active{background:var(--brick);}
+  .modal-stage{position:relative; min-height:280px;}
+  .modal-step{
+    position:absolute; inset:0; opacity:0; transform:translateY(18px);
+    transition:opacity .5s ease, transform .5s ease; pointer-events:none;
+    display:flex; flex-direction:column; align-items:center; text-align:center; gap:18px;
+    padding-top:6px;
   }
-  .step-body h4{font-weight:600; font-size:14.5px; color:var(--ink); margin-bottom:3px;}
-  .step-body p{font-size:13.5px; line-height:1.6; color:var(--text-muted);}
-  .step-body code{
-    background:var(--paper); padding:2px 6px; border-radius:3px;
-    font-size:12.5px; color:var(--brick); font-weight:600;
+  .modal-step.active{opacity:1; transform:translateY(0); pointer-events:auto; position:relative;}
+  .modal-step h2{font-size:19px; font-weight:700; line-height:1.5; max-width:420px; color:var(--ink);}
+  .modal-visual{height:130px; display:flex; align-items:center; justify-content:center; width:100%;}
+  .modal-nav{display:flex; align-items:center; justify-content:space-between; margin-top:26px;}
+  .modal-btn{
+    border:none; font-family:inherit; font-weight:700; font-size:14px; cursor:pointer;
+    padding:12px 24px; border-radius:8px; transition:transform .12s, box-shadow .12s, opacity .2s;
   }
+  .modal-btn-next{background:var(--brick); color:#F1EADA; box-shadow:0 4px 0 var(--brick-dark);}
+  .modal-btn-next:active{transform:translateY(4px); box-shadow:0 0 0 var(--brick-dark);}
+  .modal-btn-back{background:none; color:var(--text-muted);}
+  .modal-btn-back:disabled{opacity:0; pointer-events:none;}
+  .modal-hint{font-size:11.5px; color:var(--text-muted); text-align:center; margin-top:14px;}
+  .modal-cta{
+    margin-top:2px; background:var(--ink); color:#F1EADA; border:none; padding:11px 20px;
+    border-radius:8px; font-weight:700; font-size:13.5px; font-family:inherit; cursor:pointer;
+  }
+  .confetti{position:absolute; top:0; width:8px; height:8px; border-radius:2px; opacity:.9;}
+
+  /* Install guide visuals */
+  .ig-chrome{animation:none;}
+  .modal-step.active .ig-chrome{animation:igBounce .8s cubic-bezier(.34,1.56,.64,1) .1s both;}
+  @keyframes igBounce{0%{transform:scale(.3) translateY(30px);opacity:0}60%{transform:scale(1.12) translateY(-6px);opacity:1}80%{transform:scale(.95)}100%{transform:scale(1)}}
+  .ig-addrbar{
+    width:100%; max-width:380px; background:#F4F1E7; border:1px solid var(--rule);
+    border-radius:10px; padding:12px 16px; font-size:14.5px; text-align:left; direction:ltr;
+    display:flex; align-items:center; gap:8px; color:var(--ink); font-weight:500;
+  }
+  .ig-addrbar svg{flex-shrink:0; opacity:.55}
+  .ig-caret{display:inline-block;width:2px;height:15px;background:var(--brick);margin-inline-start:2px;animation:blink 1s steps(1) infinite;}
+  .ig-togglewrap{display:flex; align-items:center; gap:14px; font-size:15px; font-weight:600;}
+  .ig-toggle{
+    width:52px; height:30px; border-radius:20px; background:#D8D2C0; position:relative;
+    cursor:pointer; transition:background .35s ease; flex-shrink:0;
+  }
+  .ig-toggle.on{background:#3d6b4c;}
+  .ig-toggle .knob{
+    position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%;
+    background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.25); transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  .ig-toggle.on .knob{transform:translateX(22px);}
+  .ig-togglabel{color:var(--text-muted);}
+  .ig-toggle.on ~ .ig-togglabel, .ig-togglewrap .ig-togglabel.on{color:var(--ink);}
+  .ig-loadbtn{
+    background:var(--brick); color:#F1EADA; border:none; padding:12px 22px; border-radius:8px;
+    font-weight:700; font-size:14.5px; font-family:inherit; cursor:pointer;
+    box-shadow:0 4px 0 var(--brick-dark); transition:transform .12s, box-shadow .12s;
+  }
+  .ig-loadbtn.pressed{transform:translateY(4px); box-shadow:0 0 0 var(--brick-dark);}
+  .ig-filedialog{
+    margin-top:14px; width:100%; max-width:320px; background:#fff; border:1px solid var(--rule);
+    border-radius:10px; box-shadow:0 8px 20px rgba(28,43,33,.15); padding:14px 16px;
+    opacity:0; transform:translateY(-10px) scale(.96); transition:opacity .4s ease, transform .4s ease;
+    text-align:left; direction:ltr;
+  }
+  .ig-filedialog.show{opacity:1; transform:translateY(0) scale(1);}
+  .ig-filedialog .frow{display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:6px; font-size:13px;}
+  .ig-filedialog .frow.sel{background:#F4F1E7; font-weight:600;}
+  .ig-filedialog button{
+    margin-top:10px; width:100%; background:var(--brick); color:#F1EADA; border:none;
+    padding:8px; border-radius:6px; font-size:12.5px; font-weight:700; font-family:inherit; cursor:pointer;
+  }
+  .ig-checkwrap{width:90px;height:90px;border-radius:50%;background:var(--brick);display:flex;align-items:center;justify-content:center;position:relative;}
+  .modal-step.active .ig-checkwrap{animation:igPop .6s cubic-bezier(.34,1.56,.64,1) both;}
+  @keyframes igPop{0%{transform:scale(0)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+  .ig-checkwrap::after{
+    content:""; position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--brick);
+    opacity:0;
+  }
+  .modal-step.active .ig-checkwrap::after{animation:igRing 1.4s ease-out .5s infinite;}
+  @keyframes igRing{0%{transform:scale(.9);opacity:.6}100%{transform:scale(1.5);opacity:0}}
   .footer-word svg{ width:24px; height:24px; flex-shrink:0; }
 
   .reveal{opacity:0; transform:translateY(22px); transition:opacity .7s ease, transform .7s ease;}
@@ -527,50 +597,79 @@
 
 <!-- Install Modal -->
 <div class="modal-overlay" id="install-modal">
-  <div class="modal-box">
+  <div class="modal-box" id="ig-card">
     <button class="modal-close" onclick="document.getElementById('install-modal').classList.remove('open')">&times;</button>
-    <h3>Install Reviewer</h3>
-    <p class="modal-sub">Follow these steps to add Reviewer to your Chrome browser.</p>
+    <div class="modal-top">
+      <div class="modal-brand"><span class="dot"></span>Reviewer</div>
+      <div class="modal-stepcount" id="ig-stepcount">Step 1 of 5</div>
+    </div>
+    <div class="modal-dots" id="ig-dots"></div>
 
-    <div class="install-step">
-      <div class="step-num">1</div>
-      <div class="step-body">
-        <h4>Download the extension</h4>
-        <p>Download the extension from <a href="https://github.com/mohammedbachir/reviewer/archive/refs/heads/main.zip" style="color:var(--brick);font-weight:600;">GitHub</a> and extract it to a folder on your computer.</p>
+    <div class="modal-stage" id="ig-stage">
+      <div class="modal-step" data-step="0">
+        <h2>Open Chrome browser</h2>
+        <div class="modal-visual">
+          <svg class="ig-chrome" width="96" height="96" viewBox="0 0 96 96">
+            <circle cx="48" cy="48" r="46" fill="#fff" stroke="#eee" stroke-width="1"/>
+            <path d="M48 48 L83 48 A35 35 0 0 0 27.5 20.5 Z" fill="#EA4335"/>
+            <path d="M48 48 L27.5 20.5 A35 35 0 0 0 44 82.5 Z" fill="#34A853"/>
+            <path d="M48 48 L44 82.5 A35 35 0 0 0 83 48 Z" fill="#FBBC05"/>
+            <circle cx="48" cy="48" r="16" fill="#4285F4"/>
+            <circle cx="48" cy="48" r="16" fill="none" stroke="#fff" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+
+      <div class="modal-step" data-step="1">
+        <h2>Type <b style="color:var(--brick)">chrome://extensions</b> in the address bar</h2>
+        <div class="modal-visual">
+          <div class="ig-addrbar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z" stroke="#1C2B21" stroke-width="1.5"/></svg>
+            <span id="ig-typed"></span><span class="ig-caret"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-step" data-step="2">
+        <h2>Enable <b style="color:var(--brick)">Developer mode</b></h2>
+        <div class="modal-visual">
+          <div class="ig-togglewrap">
+            <span class="ig-togglabel" id="ig-toglOff">Off</span>
+            <div class="ig-toggle" id="ig-toggle"><div class="knob"></div></div>
+            <span class="ig-togglabel" id="ig-toglOn">On</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-step" data-step="3">
+        <h2>Click <b style="color:var(--brick)">Load unpacked</b> and select the extension folder</h2>
+        <div class="modal-visual" style="flex-direction:column; gap:0;">
+          <button class="ig-loadbtn" id="ig-loadbtn">Load unpacked</button>
+          <div class="ig-filedialog" id="ig-filedialog">
+            <div class="frow">Desktop</div>
+            <div class="frow sel">reviewer-extension</div>
+            <div class="frow">Downloads</div>
+            <button>Select Folder</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-step" data-step="4">
+        <h2>You're ready! Open your Google Business Reviews page</h2>
+        <div class="modal-visual">
+          <div class="ig-checkwrap">
+            <svg width="42" height="42" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 6" stroke="#F1EADA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <button class="modal-cta" onclick="igRestart()">Watch again</button>
       </div>
     </div>
 
-    <div class="install-step">
-      <div class="step-num">2</div>
-      <div class="step-body">
-        <h4>Open Chrome Extensions</h4>
-        <p>Type <code>chrome://extensions</code> in your address bar and press Enter.</p>
-      </div>
+    <div class="modal-nav">
+      <button class="modal-btn modal-btn-back" id="ig-backBtn">Back</button>
+      <button class="modal-btn modal-btn-next" id="ig-nextBtn">Next</button>
     </div>
-
-    <div class="install-step">
-      <div class="step-num">3</div>
-      <div class="step-body">
-        <h4>Enable Developer mode</h4>
-        <p>Toggle the <strong>Developer mode</strong> switch in the top-right corner.</p>
-      </div>
-    </div>
-
-    <div class="install-step">
-      <div class="step-num">4</div>
-      <div class="step-body">
-        <h4>Load the extension</h4>
-        <p>Click <strong>Load unpacked</strong> and select the extracted extension folder.</p>
-      </div>
-    </div>
-
-    <div class="install-step">
-      <div class="step-num">5</div>
-      <div class="step-body">
-        <h4>You're ready!</h4>
-        <p>Open your <strong>Google Business Reviews</strong> page and you'll see the <strong>Give it Answer</strong> button on each review.</p>
-      </div>
-    </div>
+    <div class="modal-hint">Use arrow keys or swipe to navigate</div>
   </div>
 </div>
 
@@ -663,6 +762,164 @@ pileObserver.observe(stage);
 document.getElementById('install-modal').addEventListener('click', function(e) {
   if (e.target === this) this.classList.remove('open');
 });
+
+/* === Install Guide Animator === */
+(function(){
+  const steps = document.querySelectorAll('.modal-step');
+  const dotsWrap = document.getElementById('ig-dots');
+  const nextBtn = document.getElementById('ig-nextBtn');
+  const backBtn = document.getElementById('ig-backBtn');
+  const stepcount = document.getElementById('ig-stepcount');
+  let current = 0, visited = new Set([0]);
+
+  steps.forEach((_,i)=>{
+    const d = document.createElement('span');
+    d.addEventListener('click',()=>{ if(visited.has(i)) igGoTo(i); });
+    dotsWrap.appendChild(d);
+  });
+  const dotEls = dotsWrap.children;
+
+  function igRender(){
+    steps.forEach((s,i)=> s.classList.toggle('active', i===current));
+    Array.from(dotEls).forEach((d,i)=>{
+      d.classList.toggle('active', i===current);
+      d.classList.toggle('done', i<current);
+    });
+    stepcount.textContent = `Step ${current+1} of ${steps.length}`;
+    backBtn.disabled = current===0;
+    nextBtn.textContent = current===steps.length-1 ? 'Done' : 'Next';
+    igRunEffect(current);
+  }
+
+  function igGoTo(i){
+    current = Math.max(0, Math.min(steps.length-1, i));
+    visited.add(current);
+    igRender();
+  }
+  window.igGoTo = igGoTo;
+
+  nextBtn.addEventListener('click', ()=>{
+    if(current===steps.length-1){ igRestart(); return; }
+    igGoTo(current+1);
+  });
+  backBtn.addEventListener('click', ()=> igGoTo(current-1));
+
+  document.addEventListener('keydown', e=>{
+    if(!document.getElementById('install-modal').classList.contains('open')) return;
+    if(e.key==='ArrowLeft') igGoTo(current-1);
+    if(e.key==='ArrowRight'||e.key==='Enter') igGoTo(current+1);
+  });
+
+  const card = document.getElementById('ig-card');
+  let wheelLock = false;
+  card.addEventListener('wheel', e=>{
+    if(!document.getElementById('install-modal').classList.contains('open')) return;
+    e.preventDefault();
+    if(wheelLock) return;
+    wheelLock = true;
+    if(e.deltaY>10) igGoTo(current+1);
+    else if(e.deltaY<-10) igGoTo(current-1);
+    setTimeout(()=> wheelLock=false, 650);
+  }, {passive:false});
+
+  let touchX=0;
+  card.addEventListener('touchstart', e=> touchX = e.touches[0].clientX);
+  card.addEventListener('touchend', e=>{
+    const dx = e.changedTouches[0].clientX - touchX;
+    if(dx < -40) igGoTo(current+1);
+    else if(dx > 40) igGoTo(current-1);
+  });
+
+  /* typing effect */
+  const typedEl = document.getElementById('ig-typed');
+  let typeTimer=null;
+  function igTypeText(){
+    clearTimeout(typeTimer);
+    const text = 'chrome://extensions';
+    typedEl.textContent='';
+    let i=0;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduced){ typedEl.textContent=text; return; }
+    (function step(){
+      if(i<=text.length){ typedEl.textContent=text.slice(0,i); i++; typeTimer=setTimeout(step,55); }
+    })();
+  }
+
+  /* toggle */
+  const toggle = document.getElementById('ig-toggle');
+  const toglOn = document.getElementById('ig-toglOn');
+  let toggleTimer=null;
+  function igPlayToggle(){
+    toggle.classList.remove('on'); toglOn.classList.remove('on');
+    clearTimeout(toggleTimer);
+    toggleTimer = setTimeout(()=>{ toggle.classList.add('on'); toglOn.classList.add('on'); }, 700);
+  }
+  toggle.addEventListener('click', ()=> toggle.classList.toggle('on'));
+
+  /* load unpacked */
+  const loadbtn = document.getElementById('ig-loadbtn');
+  const filedialog = document.getElementById('ig-filedialog');
+  let loadTimer=null, loadTimer2=null;
+  function igPlayLoad(){
+    loadbtn.classList.remove('pressed'); filedialog.classList.remove('show');
+    clearTimeout(loadTimer); clearTimeout(loadTimer2);
+    loadTimer = setTimeout(()=>{
+      loadbtn.classList.add('pressed');
+      loadTimer2 = setTimeout(()=> filedialog.classList.add('show'), 250);
+    }, 600);
+  }
+  loadbtn.addEventListener('click', ()=>{
+    loadbtn.classList.add('pressed');
+    setTimeout(()=> filedialog.classList.toggle('show'), 150);
+  });
+
+  /* confetti */
+  function igConfetti(){
+    const colors=['#A63E2E','#C89A3A','#1C2B21','#3d6b4c'];
+    for(let i=0;i<28;i++){
+      const c = document.createElement('div');
+      c.className='confetti';
+      c.style.left = Math.random()*100+'%';
+      c.style.background = colors[Math.floor(Math.random()*colors.length)];
+      c.style.top = '-10px';
+      c.style.transform = `rotate(${Math.random()*360}deg)`;
+      card.appendChild(c);
+      const dur = 1400 + Math.random()*900;
+      const drift = (Math.random()-0.5)*140;
+      c.animate([
+        {transform:`translate(0,0) rotate(0deg)`, opacity:1},
+        {transform:`translate(${drift}px, 340px) rotate(${360+Math.random()*360}deg)`, opacity:0}
+      ], {duration:dur, easing:'cubic-bezier(.3,.6,.4,1)'});
+      setTimeout(()=> c.remove(), dur+50);
+    }
+  }
+
+  function igRunEffect(i){
+    if(i===1) igTypeText();
+    if(i===2) igPlayToggle();
+    if(i===3) igPlayLoad();
+    if(i===4) setTimeout(igConfetti, 300);
+  }
+
+  window.igRestart = function(){ current=0; visited=new Set([0]); igRender(); };
+
+  /* reset when modal opens */
+  document.getElementById('install-modal').addEventListener('click', function(e){
+    if(e.target === this){ this.classList.remove('open'); }
+  });
+  const origOpen = HTMLDivElement.prototype.classList;
+  const observer = new MutationObserver((mutations)=>{
+    mutations.forEach(m=>{
+      if(m.attributeName === 'class'){
+        const modal = document.getElementById('install-modal');
+        if(modal.classList.contains('open') && current === 0 && visited.size === 1){
+          igRestart();
+        }
+      }
+    });
+  });
+  observer.observe(document.getElementById('install-modal'), {attributes:true});
+})();
 </script>
 </body>
 </html>
