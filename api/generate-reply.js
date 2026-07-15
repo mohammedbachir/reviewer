@@ -18,17 +18,25 @@ const FREE_REPLY_LIMIT = 5;
 function cleanReply(text) {
   if (!text) return text;
 
-  const lines = text.split('\n').filter(line => {
+  let result = text.trim();
+
+  // Remove wrapping quotes
+  result = result.replace(/^["'""]|["'""]$/g, '');
+
+  // Remove anything after "Reply:" or "Reply in" if it's the AI explaining
+  result = result.replace(/\n\s*(Reply|Answer|Response|Output|Here)[:\s].*$/is, '');
+
+  // Remove lines that look like AI reasoning/explanations
+  result = result.split('\n').filter(line => {
     const trimmed = line.trim();
-    if (!trimmed) return true;
-    if (trimmed.length < 8 && /^[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ\s]{3,}$/.test(trimmed)) {
-      return false;
-    }
+    // Skip lines that are clearly not replies
+    if (/^(RULES|NOTE|IMPORTANT|STEP|BREAKDOWN|SCORE|ANALYSIS|REASONING|EXPLANATION|CONTEXT|INSTRUCTION)/i.test(trimmed)) return false;
+    if (/^(I need to|I should|Let me|First|Second|Third|Finally|In conclusion)/i.test(trimmed)) return false;
+    if (/^(The review|The customer|This review|The rating)/i.test(trimmed)) return false;
     return true;
-  });
+  }).join('\n');
 
-  let result = lines.join('\n').trim();
-
+  // Remove trailing gibberish
   result = result.replace(/([.!?؟！])([^.!?؟！\n]{0,30})$/s, (match, punct, tail) => {
     if (tail.trim().length < 5 || /^[^\s]{3,}$/.test(tail.trim())) {
       return punct;
@@ -36,8 +44,16 @@ function cleanReply(text) {
     return match;
   });
 
-  // Remove wrapping quotes if present
-  result = result.replace(/^["'""]|["'""]$/g, '');
+  // If result is way too long, truncate at last sentence under 300 chars
+  if (result.length > 300) {
+    const sentences = result.match(/[^.!?؟!]+[.!?؟!]+/g) || [result];
+    let truncated = '';
+    for (const s of sentences) {
+      if ((truncated + s).length > 280) break;
+      truncated += s;
+    }
+    result = truncated || result.substring(0, 280);
+  }
 
   return result.trim();
 }
@@ -45,41 +61,53 @@ function cleanReply(text) {
 // ─── Agent Prompts ──────────────────────────────────────────────────────────
 
 const AGENT_PROMPTS = {
-  friendly: (ctx) => `You are a friendly, warm business owner replying to a customer review for ${ctx.businessName}. 
+  friendly: (ctx) => `Reply to this customer review as a friendly, warm business owner for ${ctx.businessName}.
 
-Customer review: "${ctx.reviewText}" (${ctx.rating}-stars)
+Review: "${ctx.reviewText}" (${ctx.rating} stars)
 
-Write a SHORT, warm reply (1-3 sentences max). Sound like a real person, not a robot. Use natural language. Be genuine and heartfelt. Do NOT use phrases like "Thank you for your feedback" or "We appreciate your review". Just talk like a real human would.
+RULES:
+- 1-3 sentences ONLY
+- Be genuine, warm, natural
+- NO robotic phrases like "Thank you for your feedback"
+- NO explanations, NO reasoning, just the reply text
+- ${ctx.replyLang} language only
+${ctx.strategyAdvice ? `- ${ctx.strategyAdvice}` : ''}
+${ctx.signOff ? `- End with: ${ctx.signOff}` : ''}
+${ctx.customInstructions ? `- ${ctx.customInstructions}` : ''}
 
-${ctx.strategyAdvice}
-${ctx.signOff ? `Sign off: ${ctx.signOff}` : ''}
-${ctx.customInstructions ? `Extra instructions: ${ctx.customInstructions}` : ''}
+Write ONLY the reply text, nothing else:`,
 
-Reply in ${ctx.replyLang}:`,
+  professional: (ctx) => `Reply to this customer review as a professional business representative for ${ctx.businessName}.
 
-  professional: (ctx) => `You are a professional business representative replying to a customer review for ${ctx.businessName}.
+Review: "${ctx.reviewText}" (${ctx.rating} stars)
 
-Customer review: "${ctx.reviewText}" (${ctx.rating}-stars)
+RULES:
+- 1-3 sentences ONLY
+- Polished but human, NOT corporate
+- NO phrases like "Thank you for your feedback" or "We value your business"
+- NO explanations, NO reasoning, just the reply text
+- ${ctx.replyLang} language only
+${ctx.strategyAdvice ? `- ${ctx.strategyAdvice}` : ''}
+${ctx.signOff ? `- End with: ${ctx.signOff}` : ''}
+${ctx.customInstructions ? `- ${ctx.customInstructions}` : ''}
 
-Write a SHORT, professional reply (1-3 sentences max). Be respectful and polished but NOT robotic. Avoid corporate-speak. Sound like a real professional person, not an AI template. Never say "Thank you for your feedback" or "We value your business".
+Write ONLY the reply text, nothing else:`,
 
-${ctx.strategyAdvice}
-${ctx.signOff ? `Sign off: ${ctx.signOff}` : ''}
-${ctx.customInstructions ? `Extra instructions: ${ctx.customInstructions}` : ''}
+  casual: (ctx) => `Reply to this customer review as a casual, laid-back business owner for ${ctx.businessName}.
 
-Reply in ${ctx.replyLang}:`,
+Review: "${ctx.reviewText}" (${ctx.rating} stars)
 
-  casual: (ctx) => `You are a casual, laid-back business owner replying to a customer review for ${ctx.businessName}.
+RULES:
+- 1-3 sentences ONLY
+- Use contractions, be relaxed, sound like a real person
+- NO formal AI phrases
+- NO explanations, NO reasoning, just the reply text
+- ${ctx.replyLang} language only
+${ctx.strategyAdvice ? `- ${ctx.strategyAdvice}` : ''}
+${ctx.signOff ? `- End with: ${ctx.signOff}` : ''}
+${ctx.customInstructions ? `- ${ctx.customInstructions}` : ''}
 
-Customer review: "${ctx.reviewText}" (${ctx.rating}-stars)
-
-Write a SHORT, casual reply (1-3 sentences max). Be relaxed and genuine. Use contractions, casual expressions. Sound like a real person texting a friend. Never use formal AI phrases. Keep it real and relatable.
-
-${ctx.strategyAdvice}
-${ctx.signOff ? `Sign off: ${ctx.signOff}` : ''}
-${ctx.customInstructions ? `Extra instructions: ${ctx.customInstructions}` : ''}
-
-Reply in ${ctx.replyLang}:`,
+Write ONLY the reply text, nothing else:`,
 };
 
 // ─── Generate one reply from one agent ──────────────────────────────────────
@@ -96,7 +124,7 @@ async function generateAgentReply(agentName, prompt) {
         model: 'openrouter/free',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.85,
-        max_tokens: 200,
+        max_tokens: 150,
       }),
     });
 
