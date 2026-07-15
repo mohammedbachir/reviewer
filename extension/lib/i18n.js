@@ -46,7 +46,7 @@ const TRANSLATIONS = {
     // Popup — Ready
     allSet: 'You\'re all set',
     readyText: 'Go to your Google Business Reviews and click the Give it Answer button.',
-    planPro: 'Plan: Pro — unlimited replies',
+    planPro: 'Ready to reply',
     freeRepliesLeft: (n) => `You have ${n} free ${n === 1 ? 'reply' : 'replies'} left.`,
     editSettings: 'Edit settings',
 
@@ -118,7 +118,7 @@ const TRANSLATIONS = {
     // Popup — Ready
     allSet: 'You\'re all set',
     readyText: 'Go to your Google Business Reviews and click the Give it Answer button.',
-    planPro: 'Plan: Pro — unlimited replies',
+    planPro: 'Ready to reply',
     freeRepliesLeft: (n) => `You have ${n} free ${n === 1 ? 'reply' : 'replies'} left.`,
     editSettings: 'Edit settings',
 
