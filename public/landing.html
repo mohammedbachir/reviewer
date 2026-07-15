@@ -302,6 +302,44 @@
     font-size:13px; color:rgba(241,234,218,0.45);
   }
   .footer-word{ font-family:'Fraunces',serif; font-weight:700; color:rgba(241,234,218,0.75); font-size:15px; display:flex; align-items:center; gap:8px; }
+
+  /* ---------- INSTALL MODAL ---------- */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; z-index:100;
+    background:rgba(28,43,33,0.6); backdrop-filter:blur(4px);
+    justify-content:center; align-items:center;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--white); max-width:520px; width:90%; max-height:85vh;
+    overflow-y:auto; padding:36px 32px; position:relative;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+    border:1px solid var(--rule);
+  }
+  .modal-close{
+    position:absolute; top:14px; right:16px; background:none; border:none;
+    font-size:22px; cursor:pointer; color:var(--text-muted); line-height:1;
+  }
+  .modal-close:hover{color:var(--ink);}
+  .modal-box h3{font-family:'Fraunces',serif; font-weight:700; font-size:22px; color:var(--ink); margin-bottom:6px;}
+  .modal-box .modal-sub{font-size:14px; color:var(--text-muted); margin-bottom:24px;}
+  .install-step{
+    display:flex; gap:14px; align-items:flex-start; padding:14px 0;
+    border-bottom:1px solid var(--rule);
+  }
+  .install-step:last-child{border-bottom:none;}
+  .step-num{
+    flex-shrink:0; width:28px; height:28px; border-radius:50%;
+    background:var(--brick); color:var(--cream-text);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:13px;
+  }
+  .step-body h4{font-weight:600; font-size:14.5px; color:var(--ink); margin-bottom:3px;}
+  .step-body p{font-size:13.5px; line-height:1.6; color:var(--text-muted);}
+  .step-body code{
+    background:var(--paper); padding:2px 6px; border-radius:3px;
+    font-size:12.5px; color:var(--brick); font-weight:600;
+  }
   .footer-word svg{ width:24px; height:24px; flex-shrink:0; }
 
   .reveal{opacity:0; transform:translateY(22px); transition:opacity .7s ease, transform .7s ease;}
@@ -362,7 +400,7 @@
     <h1>Reply to every review in <em>seconds</em>, not fifteen minutes</h1>
     <p class="lead">Reviewer reads your customers' Google reviews and drafts a reply that's ready to post. You just approve — and it stamps it sent.</p>
     <div class="hero-ctas">
-      <button class="stampbtn" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">Install Reviewer — it's free</button>
+      <button class="stampbtn" onclick="document.getElementById('install-modal').classList.add('open')">Install Reviewer — it's free</button>
       <a class="textlink" href="#how">See how it works ↓</a>
     </div>
   </div>
@@ -458,7 +496,7 @@
         </g>
       </svg>
     </div>
-    <button class="stampbtn" onclick="alert('Chrome Web Store link goes here')" style="margin-bottom:70px;">Install Reviewer from the Chrome Web Store</button>
+    <button class="stampbtn" onclick="document.getElementById('install-modal').classList.add('open')" style="margin-bottom:70px;">Install Reviewer from the Chrome Web Store</button>
 
     <div class="footer-bottom">
       <div class="footer-word">
@@ -486,6 +524,55 @@
     </div>
   </div>
 </section>
+
+<!-- Install Modal -->
+<div class="modal-overlay" id="install-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('install-modal').classList.remove('open')">&times;</button>
+    <h3>Install Reviewer</h3>
+    <p class="modal-sub">Follow these steps to add Reviewer to your Chrome browser.</p>
+
+    <div class="install-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h4>Download the extension</h4>
+        <p>Download the extension from <a href="https://github.com/mohammedbachir/reviewer/archive/refs/heads/main.zip" style="color:var(--brick);font-weight:600;">GitHub</a> and extract it to a folder on your computer.</p>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h4>Open Chrome Extensions</h4>
+        <p>Type <code>chrome://extensions</code> in your address bar and press Enter.</p>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h4>Enable Developer mode</h4>
+        <p>Toggle the <strong>Developer mode</strong> switch in the top-right corner.</p>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h4>Load the extension</h4>
+        <p>Click <strong>Load unpacked</strong> and select the extracted extension folder.</p>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h4>You're ready!</h4>
+        <p>Open your <strong>Google Business Reviews</strong> page and you'll see the <strong>Give it Answer</strong> button on each review.</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 function starSVG(filled){
@@ -572,6 +659,10 @@ const pileObserver = new IntersectionObserver((entries)=>{
   });
 }, {threshold:0.35});
 pileObserver.observe(stage);
+
+document.getElementById('install-modal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('open');
+});
 </script>
 </body>
 </html>
