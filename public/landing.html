@@ -459,7 +459,7 @@
       </svg>
       <span>Reviewer</span>
     </div>
-    <button class="nav-cta" onclick="document.getElementById('cta-final').scrollIntoView({behavior:'smooth'})">Install extension</button>
+    <button class="nav-cta" onclick="document.getElementById('install-modal').classList.add('open')">Install extension</button>
   </div>
 </nav>
 
@@ -618,6 +618,7 @@
             <circle cx="48" cy="48" r="16" fill="none" stroke="#fff" stroke-width="3"/>
           </svg>
         </div>
+        <a href="https://github.com/mohammedbachir/reviewer/archive/refs/heads/main.zip" style="color:var(--brick);font-weight:600;font-size:14px;">Download the extension first</a>
       </div>
 
       <div class="modal-step" data-step="1">
@@ -661,7 +662,10 @@
             <svg width="42" height="42" viewBox="0 0 24 24" fill="none"><path d="M4 12.5l5 5L20 6" stroke="#F1EADA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
         </div>
-        <button class="modal-cta" onclick="igRestart()">Watch again</button>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+          <a href="https://github.com/mohammedbachir/reviewer/archive/refs/heads/main.zip" class="modal-cta" style="text-decoration:none;display:inline-block;">Download Extension</a>
+          <button class="modal-cta" style="background:var(--ink);" onclick="igRestart()">Watch again</button>
+        </div>
       </div>
     </div>
 
