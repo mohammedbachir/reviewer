@@ -10,9 +10,9 @@ EMAIL_DELAY = 30         # Seconds between emails (avoid spam)
 LEADS_FILE = "leads.csv"
 
 # ─── Gmail SMTP ─────────────────────────────────────────────────────────────
-GMAIL_USER = ""          # your.email@gmail.com
-GMAIL_APP_PASSWORD = ""  # App Password from Google Account settings
-SENDER_NAME = ""         # Your name
+GMAIL_USER = "programmedesigners@gmail.com"
+GMAIL_APP_PASSWORD = "owbc hwpi dpmh mtcl"
+SENDER_NAME = "Bachir"
 
 # ─── Email Template ─────────────────────────────────────────────────────────
 SUBJECT = "Your customers are waiting for a reply"
