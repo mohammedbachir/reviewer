@@ -96,6 +96,106 @@ def save_to_csv(businesses, filename="leads.csv"):
     print(f"[Analyzer] Saved {len(businesses)} leads to {filename}")
 
 
+def save_to_pdf(businesses, filename="leads.pdf", city="", business_type=""):
+    """
+    Save businesses to a professional PDF table.
+    
+    Args:
+        businesses: List of business dicts
+        filename: Output PDF filename
+        city: City name for the title
+        business_type: Business type for the title
+    """
+    if not businesses:
+        print("[Analyzer] No businesses to save")
+        return
+    
+    from fpdf import FPDF
+    
+    class PDF(FPDF):
+        def header(self):
+            self.set_font('Helvetica', 'B', 10)
+            self.set_text_color(100, 100, 100)
+            self.cell(0, 8, f'Lead Generator Report - {city} / {business_type}', align='R', new_x="LMARGIN", new_y="NEXT")
+            self.line(10, self.get_y(), 287, self.get_y())
+            self.ln(3)
+        
+        def footer(self):
+            self.set_y(-15)
+            self.set_font('Helvetica', 'I', 8)
+            self.set_text_color(150, 150, 150)
+            self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
+    
+    pdf = PDF(orientation='L', unit='mm', format='A4')
+    pdf.alias_nb_pages()
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.add_page()
+    
+    # Title
+    pdf.set_font('Helvetica', 'B', 18)
+    pdf.set_text_color(28, 43, 33)  # #1C2B21
+    pdf.cell(0, 12, f'Lead Generator Report', new_x="LMARGIN", new_y="NEXT")
+    
+    pdf.set_font('Helvetica', '', 11)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 7, f'City: {city}  |  Type: {business_type}  |  Total: {len(businesses)} leads', new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(5)
+    
+    # Table header
+    pdf.set_font('Helvetica', 'B', 8)
+    pdf.set_fill_color(28, 43, 33)  # Dark green
+    pdf.set_text_color(255, 255, 255)  # White
+    
+    col_widths = [60, 45, 30, 40, 15, 15, 30, 30]
+    col_headers = ['Name', 'Address', 'Phone', 'Website', 'Rating', 'Reviews', 'Email', 'Priority']
+    
+    for i, header in enumerate(col_headers):
+        pdf.cell(col_widths[i], 8, header, border=1, fill=True, align='C')
+    pdf.ln()
+    
+    # Table rows
+    pdf.set_font('Helvetica', '', 7)
+    pdf.set_text_color(28, 43, 33)  # Dark green
+    
+    for idx, biz in enumerate(businesses):
+        # Alternate row colors
+        if idx % 2 == 0:
+            pdf.set_fill_color(245, 245, 240)  # Light gray
+        else:
+            pdf.set_fill_color(255, 255, 255)  # White
+        
+        row = [
+            str(biz.get('name', ''))[:35],
+            str(biz.get('address', ''))[:28],
+            str(biz.get('phone', ''))[:18],
+            str(biz.get('website', ''))[:25],
+            str(biz.get('rating', '')),
+            str(biz.get('review_count', '')),
+            str(biz.get('email', ''))[:20],
+            str(biz.get('target_priority', '')),
+        ]
+        
+        for i, cell in enumerate(row):
+            pdf.cell(col_widths[i], 7, cell, border=1, fill=True, align='C' if i in [4, 5, 7] else 'L')
+        pdf.ln()
+        
+        # Check if we need a new page
+        if pdf.get_y() > 180:
+            pdf.add_page()
+            # Re-draw header
+            pdf.set_font('Helvetica', 'B', 8)
+            pdf.set_fill_color(28, 43, 33)
+            pdf.set_text_color(255, 255, 255)
+            for i, header in enumerate(col_headers):
+                pdf.cell(col_widths[i], 8, header, border=1, fill=True, align='C')
+            pdf.ln()
+            pdf.set_font('Helvetica', '', 7)
+            pdf.set_text_color(28, 43, 33)
+    
+    pdf.output(filename)
+    print(f"[Analyzer] Saved {len(businesses)} leads to {filename}")
+
+
 def load_from_csv(filename="leads.csv"):
     """
     Load businesses from CSV file.

@@ -23,7 +23,7 @@ from config import (
     BODY_TEMPLATE
 )
 from finder import find_businesses
-from analyzer import analyze_response_rate, filter_leads, print_analysis, save_to_csv
+from analyzer import analyze_response_rate, filter_leads, print_analysis, save_to_csv, save_to_pdf
 from contact import enrich_with_emails
 from sender import send_outreach_emails
 
@@ -86,9 +86,9 @@ def show_menu():
     limit = int(limit_input) if limit_input.isdigit() else 20
     
     # Get save path
-    default_csv = f"{business_type.replace(' ', '_')}_{city.replace(' ', '_')}.csv"
-    csv_input = input(f"\n  Save CSV to [F:\\reviewer\\lead-generator\\{default_csv}]: ").strip()
-    save_path = csv_input if csv_input else f"F:\\reviewer\\lead-generator\\{default_csv}"
+    default_pdf = f"{business_type.replace(' ', '_')}_{city.replace(' ', '_')}.pdf"
+    csv_input = input(f"\n  Save PDF to [F:\\reviewer\\lead-generator\\{default_pdf}]: ").strip()
+    save_path = csv_input if csv_input else f"F:\\reviewer\\lead-generator\\{default_pdf}"
     
     # Get send option
     send_input = input("\n  Send emails? (y/n) [n]: ").strip().lower()
@@ -190,7 +190,11 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
         print("[Step 4/4] Email sending disabled\n")
     
     # Save results
-    save_to_csv(qualified, save_path)
+    save_to_pdf(qualified, save_path, city=city, business_type=business_type)
+    
+    # Also save CSV as backup
+    csv_path = save_path.replace('.pdf', '.csv')
+    save_to_csv(qualified, csv_path)
     
     # Summary
     print("\n" + "="*60)
