@@ -123,6 +123,38 @@ def load_from_csv(filename="leads.csv"):
     return businesses
 
 
+def filter_leads(leads, max_response_rate=30, min_reviews=5):
+    """
+    Filter leads based on criteria.
+    
+    Args:
+        leads: List of lead dicts
+        max_response_rate: Maximum response rate to consider
+        min_reviews: Minimum review count
+    
+    Returns:
+        Filtered list of leads
+    """
+    filtered = []
+    for lead in leads:
+        response_rate = float(lead.get('response_rate', 0))
+        review_count = int(lead.get('review_count', 0))
+        
+        if response_rate <= max_response_rate and review_count >= min_reviews:
+            filtered.append(lead)
+    
+    return filtered
+
+
+def print_analysis(analyzed):
+    """Print analysis summary."""
+    high = sum(1 for b in analyzed if b.get('target_priority') == 'high')
+    medium = sum(1 for b in analyzed if b.get('target_priority') == 'medium')
+    low = sum(1 for b in analyzed if b.get('target_priority') == 'low')
+    
+    print(f"\n[Analysis] Results: {high} high priority, {medium} medium, {low} low")
+
+
 if __name__ == "__main__":
     # Test
     test_biz = {
