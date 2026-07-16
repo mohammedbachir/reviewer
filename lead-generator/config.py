@@ -2,20 +2,17 @@
 Lead Generator — Configuration
 """
 
-# ─── Outscraper API ─────────────────────────────────────────────────────────
-OUTSCRAPER_API_KEY = ""  # Get free key from https://app.outscraper.com
-
-# ─── Gmail SMTP ─────────────────────────────────────────────────────────────
-GMAIL_USER = ""          # your.email@gmail.com
-GMAIL_APP_PASSWORD = ""  # App Password from Google Account settings
-SENDER_NAME = ""         # Your name
-
 # ─── Settings ───────────────────────────────────────────────────────────────
 SEARCH_LIMIT = 50        # Max businesses per search
 MIN_REVIEWS = 5          # Minimum reviews to consider
 MAX_RESPONSE_RATE = 30   # Target businesses with response rate below this %
 EMAIL_DELAY = 30         # Seconds between emails (avoid spam)
 LEADS_FILE = "leads.csv"
+
+# ─── Gmail SMTP ─────────────────────────────────────────────────────────────
+GMAIL_USER = ""          # your.email@gmail.com
+GMAIL_APP_PASSWORD = ""  # App Password from Google Account settings
+SENDER_NAME = ""         # Your name
 
 # ─── Email Template ─────────────────────────────────────────────────────────
 SUBJECT = "Your customers are waiting for a reply"

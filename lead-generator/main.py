@@ -9,7 +9,6 @@ import time
 from datetime import datetime
 
 from config import (
-    OUTSCRAPER_API_KEY,
     GMAIL_USER,
     GMAIL_APP_PASSWORD,
     SENDER_NAME,
@@ -94,8 +93,7 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, resume=False)
     businesses = find_businesses(
         city=city,
         business_type=business_type,
-        limit=limit,
-        api_key=OUTSCRAPER_API_KEY
+        limit=limit
     )
     
     if not businesses:
@@ -109,7 +107,7 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, resume=False)
     analyzed = []
     for i, biz in enumerate(businesses):
         print(f"[Step 2/4] Analyzing {i+1}/{len(businesses)}: {biz.get('name', 'Unknown')}")
-        analyzed_biz = analyze_response_rate(biz, OUTSCRAPER_API_KEY)
+        analyzed_biz = analyze_response_rate(biz)
         analyzed.append(analyzed_biz)
     
     print_analysis(analyzed)
