@@ -85,6 +85,11 @@ def show_menu():
     limit_input = input("\n  Max businesses to find [20]: ").strip()
     limit = int(limit_input) if limit_input.isdigit() else 20
     
+    # Get save path
+    default_csv = f"{business_type.replace(' ', '_')}_{city.replace(' ', '_')}.csv"
+    csv_input = input(f"\n  Save CSV to [F:\\reviewer\\lead-generator\\{default_csv}]: ").strip()
+    save_path = csv_input if csv_input else f"F:\\reviewer\\lead-generator\\{default_csv}"
+    
     # Get send option
     send_input = input("\n  Send emails? (y/n) [n]: ").strip().lower()
     send_emails = send_input in ('y', 'yes')
@@ -94,6 +99,7 @@ def show_menu():
     print(f"  City:            {city}")
     print(f"  Business type:   {business_type}")
     print(f"  Max results:     {limit}")
+    print(f"  Save CSV to:     {save_path}")
     print(f"  Send emails:     {'Yes' if send_emails else 'No (save only)'}")
     print("-"*60)
     
@@ -102,17 +108,21 @@ def show_menu():
         print("  Cancelled.")
         sys.exit(0)
     
-    return city, business_type, limit, send_emails
+    return city, business_type, limit, send_emails, save_path
 
 
-def run_pipeline(city, business_type, limit=50, send_emails=False):
+def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=None):
     """Run the full lead generation pipeline."""
+    if save_path is None:
+        save_path = LEADS_FILE
+    
     print("\n" + "="*60)
     print("  PIPELINE STARTED")
     print("="*60)
     print(f"  City: {city}")
     print(f"  Type: {business_type}")
     print(f"  Limit: {limit}")
+    print(f"  Save to: {save_path}")
     print("="*60 + "\n")
     
     # Step 1: Find businesses
@@ -180,7 +190,7 @@ def run_pipeline(city, business_type, limit=50, send_emails=False):
         print("[Step 4/4] Email sending disabled\n")
     
     # Save results
-    save_to_csv(qualified, LEADS_FILE)
+    save_to_csv(qualified, save_path)
     
     # Summary
     print("\n" + "="*60)
@@ -191,7 +201,7 @@ def run_pipeline(city, business_type, limit=50, send_emails=False):
     print(f"  Emails found:       {sum(1 for l in qualified if l.get('email'))}")
     if send_emails:
         print(f"  Emails sent:        {sum(1 for l in qualified if l.get('status') == 'sent')}")
-    print(f"  Results saved to:   {LEADS_FILE}")
+    print(f"  Results saved to:   {save_path}")
     print("="*60 + "\n")
 
 
@@ -201,6 +211,7 @@ def main():
     parser.add_argument('--type', help='Business type (interactive if not set)')
     parser.add_argument('--limit', type=int, default=20, help='Max businesses to find')
     parser.add_argument('--send', action='store_true', help='Send outreach emails')
+    parser.add_argument('--save', help='CSV file path to save results')
     parser.add_argument('--interactive', '-i', action='store_true', help='Interactive mode')
     
     args = parser.parse_args()
@@ -211,15 +222,17 @@ def main():
             city=args.city,
             business_type=args.type,
             limit=args.limit,
-            send_emails=args.send
+            send_emails=args.send,
+            save_path=args.save
         )
     else:
-        city, business_type, limit, send_emails = show_menu()
+        city, business_type, limit, send_emails, save_path = show_menu()
         run_pipeline(
             city=city,
             business_type=business_type,
             limit=limit,
-            send_emails=send_emails
+            send_emails=send_emails,
+            save_path=save_path
         )
 
 
