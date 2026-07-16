@@ -1,5 +1,5 @@
 """
-Lead Generator — Configuration
+FindLeads — Configuration
 """
 
 # ─── Settings ───────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 """
-Lead Generator — Business Finder
+FindLeads — Business Finder
 Uses Playwright directly to scrape Google Maps search results.
 Extracts multiple businesses with name, rating, reviews, website, phone, address.
 """

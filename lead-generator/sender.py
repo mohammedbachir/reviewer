@@ -1,5 +1,5 @@
 """
-Lead Generator — Email Sender
+FindLeads — Email Sender
 Sends outreach emails via Gmail SMTP.
 """
 

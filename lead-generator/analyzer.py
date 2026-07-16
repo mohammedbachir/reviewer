@@ -1,5 +1,5 @@
 """
-Lead Generator — Review Analyzer
+FindLeads — Review Analyzer
 Analyzes business review response rates.
 Uses smart strategy: targets businesses with 15+ reviews (high "Review Fatigue").
 """
@@ -116,7 +116,7 @@ def save_to_pdf(businesses, filename="leads.pdf", city="", business_type=""):
         def header(self):
             self.set_font('Helvetica', 'B', 10)
             self.set_text_color(100, 100, 100)
-            self.cell(0, 8, f'Lead Generator Report - {city} / {business_type}', align='R', new_x="LMARGIN", new_y="NEXT")
+            self.cell(0, 8, f'FindLeads Report - {city} / {business_type}', align='R', new_x="LMARGIN", new_y="NEXT")
             self.line(10, self.get_y(), 287, self.get_y())
             self.ln(3)
         
@@ -134,7 +134,7 @@ def save_to_pdf(businesses, filename="leads.pdf", city="", business_type=""):
     # Title
     pdf.set_font('Helvetica', 'B', 18)
     pdf.set_text_color(28, 43, 33)  # #1C2B21
-    pdf.cell(0, 12, f'Lead Generator Report', new_x="LMARGIN", new_y="NEXT")
+    pdf.cell(0, 12, f'FindLeads Report', new_x="LMARGIN", new_y="NEXT")
     
     pdf.set_font('Helvetica', '', 11)
     pdf.set_text_color(100, 100, 100)

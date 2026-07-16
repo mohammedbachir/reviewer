@@ -1,5 +1,5 @@
 """
-Lead Generator — Main Orchestrator
+FindLeads — Main Orchestrator
 Interactive mode: asks for city and business type.
 """
 
@@ -55,7 +55,7 @@ BUSINESS_TYPES = [
 def show_menu():
     """Show interactive menu and get user input."""
     print("\n" + "="*60)
-    print("  LEAD GENERATOR")
+    print("  FINDLEADS")
     print("="*60)
     
     # Get city
@@ -210,7 +210,7 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Lead Generator for Reviewer')
+    parser = argparse.ArgumentParser(description='FindLeads — Business Lead Generator')
     parser.add_argument('--city', help='City to search (interactive if not set)')
     parser.add_argument('--type', help='Business type (interactive if not set)')
     parser.add_argument('--limit', type=int, default=20, help='Max businesses to find')

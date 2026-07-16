@@ -1,5 +1,5 @@
 """
-Lead Generator — Contact Finder
+FindLeads — Contact Finder
 Finds email addresses from business websites.
 """
 
