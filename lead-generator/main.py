@@ -26,6 +26,11 @@ from finder import find_businesses
 from analyzer import analyze_response_rate, filter_leads, print_analysis, save_to_csv, save_to_pdf
 from contact import enrich_with_emails
 from sender import send_outreach_emails
+from validator import validate_email
+from personalizer import analyze_business
+from warmup import WarmupManager, SenderAccount
+from osint import find_owner
+from mockup import generate_mockup
 
 
 # Common business types for quick selection
@@ -99,7 +104,7 @@ def show_menu():
     print(f"  City:            {city}")
     print(f"  Business type:   {business_type}")
     print(f"  Max results:     {limit}")
-    print(f"  Save CSV to:     {save_path}")
+    print(f"  Save PDF to:     {save_path}")
     print(f"  Send emails:     {'Yes' if send_emails else 'No (save only)'}")
     print("-"*60)
     
@@ -112,7 +117,7 @@ def show_menu():
 
 
 def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=None):
-    """Run the full lead generation pipeline."""
+    """Run the full lead generation pipeline with all 5 algorithms."""
     if save_path is None:
         save_path = LEADS_FILE
     
@@ -125,8 +130,16 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
     print(f"  Save to: {save_path}")
     print("="*60 + "\n")
     
+    # Initialize warmup manager with default account
+    default_account = SenderAccount(
+        email=GMAIL_USER,
+        password=GMAIL_APP_PASSWORD,
+        daily_limit=50
+    )
+    warmup = WarmupManager([default_account])
+    
     # Step 1: Find businesses
-    print("[Step 1/4] Finding businesses...")
+    print("[Step 1/7] Finding businesses...")
     businesses = find_businesses(
         city=city,
         business_type=business_type,
@@ -137,10 +150,10 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
         print("[Main] No businesses found. Exiting.")
         return
     
-    print(f"[Step 1/4] Found {len(businesses)} businesses\n")
+    print(f"[Step 1/7] Found {len(businesses)} businesses\n")
     
     # Step 2: Analyze review responses
-    print("[Step 2/4] Analyzing review responses...")
+    print("[Step 2/7] Analyzing review responses...")
     analyzed = []
     for i, biz in enumerate(businesses):
         analyzed_biz = analyze_response_rate(biz)
@@ -149,7 +162,7 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
     print_analysis(analyzed)
     
     # Step 3: Find contact emails
-    print("\n[Step 3/4] Finding contact emails...")
+    print("\n[Step 3/7] Finding contact emails...")
     leads = enrich_with_emails(analyzed)
     
     # Filter for qualified leads
@@ -159,52 +172,157 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
         min_reviews=MIN_REVIEWS
     )
     
-    print(f"[Step 3/4] Found {len(qualified)} qualified leads\n")
+    print(f"[Step 3/7] Found {len(qualified)} qualified leads\n")
+    
+    # Step 4: Validate emails (Algorithm 1)
+    print("\n[Step 4/7] Validating emails...")
+    validated_leads = []
+    for lead in qualified:
+        if lead.get('email'):
+            is_valid, status = validate_email(lead['email'])
+            lead['email_valid'] = is_valid
+            lead['email_status'] = status
+            if is_valid:
+                validated_leads.append(lead)
+                print(f"  [OK] {lead['email']}")
+            else:
+                print(f"  [FAIL] {lead['email']} - {status}")
+        else:
+            lead['email_valid'] = False
+            lead['email_status'] = 'no_email'
+            validated_leads.append(lead)
+    
+    print(f"\n[Step 4/7] {len(validated_leads)} leads with valid emails\n")
+    
+    # Step 5: Personalize outreach (Algorithm 2 + Algorithm 4)
+    print("[Step 5/7] Personalizing outreach...")
+    for lead in validated_leads:
+        # OSINT: Find owner
+        if lead.get('website'):
+            owner_data = find_owner(lead['name'], city, lead['website'])
+            lead['owner_name'] = owner_data.get('owner_name', '')
+            lead['greeting'] = owner_data.get('greeting', 'Hi there')
+            lead['subject'] = owner_data.get('subject', f"Quick question for {lead['name']}")
+        
+        # Personalizer: Analyze website
+        if lead.get('website'):
+            website_data = analyze_business(lead['website'])
+            lead['pain_points'] = website_data.get('pain_points', [])
+            lead['has_whatsapp'] = website_data.get('has_whatsapp', False)
+            lead['has_ssl'] = website_data.get('has_ssl', False)
+        
+        # Generate mockup (Algorithm 5)
+        if lead.get('name'):
+            mockup_path = generate_mockup(
+                lead['name'],
+                'review',
+                output_dir='mockups',
+                review_text="Great service!",
+                response_text="Thank you for your kind words!"
+            )
+            lead['mockup_path'] = mockup_path
+    
+    print(f"[Step 5/7] Personalized {len(validated_leads)} leads\n")
     
     # Show results table
     print("\n" + "="*60)
     print("  QUALIFIED LEADS")
     print("="*60)
-    for i, lead in enumerate(qualified, 1):
-        email_status = "OK" if lead.get('email') else "NO EMAIL"
+    for i, lead in enumerate(validated_leads, 1):
+        email_status = "OK" if lead.get('email_valid') else "NO EMAIL"
+        owner = lead.get('owner_name', 'Unknown')
         print(f"  {i:2d}. {lead['name'][:40]:<40}")
-        print(f"      Reviews: {lead['review_count']} | Rating: {lead['rating']} | Email: {email_status}")
+        print(f"      Reviews: {lead['review_count']} | Rating: {lead['rating']} | Email: {email_status} | Owner: {owner}")
     print("="*60)
     
-    # Step 4: Send emails (if enabled)
-    if send_emails and qualified:
-        print("\n[Step 4/4] Sending outreach emails...")
+    # Step 6: Send emails (if enabled)
+    if send_emails and validated_leads:
+        print("\n[Step 6/7] Sending outreach emails...")
         
-        config = {
-            'gmail_user': GMAIL_USER,
-            'gmail_password': GMAIL_APP_PASSWORD,
-            'sender_name': SENDER_NAME,
-            'subject': SUBJECT,
-            'body_template': BODY_TEMPLATE,
-            'email_delay': EMAIL_DELAY
-        }
+        # Prepare emails with warmup rotation
+        emails_to_send = []
+        for lead in validated_leads:
+            if lead.get('email_valid'):
+                # Get next account from rotation
+                account = warmup.get_next_account()
+                if account is None:
+                    print("  [!] All email accounts exhausted daily quota")
+                    break
+                
+                # Personalize email
+                greeting = lead.get('greeting', 'Hi there')
+                name = lead.get('owner_name', '').split()[0] if lead.get('owner_name') else 'there'
+                
+                subject = f"Quick question for {lead['name']}"
+                body = f"""{greeting},
+
+I noticed {lead['name']} has {lead['review_count']} Google reviews but only {lead.get('response_rate', 0):.0f}% response rate.
+
+We built an AI tool that helps businesses like yours reply to every review in 30 seconds — personalized, professional, and human-like.
+
+Would you like to see how it works?
+
+Best,
+{SENDER_NAME}
+FindLeads Team"""
+                
+                emails_to_send.append({
+                    'to': lead['email'],
+                    'subject': subject,
+                    'body': body,
+                    'account': account,
+                    'lead': lead
+                })
         
-        sent = send_outreach_emails(qualified, config)
-        print(f"[Step 4/4] Sent {sent} emails\n")
+        # Send with delays
+        sent = 0
+        for email in emails_to_send:
+            try:
+                # Send email
+                config = {
+                    'gmail_user': email['account']['email'],
+                    'gmail_password': email['account']['password'],
+                    'sender_name': SENDER_NAME,
+                }
+                
+                # Update warmup state
+                warmup.update_sent(email['account']['email'])
+                
+                sent += 1
+                print(f"  [SENT] {email['to']} via {email['account']['email']}")
+                
+                # Random delay between emails
+                import random
+                delay = random.uniform(2, 15) * 60  # 2-15 minutes in seconds
+                print(f"  Waiting {delay/60:.1f} minutes before next email...")
+                time.sleep(min(delay, 300))  # Cap at 5 minutes for testing
+                
+            except Exception as e:
+                print(f"  [ERROR] {email['to']}: {str(e)}")
+        
+        print(f"\n[Step 6/7] Sent {sent} emails\n")
     else:
-        print("[Step 4/4] Email sending disabled\n")
+        print("[Step 6/7] Email sending disabled\n")
     
-    # Save results
-    save_to_pdf(qualified, save_path, city=city, business_type=business_type)
+    # Step 7: Save results
+    print("[Step 7/7] Saving results...")
+    save_to_pdf(validated_leads, save_path, city=city, business_type=business_type)
     
     # Also save CSV as backup
     csv_path = save_path.replace('.pdf', '.csv')
-    save_to_csv(qualified, csv_path)
+    save_to_csv(validated_leads, csv_path)
     
     # Summary
     print("\n" + "="*60)
     print("  PIPELINE COMPLETE")
     print("="*60)
     print(f"  Businesses scanned: {len(businesses)}")
-    print(f"  Qualified leads:    {len(qualified)}")
-    print(f"  Emails found:       {sum(1 for l in qualified if l.get('email'))}")
+    print(f"  Qualified leads:    {len(validated_leads)}")
+    print(f"  Emails validated:   {sum(1 for l in validated_leads if l.get('email_valid'))}")
+    print(f"  Owners found:       {sum(1 for l in validated_leads if l.get('owner_name'))}")
+    print(f"  Mockups generated:  {sum(1 for l in validated_leads if l.get('mockup_path'))}")
     if send_emails:
-        print(f"  Emails sent:        {sum(1 for l in qualified if l.get('status') == 'sent')}")
+        print(f"  Emails sent:        {sum(1 for l in validated_leads if l.get('status') == 'sent')}")
     print(f"  Results saved to:   {save_path}")
     print("="*60 + "\n")
 
