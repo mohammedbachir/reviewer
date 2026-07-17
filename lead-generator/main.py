@@ -326,7 +326,7 @@ Would you like to see how it works?
 
 Best,
 {SENDER_NAME}
-FindLeads Team"""
+Reviewer Team"""
                     
                     emails_to_send.append({
                         'to': lead['email'],
