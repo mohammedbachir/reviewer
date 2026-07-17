@@ -280,16 +280,16 @@ FindLeads Team"""
             try:
                 # Send email
                 config = {
-                    'gmail_user': email['account']['email'],
-                    'gmail_password': email['account']['password'],
+                    'gmail_user': email['account'].email,
+                    'gmail_password': email['account'].password,
                     'sender_name': SENDER_NAME,
                 }
                 
                 # Update warmup state
-                warmup.update_sent(email['account']['email'])
+                warmup.update_sent(email['account'].email)
                 
                 sent += 1
-                print(f"  [SENT] {email['to']} via {email['account']['email']}")
+                print(f"  [SENT] {email['to']} via {email['account'].email}")
                 
                 # Random delay between emails
                 import random
