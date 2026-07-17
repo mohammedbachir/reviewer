@@ -26,7 +26,7 @@ from config import (
 from finder import find_businesses
 from analyzer import analyze_response_rate, filter_leads, print_analysis, save_to_csv, save_to_pdf
 from contact import enrich_with_emails
-from sender import send_outreach_emails, create_email, send_email
+from sender import send_outreach_emails, create_email, send_email, send_bulk_sync
 from validator import validate_email
 from personalizer import analyze_business
 from warmup import WarmupManager, SenderAccount
@@ -251,21 +251,14 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
     
     # Step 6: Send emails (if enabled)
     if send_emails and validated_leads:
-        print("\n[Step 6/7] Sending outreach emails...")
+        print("\n[Step 6/7] Sending outreach emails (FAST MODE)...")
         
-        # Prepare emails with warmup rotation
+        # Prepare emails for bulk sending
         emails_to_send = []
         for lead in validated_leads:
             if lead.get('email_valid'):
-                # Get next account from rotation
-                account = warmup.get_next_account()
-                if account is None:
-                    print("  [!] All email accounts exhausted daily quota")
-                    break
-                
                 # Personalize email
                 greeting = lead.get('greeting', 'Hi there')
-                name = lead.get('owner_name', '').split()[0] if lead.get('owner_name') else 'there'
                 
                 subject = f"Quick question for {lead['name']}"
                 body = f"""{greeting},
@@ -284,51 +277,26 @@ FindLeads Team"""
                     'to': lead['email'],
                     'subject': subject,
                     'body': body,
-                    'account': account,
-                    'lead': lead
                 })
         
-        # Send with delays
-        sent = 0
-        for email_data in emails_to_send:
-            try:
-                logger.info(f"Sending to {email_data['to']} via {email_data['account'].email}")
-                
-                # Create email message
-                msg = create_email(
-                    to_email=email_data['to'],
-                    business_name=email_data['lead']['name'],
-                    unanswered_reviews=email_data['lead'].get('unanswered_reviews', 0),
-                    sender_name=SENDER_NAME,
-                    subject=email_data['subject'],
-                    body_template=email_data['body']
-                )
-                
-                # Send email
-                success = send_email(msg, email_data['account'].email, email_data['account'].password)
-                
-                if success:
-                    # Update warmup state
-                    email_data['account'].record_send()
-                    sent += 1
-                    print(f"  [SENT] {email_data['to']} via {email_data['account'].email}")
-                    logger.info(f"Sent successfully to {email_data['to']}")
-                else:
-                    print(f"  [FAILED] {email_data['to']}")
-                    logger.error(f"Failed to send to {email_data['to']}")
-                
-                # Random delay between emails
-                import random
-                delay = random.uniform(2, 15) * 60  # 2-15 minutes in seconds
-                print(f"  Waiting {delay/60:.1f} minutes before next email...")
-                logger.info(f"Waiting {delay/60:.1f} minutes before next email...")
-                time.sleep(min(delay, 300))  # Cap at 5 minutes for testing
-                
-            except Exception as e:
-                print(f"  [ERROR] {email_data['to']}: {str(e)}")
-                logger.error(f"Failed to send to {email_data['to']}: {str(e)}", exc_info=True)
+        # Send all emails FAST (concurrent sending)
+        if emails_to_send:
+            print(f"  Sending {len(emails_to_send)} emails concurrently...")
+            results = send_bulk_sync(
+                emails=emails_to_send,
+                gmail_user=GMAIL_USER,
+                gmail_password=GMAIL_APP_PASSWORD,
+                sender_name=SENDER_NAME,
+                max_concurrent=3  # Send 3 at a time
+            )
+            
+            print(f"\n  Results: {results['sent']} sent, {results['failed']} failed")
+            
+            if results['errors']:
+                print("  Failed emails:")
+                for err in results['errors']:
+                    print(f"    - {err['email']}: {err['error']}")
         
-        print(f"\n[Step 6/7] Sent {sent} emails\n")
     else:
         print("[Step 6/7] Email sending disabled\n")
     
