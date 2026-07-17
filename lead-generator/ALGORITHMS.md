@@ -1,6 +1,6 @@
 # FindLeads - Algorithms Tracker
 
-> Total: 75 algorithms | Completed: 5 | Remaining: 70
+> Total: 75 algorithms | Completed: 13 | Remaining: 62
 
 ---
 
@@ -16,14 +16,14 @@
 
 ## 🔨 Deep OSINT Engine (8 algorithms)
 
-- [ ] **6. Tech Stack Detection** - `osint/tech_detector.py` - TechDetect/Wappalyzer - detect 7400+ technologies (CMS, frameworks, CDNs, analytics)
-- [ ] **7. WHOIS Lookup** - `osint/whois_lookup.py` - `python-whois` + `ipwhois` - domain registration info + owner + expiry date
-- [ ] **8. DNS Intelligence** - `osint/dns_intel.py` - `dnspython` - DNS records + reverse DNS analysis
-- [ ] **9. Sentiment Analysis** - `osint/sentiment.py` - `TextBlob`/`VADER` - review sentiment (negative/positive/neutral)
-- [ ] **10. Financial Health Analysis** - `osint/financial_health.py` - derive business financial health from sentiment + whois + reviews signals
-- [ ] **11. Hidden Emails Discovery** - `osint/hidden_emails.py` - `requests` + `BeautifulSoup` - find hidden emails in PDFs, CSS, JS files
-- [ ] **12. Domain History** - `osint/domain_history.py` - Wayback Machine API - website history + when design changed
-- [ ] **13. SSL Certificate Intelligence** - `osint/ssl_intel.py` - `ssl` module - certificate info + owner + expiry
+- [x] **6. Tech Stack Detection** - `osint/tech_detector.py` - TechDetect/Wappalyzer - detect 7400+ technologies (CMS, frameworks, CDNs, analytics)
+- [x] **7. WHOIS Lookup** - `osint/whois_lookup.py` - `python-whois` + `ipwhois` - domain registration info + owner + expiry date
+- [x] **8. DNS Intelligence** - `osint/dns_intel.py` - `dnspython` - DNS records + reverse DNS analysis
+- [x] **9. Sentiment Analysis** - `osint/sentiment.py` - `TextBlob`/`VADER` - review sentiment (negative/positive/neutral)
+- [x] **10. Financial Health Analysis** - `osint/financial_health.py` - derive business financial health from sentiment + whois + reviews signals
+- [x] **11. Hidden Emails Discovery** - `osint/hidden_emails.py` - `requests` + `BeautifulSoup` - find hidden emails in PDFs, CSS, JS files
+- [x] **12. Domain History** - `osint/domain_history.py` - Wayback Machine API - website history + when design changed
+- [x] **13. SSL Certificate Intelligence** - `osint/ssl_intel.py` - `ssl` module - certificate info + owner + expiry
 
 ---
 
@@ -174,7 +174,7 @@
 | Category | Total | Completed | Remaining |
 |---|---|---|---|
 | Existing Algorithms | 5 | 5 | 0 |
-| Deep OSINT Engine | 8 | 0 | 8 |
+| Deep OSINT Engine | 8 | 8 | 0 |
 | Knowledge Graph (DuckDB + NetworkX) | 7 | 0 | 7 |
 | Temporal Tracking & Change Detection | 8 | 0 | 8 |
 | Search & Filtering System | 10 | 0 | 10 |
