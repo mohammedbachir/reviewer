@@ -8,6 +8,7 @@ import csv
 import os
 import sys
 import time
+import logging
 from datetime import datetime
 
 from config import (
@@ -25,7 +26,7 @@ from config import (
 from finder import find_businesses
 from analyzer import analyze_response_rate, filter_leads, print_analysis, save_to_csv, save_to_pdf
 from contact import enrich_with_emails
-from sender import send_outreach_emails
+from sender import send_outreach_emails, create_email, send_email
 from validator import validate_email
 from personalizer import analyze_business
 from warmup import WarmupManager, SenderAccount
@@ -120,6 +121,19 @@ def run_pipeline(city, business_type, limit=50, send_emails=False, save_path=Non
     """Run the full lead generation pipeline with all 5 algorithms."""
     if save_path is None:
         save_path = LEADS_FILE
+    
+    # Setup logging
+    log_file = f"findleads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler()
+        ]
+    )
+    logger = logging.getLogger(__name__)
+    logger.info(f"Pipeline started: {city} / {business_type} / limit={limit}")
     
     print("\n" + "="*60)
     print("  PIPELINE STARTED")
@@ -276,29 +290,43 @@ FindLeads Team"""
         
         # Send with delays
         sent = 0
-        for email in emails_to_send:
+        for email_data in emails_to_send:
             try:
+                logger.info(f"Sending to {email_data['to']} via {email_data['account'].email}")
+                
+                # Create email message
+                msg = create_email(
+                    to_email=email_data['to'],
+                    business_name=email_data['lead']['name'],
+                    unanswered_reviews=email_data['lead'].get('unanswered_reviews', 0),
+                    sender_name=SENDER_NAME,
+                    subject=email_data['subject'],
+                    body_template=email_data['body']
+                )
+                
                 # Send email
-                config = {
-                    'gmail_user': email['account'].email,
-                    'gmail_password': email['account'].password,
-                    'sender_name': SENDER_NAME,
-                }
+                success = send_email(msg, email_data['account'].email, email_data['account'].password)
                 
-                # Update warmup state
-                warmup.update_sent(email['account'].email)
-                
-                sent += 1
-                print(f"  [SENT] {email['to']} via {email['account'].email}")
+                if success:
+                    # Update warmup state
+                    email_data['account'].record_send()
+                    sent += 1
+                    print(f"  [SENT] {email_data['to']} via {email_data['account'].email}")
+                    logger.info(f"Sent successfully to {email_data['to']}")
+                else:
+                    print(f"  [FAILED] {email_data['to']}")
+                    logger.error(f"Failed to send to {email_data['to']}")
                 
                 # Random delay between emails
                 import random
                 delay = random.uniform(2, 15) * 60  # 2-15 minutes in seconds
                 print(f"  Waiting {delay/60:.1f} minutes before next email...")
+                logger.info(f"Waiting {delay/60:.1f} minutes before next email...")
                 time.sleep(min(delay, 300))  # Cap at 5 minutes for testing
                 
             except Exception as e:
-                print(f"  [ERROR] {email['to']}: {str(e)}")
+                print(f"  [ERROR] {email_data['to']}: {str(e)}")
+                logger.error(f"Failed to send to {email_data['to']}: {str(e)}", exc_info=True)
         
         print(f"\n[Step 6/7] Sent {sent} emails\n")
     else:
