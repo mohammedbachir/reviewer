@@ -1,6 +1,6 @@
 # FindLeads - Algorithms Tracker
 
-> Total: 45 algorithms | Completed: 5 | Remaining: 40
+> Total: 62 algorithms | Completed: 5 | Remaining: 57
 
 ---
 
@@ -27,60 +27,107 @@
 
 ---
 
-## 🔨 Knowledge Graph - DuckDB (7 algorithms)
+## 🔨 Knowledge Graph - DuckDB + NetworkX (7 algorithms)
+
+> **Database Choice: DuckDB + NetworkX**
+> - **DuckDB**: Storage + Analytics (embedded, no server, columnar, compressed, JSON support)
+> - **NetworkX**: Graph queries in memory (BFS, shortest path, communities)
+> - **Why**: DuckDB = fast analytics + compressed storage. NetworkX = graph algorithms. Neither alone is enough.
 
 - [ ] **14. Graph Database Setup** - `graph/database.py` - DuckDB + JSON columns - single file relational database
 - [ ] **15. Node Storage** - `graph/nodes.py` - store business, person, email, tech, review nodes
 - [ ] **16. Edge Storage** - `graph/edges.py` - store relationships (OWNS, USES_TECH, HAS_EMAIL, REVIEWED_BY)
-- [ ] **17. Graph Queries** - `graph/queries.py` - BFS, shortest path, community detection via DuckDB SQL
+- [ ] **17. Graph Queries** - `graph/queries.py` - BFS, shortest path, community detection via NetworkX (in-memory from DuckDB)
 - [ ] **18. Data Sync** - `graph/sync.py` - sync data from CSV/PDF to Graph
 - [ ] **19. Incremental Updates** - `graph/incremental.py` - update data only when changed
 - [ ] **20. Export & Backup** - `graph/export.py` - export to JSON/CSV + upload to GitHub Artifacts
 
 ---
 
+## 🔨 Temporal Tracking & Change Detection (8 algorithms)
+
+> **Why this matters**: Data without time dimension is a snapshot. Data WITH time dimension is intelligence.
+> Monthly updates track business health over time - this is what makes data priceless.
+
+- [ ] **21. Snapshot System** - `temporal/snapshots.py` - take business state snapshots (rating, reviews, tech, health) on every scan
+- [ ] **22. Change Detection** - `temporal/changes.py` - compare current vs previous snapshot, detect rating drops, new reviews, no-reply periods
+- [ ] **23. Change Severity Scoring** - `temporal/severity.py` - classify changes as low/medium/high/critical
+- [ ] **24. Monthly Health Tracking** - `temporal/monthly.py` - track business health score over time (0-100)
+- [ ] **25. Alert Generation** - `temporal/alerts.py` - auto-generate alerts for critical changes (rating drop, domain expiring, no reply for 90 days)
+- [ ] **26. Trend Analysis** - `temporal/trends.py` - analyze trends across businesses/sectors (is beauty industry improving?)
+- [ ] **27. Decay Detection** - `temporal/decay.py` - detect businesses in decline (losing reviews, dropping rating, no activity)
+- [ ] **28. Opportunity Scoring** - `temporal/opportunity.py` - score businesses by opportunity level based on changes + health + timing
+
+---
+
+## 🔨 Search & Filtering System (10 algorithms)
+
+> **Why this matters**: Without search, data is a dump. With search, data is a weapon.
+> User must be able to filter by: month, country, city, sector, health score, rating, activity level.
+
+- [ ] **29. Taxonomy System** - `search/taxonomy.py` - country/city/sector hierarchy (UAE > Dubai > beauty salons)
+- [ ] **30. Filter Engine** - `search/filters.py` - multi-criteria filtering (country + city + sector + month + health + rating)
+- [ ] **31. Query Builder** - `search/queries.py` - build DuckDB SQL queries from filter criteria
+- [ ] **32. Date Range Filters** - `search/date_filters.py` - filter by specific month, last month, last 3 months, custom range
+- [ ] **33. Geographic Filters** - `search/geo_filters.py` - filter by country, city, or all cities in a country
+- [ ] **34. Sector Filters** - `search/sector_filters.py` - filter by sector (beauty, medical, hospitality, retail, etc.)
+- [ ] **35. Health Filters** - `search/health_filters.py` - filter by health score (healthy, declining, critical, dead)
+- [ ] **36. Activity Filters** - `search/activity_filters.py` - filter by reply activity (active, slow, dormant, silent)
+- [ ] **37. Search CLI** - `search/cli.py` - command line interface for searches
+- [ ] **38. Search Reports** - `search/reports.py` - generate filtered PDF/CSV reports with statistics
+
+---
+
 ## 🔨 Reinforcement Learning Outreach - RLO (5 algorithms)
 
-- [ ] **21. IMAP IDLE Listener** - `rlo/imap_listener.py` - `imap_tools` - receive replies instantly (free push notification)
-- [ ] **22. Response Classification** - `rlo/response_classifier.py` - `VADER Sentiment` - classify replies (positive/negative/spam)
-- [ ] **23. Prompt Scoring** - `rlo/prompt_scorer.py` - track which prompts worked and which failed
-- [ ] **24. Automated Feedback Loop** - `rlo/feedback_loop.py` - update prompt weights automatically via DuckDB
-- [ ] **25. Learning History** - `rlo/learning_history.py` - save all learning history to DuckDB
+- [ ] **39. IMAP IDLE Listener** - `rlo/imap_listener.py` - `imap_tools` - receive replies instantly (free push notification)
+- [ ] **40. Response Classification** - `rlo/response_classifier.py` - `VADER Sentiment` - classify replies (positive/negative/spam)
+- [ ] **41. Prompt Scoring** - `rlo/prompt_scorer.py` - track which prompts worked and which failed
+- [ ] **42. Automated Feedback Loop** - `rlo/feedback_loop.py` - update prompt weights automatically via DuckDB
+- [ ] **43. Learning History** - `rlo/learning_history.py` - save all learning history to DuckDB
 
 ---
 
 ## 🔨 Autonomous Agent (5 algorithms)
 
-- [ ] **26. LangGraph State Machine** - `agent/state_machine.py` - `LangGraph` - build AI "state machine" for smart agent
-- [ ] **27. Response Reading** - `agent/response_reader.py` - OpenRouter `llama-3.1-8b:free` - read and understand customer reply
-- [ ] **28. Auto-Reply Generation** - `agent/auto_reply.py` - OpenRouter `llama-3.1-8b:free` - generate appropriate auto-reply
-- [ ] **29. Meeting Scheduling** - `agent/scheduler.py` - `Cal.com` (open source) - book meetings automatically
-- [ ] **30. Conversation Memory** - `agent/memory.py` - DuckDB + Knowledge Graph - remember previous conversations
+- [ ] **44. LangGraph State Machine** - `agent/state_machine.py` - `LangGraph` - build AI "state machine" for smart agent
+- [ ] **45. Response Reading** - `agent/response_reader.py` - OpenRouter `llama-3.1-8b:free` - read and understand customer reply
+- [ ] **46. Auto-Reply Generation** - `agent/auto_reply.py` - OpenRouter `llama-3.1-8b:free` - generate appropriate auto-reply
+- [ ] **47. Meeting Scheduling** - `agent/scheduler.py` - `Cal.com` (open source) - book meetings automatically
+- [ ] **48. Conversation Memory** - `agent/memory.py` - DuckDB + Knowledge Graph - remember previous conversations
 
 ---
 
-## 🔨 Stealth & Distribution (10 algorithms)
+## 🔨 Stealth & Distribution (12 algorithms)
 
-- [ ] **31. Playwright Stealth** - `stealth/playwright_stealth.py` - `playwright-stealth` - remove bot traces from browser
-- [ ] **32. Human Mouse Movement** - `stealth/human_mouse.py` - `pyautogui`/Playwright - natural random mouse movement
-- [ ] **33. Random Scrolling** - `stealth/scrolling.py` - Playwright - slow scrolling like a human reading
-- [ ] **34. Random Delays** - `stealth/delays.py` - Python `time.sleep` - wait 5-20 seconds between each business
-- [ ] **35. Random User-Agent** - `stealth/user_agent.py` - `fake-useragent` - change User-Agent per request
-- [ ] **36. Random Headers** - `stealth/headers.py` - Playwright - change Accept-Language, Referer, etc.
-- [ ] **37. Free Proxy Rotation** - `stealth/proxy_rotation.py` - `proxyscrape.com` API - rotate free IP per request
-- [ ] **38. GitHub Actions Workflow** - `.github/workflows/findleads.yml` - GitHub Actions - scheduled run every 6 hours
-- [ ] **39. GitHub Artifacts** - `.github/workflows/` - GitHub - save `data.duckdb` between runs
-- [ ] **40. DuckDB Persistence** - `stealth/persistence.py` - DuckDB - save data to single file
+> **Strategy**: All run in parallel for maximum coverage
+> - GitHub Actions: scheduled runs (free IP rotation via Microsoft Azure)
+> - Playwright Stealth: remove bot traces
+> - Free Proxy Rotation: rotate IP per request
+> - Random delays/UA/headers: human mimicry
+
+- [ ] **49. Playwright Stealth** - `stealth/playwright_stealth.py` - `playwright-stealth` - remove bot traces from browser
+- [ ] **50. Human Mouse Movement** - `stealth/human_mouse.py` - `pyautogui`/Playwright - natural random mouse movement
+- [ ] **51. Random Scrolling** - `stealth/scrolling.py` - Playwright - slow scrolling like a human reading
+- [ ] **52. Random Delays** - `stealth/delays.py` - Python `time.sleep` - wait 5-20 seconds between each business
+- [ ] **53. Random User-Agent** - `stealth/user_agent.py` - `fake-useragent` - change User-Agent per request
+- [ ] **54. Random Headers** - `stealth/headers.py` - Playwright - change Accept-Language, Referer, etc.
+- [ ] **55. Free Proxy Rotation** - `stealth/proxy_rotation.py` - `proxyscrape.com` API - rotate free IP per request
+- [ ] **56. GitHub Actions Workflow** - `.github/workflows/findleads.yml` - GitHub Actions - scheduled run every 6 hours (10 min/run)
+- [ ] **57. GitHub Artifacts** - `.github/workflows/` - GitHub - save `data.duckdb` between runs (auto-delete after 90 days)
+- [ ] **58. DuckDB Persistence** - `stealth/persistence.py` - DuckDB - save data to single compressed file
+- [ ] **59. External Backup** - `stealth/backup.py` - Google Drive (15GB) + Dropbox (2GB) - automatic backup via rclone
+- [ ] **60. IP Rotation Tracking** - `stealth/ip_tracker.py` - track which IPs were used, avoid repeating
 
 ---
 
 ## 🔨 Advanced OSINT (5 algorithms)
 
-- [ ] **41. Website Screenshot** - `osint/screenshot.py` - Playwright - screenshot business website (for mockups)
-- [ ] **42. Page Speed Analysis** - `osint/page_speed.py` - Playwright + Lighthouse - website loading speed
-- [ ] **43. Mobile Responsiveness Check** - `osint/mobile_check.py` - Playwright - does site work on mobile?
-- [ ] **44. Social Media Discovery** - `osint/social_media.py` - `requests` + scraping - find social media accounts
-- [ ] **45. Review Pattern Analysis** - `osint/review_patterns.py` - Python - detect fake reviews
+- [ ] **61. Website Screenshot** - `osint/screenshot.py` - Playwright - screenshot business website (for mockups)
+- [ ] **62. Page Speed Analysis** - `osint/page_speed.py` - Playwright + Lighthouse - website loading speed
+- [ ] **63. Mobile Responsiveness Check** - `osint/mobile_check.py` - Playwright - does site work on mobile?
+- [ ] **64. Social Media Discovery** - `osint/social_media.py` - `requests` + scraping - find social media accounts
+- [ ] **65. Review Pattern Analysis** - `osint/review_patterns.py` - Python - detect fake reviews
 
 ---
 
@@ -90,12 +137,93 @@
 |---|---|---|---|
 | Existing Algorithms | 5 | 5 | 0 |
 | Deep OSINT Engine | 8 | 0 | 8 |
-| Knowledge Graph | 7 | 0 | 7 |
+| Knowledge Graph (DuckDB + NetworkX) | 7 | 0 | 7 |
+| Temporal Tracking & Change Detection | 8 | 0 | 8 |
+| Search & Filtering System | 10 | 0 | 10 |
 | RLO | 5 | 0 | 5 |
 | Autonomous Agent | 5 | 0 | 5 |
-| Stealth & Distribution | 10 | 0 | 10 |
+| Stealth & Distribution | 12 | 0 | 12 |
 | Advanced OSINT | 5 | 0 | 5 |
-| **TOTAL** | **45** | **5** | **40** |
+| **TOTAL** | **65** | **5** | **60** |
+
+---
+
+## 🗄️ Database Architecture
+
+> **Primary**: DuckDB (storage + analytics)
+> **Secondary**: NetworkX (graph queries in memory)
+
+### Why DuckDB?
+- Embedded (no server, no Docker)
+- Columnar storage (compressed, 30-40% of raw size)
+- JSON support (tech_stack = ['WordPress', 'WooCommerce'])
+- Fast analytics (100x faster than SQLite for OLAP)
+- Single file (data.duckdb)
+- Free and open source
+
+### Why NetworkX for Graph?
+- In-memory graph algorithms (BFS, shortest path, communities)
+- Loaded from DuckDB when needed
+- Freed after query completes
+- Free and open source
+
+### Schema Overview
+
+```sql
+-- Businesses
+CREATE TABLE businesses (
+    id TEXT PRIMARY KEY,
+    name TEXT, country TEXT, city TEXT, sector TEXT,
+    rating REAL, review_count INTEGER,
+    tech_stack TEXT,  -- JSON
+    health_score INTEGER,
+    created_at DATE, updated_at DATE
+);
+
+-- Snapshots (temporal tracking)
+CREATE TABLE snapshots (
+    id INTEGER PRIMARY KEY,
+    business_id TEXT,
+    scan_date DATE,
+    rating REAL, review_count INTEGER,
+    replied_to_reviews INTEGER,
+    sentiment_score REAL,
+    health_score INTEGER,
+    status TEXT  -- 'active', 'declining', 'closed'
+);
+
+-- Changes (change detection)
+CREATE TABLE changes (
+    id INTEGER PRIMARY KEY,
+    business_id TEXT,
+    scan_date DATE,
+    change_type TEXT,  -- 'rating_drop', 'no_reply', 'domain_expiring'
+    old_value TEXT, new_value TEXT,
+    severity TEXT  -- 'low', 'medium', 'high', 'critical'
+);
+
+-- Taxonomy (search filters)
+CREATE TABLE taxonomy (
+    id INTEGER PRIMARY KEY,
+    country TEXT, city TEXT, sector TEXT,
+    is_active BOOLEAN,
+    last_scan DATE,
+    business_count INTEGER,
+    avg_health_score REAL
+);
+```
+
+---
+
+## 📈 Data Growth Projections (6 months)
+
+| City | Businesses | Data Size (DuckDB) |
+|---|---|---|
+| Dubai only | 30,000 | ~300 MB |
+| UAE (5 cities) | 150,000 | ~1.5 GB |
+| Gulf (10 countries) | 300,000 | ~3 GB |
+| Middle East (20 countries) | 600,000 | ~6 GB |
+| After 2 years | 2,000,000+ | ~20 GB |
 
 ---
 
@@ -105,12 +233,14 @@
 |---|---|
 | GitHub Actions | $0 (2000 min/month free) |
 | DuckDB | $0 (free) |
+| NetworkX | $0 (free) |
 | Playwright Stealth | $0 (free) |
 | TextBlob / VADER | $0 (free) |
 | IMAP IDLE | $0 (free) |
 | Free Proxies | $0 (free) |
 | OpenRouter (llama-3.1-8b:free) | $0 (free) |
 | Cal.com | $0 (free) |
+| Google Drive Backup | $0 (15GB free) |
 | **Total** | **$0** |
 
 ---
@@ -120,8 +250,22 @@
 | Week | Focus | Algorithms |
 |---|---|---|
 | Week 1 | Deep OSINT Engine | #6 - #13 |
-| Week 2 | Knowledge Graph | #14 - #20 |
-| Week 3 | Stealth & Distribution | #31 - #40 |
-| Week 4 | RLO Phase 1 | #21 - #25 |
-| Week 5 | Autonomous Agent | #26 - #30 |
-| Week 6 | Advanced OSINT + Testing | #41 - #45 |
+| Week 2 | Knowledge Graph (DuckDB + NetworkX) | #14 - #20 |
+| Week 3 | Temporal Tracking & Change Detection | #21 - #28 |
+| Week 4 | Search & Filtering System | #29 - #38 |
+| Week 5 | Stealth & Distribution | #49 - #60 |
+| Week 6 | RLO Phase 1 | #39 - #43 |
+| Week 7 | Autonomous Agent | #44 - #48 |
+| Week 8 | Advanced OSINT + Testing | #61 - #65 |
+
+---
+
+## 🔑 Key Decisions
+
+1. **Database**: DuckDB (storage) + NetworkX (graph queries) — both free, embedded, no server
+2. **Stealth**: Playwright Stealth + GitHub Actions (Microsoft IPs) + Free Proxy Rotation — all free
+3. **Learning**: IMAP IDLE + VADER Sentiment — free push notifications + free sentiment analysis
+4. **Agent**: LangGraph + Cal.com + llama-3.1-8b:free — free state machine + free scheduling + free LLM
+5. **Temporal**: Snapshots + Change Detection — track business health over time
+6. **Search**: Multi-criteria filtering (country/city/sector/month/health/rating) — make data actionable
+7. **Backup**: GitHub Artifacts (90 days) + Google Drive (15GB) + Dropbox (2GB) — triple redundancy
