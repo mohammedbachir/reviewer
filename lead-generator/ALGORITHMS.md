@@ -1,6 +1,6 @@
 # FindLeads - Algorithms Tracker
 
-> Total: 62 algorithms | Completed: 5 | Remaining: 57
+> Total: 75 algorithms | Completed: 5 | Remaining: 70
 
 ---
 
@@ -131,6 +131,44 @@
 
 ---
 
+## 🔨 Parallel Execution Architecture (10 algorithms)
+
+> **The Game Changer**: Run multiple free platforms simultaneously for maximum data collection
+> - GitHub Actions + Oracle Cloud + Google Cloud Run + Local Machine
+> - Each platform handles different tasks, all feeding into same DuckDB
+> - Result: 5.75x more data than single platform
+
+### Platforms Overview
+
+| Platform | Free Tier | Tasks | IPs |
+|---|---|---|---|
+| **GitHub Actions** | 2000 min/month | Google Maps scraping | Microsoft Azure |
+| **Oracle Cloud Free Tier** | 4 ARM VMs + 24GB RAM (ALWAYS FREE) | OSINT + WHOIS + Tech Stack + Sentiment | Oracle |
+| **Google Cloud Run** | 2M requests/month | Temporal updates + Change detection | Google |
+| **Local Machine** | Unlimited | Monitoring + Reports + Manual | Local |
+
+### Capacity Comparison
+
+| Scenario | Businesses/day | Businesses/month | Cost |
+|---|---|---|---|
+| **Before (GitHub only)** | 240 | 7,200 | $0 |
+| **After (All parallel)** | 1,380 | 41,400 | $0 |
+
+### Algorithms
+
+- [ ] **66. Oracle Cloud VM Setup** - `infra/oracle_setup.py` - provision 4 ARM VMs on Oracle Cloud Free Tier (always free, 24GB RAM total)
+- [ ] **67. Docker Containerization** - `infra/docker.py` - package FindLeads as Docker container for deployment on any platform
+- [ ] **68. Cloud Sync Engine** - `infra/cloud_sync.py` - sync data.duckdb across all platforms (GitHub Artifacts, Oracle storage, Google Drive)
+- [ ] **69. Task Distribution Manager** - `infra/task_manager.py` - distribute scraping tasks across platforms (which platform does what)
+- [ ] **70. IP Pool Manager** - `infra/ip_pool.py` - manage IP addresses from all platforms (Microsoft, Oracle, Google, Local) - avoid repeats
+- [ ] **71. Health Monitor** - `infra/monitor.py` - monitor all platforms status (is GitHub Actions running? Are Oracle VMs healthy?)
+- [ ] **72. Auto-Restart** - `infra/auto_restart.py` - auto-restart failed workers on any platform
+- [ ] **73. Cost Tracker** - `infra/cost_tracker.py` - track usage across all free tiers (GitHub minutes, Oracle CPU, Google requests)
+- [ ] **74. Data Merge Engine** - `infra/data_merge.py` - merge data from multiple sources into single DuckDB (handle duplicates, conflicts)
+- [ ] **75. Platform Selector** - `infra/platform_selector.py` - auto-select best platform based on current load and availability
+
+---
+
 ## 📊 Progress Summary
 
 | Category | Total | Completed | Remaining |
@@ -144,7 +182,8 @@
 | Autonomous Agent | 5 | 0 | 5 |
 | Stealth & Distribution | 12 | 0 | 12 |
 | Advanced OSINT | 5 | 0 | 5 |
-| **TOTAL** | **65** | **5** | **60** |
+| **Parallel Execution Architecture** | **10** | **0** | **10** |
+| **TOTAL** | **75** | **5** | **70** |
 
 ---
 
@@ -217,21 +256,20 @@ CREATE TABLE taxonomy (
 
 ## 📈 Data Growth Projections (6 months)
 
-| City | Businesses | Data Size (DuckDB) |
-|---|---|---|
-| Dubai only | 30,000 | ~300 MB |
-| UAE (5 cities) | 150,000 | ~1.5 GB |
-| Gulf (10 countries) | 300,000 | ~3 GB |
-| Middle East (20 countries) | 600,000 | ~6 GB |
-| After 2 years | 2,000,000+ | ~20 GB |
+| Scenario | Businesses/month | After 6 months | Data Size |
+|---|---|---|---|
+| **Before (GitHub only)** | 7,200 | 43,200 | ~300 MB |
+| **After (All parallel)** | 41,400 | 248,400 | ~1.8 GB |
 
 ---
 
 ## 💰 Total Cost: $0
 
-| Item | Cost |
+| Platform | Cost |
 |---|---|
 | GitHub Actions | $0 (2000 min/month free) |
+| Oracle Cloud Free Tier | $0 (4 ARM VMs, 24GB RAM - ALWAYS FREE) |
+| Google Cloud Run | $0 (2M requests/month free) |
 | DuckDB | $0 (free) |
 | NetworkX | $0 (free) |
 | Playwright Stealth | $0 (free) |
@@ -254,18 +292,21 @@ CREATE TABLE taxonomy (
 | Week 3 | Temporal Tracking & Change Detection | #21 - #28 |
 | Week 4 | Search & Filtering System | #29 - #38 |
 | Week 5 | Stealth & Distribution | #49 - #60 |
-| Week 6 | RLO Phase 1 | #39 - #43 |
-| Week 7 | Autonomous Agent | #44 - #48 |
-| Week 8 | Advanced OSINT + Testing | #61 - #65 |
+| Week 6 | **Parallel Execution Architecture** | **#66 - #75** |
+| Week 7 | RLO Phase 1 | #39 - #43 |
+| Week 8 | Autonomous Agent | #44 - #48 |
+| Week 9 | Advanced OSINT + Testing | #61 - #65 |
 
 ---
 
 ## 🔑 Key Decisions
 
 1. **Database**: DuckDB (storage) + NetworkX (graph queries) — both free, embedded, no server
-2. **Stealth**: Playwright Stealth + GitHub Actions (Microsoft IPs) + Free Proxy Rotation — all free
-3. **Learning**: IMAP IDLE + VADER Sentiment — free push notifications + free sentiment analysis
-4. **Agent**: LangGraph + Cal.com + llama-3.1-8b:free — free state machine + free scheduling + free LLM
-5. **Temporal**: Snapshots + Change Detection — track business health over time
-6. **Search**: Multi-criteria filtering (country/city/sector/month/health/rating) — make data actionable
-7. **Backup**: GitHub Artifacts (90 days) + Google Drive (15GB) + Dropbox (2GB) — triple redundancy
+2. **Parallel Execution**: GitHub Actions + Oracle Cloud + Google Cloud Run + Local — all free, 5.75x more data
+3. **Stealth**: Playwright Stealth + GitHub Actions (Microsoft IPs) + Free Proxy Rotation — all free
+4. **Learning**: IMAP IDLE + VADER Sentiment — free push notifications + free sentiment analysis
+5. **Agent**: LangGraph + Cal.com + llama-3.1-8b:free — free state machine + free scheduling + free LLM
+6. **Temporal**: Snapshots + Change Detection — track business health over time
+7. **Search**: Multi-criteria filtering (country/city/sector/month/health/rating) — make data actionable
+8. **Backup**: GitHub Artifacts (90 days) + Google Drive (15GB) + Dropbox (2GB) — triple redundancy
+9. **Oracle Cloud**: 4 ARM VMs ALWAYS FREE — the game changer for 24/7 execution
