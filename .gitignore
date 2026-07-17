@@ -1,5 +1,8 @@
 # Dependencies
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
 
 # Environment
 .env
@@ -9,11 +12,34 @@ node_modules/
 # Build / deploy
 .vercel
 dist/
+build/
 
 # OS / editor
 .DS_Store
 Thumbs.db
 *.log
+.vscode/
+.idea/
 
 # Extension packaging
 *.zip
+
+# Python venv
+venv/
+.venv/
+env/
+
+# Screenshots & mockups (generated, not tracked)
+lead-generator/screenshots/
+lead-generator/mockups/
+lead-generator/reports/
+
+# Temp files
+*.tmp
+*.bak
+
+# ═══════════════════════════════════════════════════════════════
+# IMPORTANT: data.duckdb is NOT ignored — it must be committed
+# so data persists across GitHub Actions runs.
+# ═══════════════════════════════════════════════════════════════
+# lead-generator/data.duckdb   ← TRACKED (do not ignore)

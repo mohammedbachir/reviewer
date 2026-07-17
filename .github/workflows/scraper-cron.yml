@@ -1,0 +1,321 @@
+name: FindLeads — Automated Scraper (Every 6 Hours)
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      city:
+        description: 'Target city (leave empty for multi-city)'
+        required: false
+        default: ''
+      sector:
+        description: 'Business sector'
+        required: false
+        default: 'beauty salon'
+      limit:
+        description: 'Businesses per city'
+        required: false
+        default: '15'
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 1: Scrape UAE cities (Dubai, Abu Dhabi)
+  # ═══════════════════════════════════════════════════════════════
+  scrape-uae:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r lead-generator/requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Scrape Dubai — Beauty Salons
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Dubai" \
+            --sector "beauty salon" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Scrape Dubai — Dental Clinics
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Dubai" \
+            --sector "dental clinic" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Scrape Abu Dhabi — Beauty Salons
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Abu Dhabi" \
+            --sector "beauty salon" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Scrape Abu Dhabi — Dental Clinics
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Abu Dhabi" \
+            --sector "dental clinic" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Upload DuckDB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uae-data-${{ github.run_id }}
+          path: lead-generator/data.duckdb
+          retention-days: 90
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 2: Scrape Saudi Arabia cities (Riyadh, Jeddah)
+  # ═══════════════════════════════════════════════════════════════
+  scrape-saudi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r lead-generator/requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Scrape Riyadh — Beauty Salons
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Riyadh" \
+            --sector "beauty salon" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Scrape Riyadh — Dental Clinics
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Riyadh" \
+            --sector "dental clinic" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Scrape Jeddah — Beauty Salons
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Jeddah" \
+            --sector "beauty salon" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Upload DuckDB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saudi-data-${{ github.run_id }}
+          path: lead-generator/data.duckdb
+          retention-days: 90
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 3: Scrape US cities (Austin, Miami)
+  # ═══════════════════════════════════════════════════════════════
+  scrape-us:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r lead-generator/requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Scrape Austin — Coffee Shops
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Austin" \
+            --sector "coffee shop" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Scrape Miami — Dentists
+        run: |
+          python lead-generator/pipeline/orchestrator.py \
+            --city "Miami" \
+            --sector "dentist" \
+            --limit ${{ github.event.inputs.limit || '15' }} \
+            --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Upload DuckDB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: us-data-${{ github.run_id }}
+          path: lead-generator/data.duckdb
+          retention-days: 90
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 4: Merge all data + commit to repo
+  # ═══════════════════════════════════════════════════════════════
+  merge-and-commit:
+    runs-on: ubuntu-latest
+    needs: [scrape-uae, scrape-saudi, scrape-us]
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install DuckDB
+        run: pip install duckdb
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Merge DuckDB files
+        run: |
+          python -c "
+          import duckdb, glob, os
+
+          # Start with the main DB
+          main_db = 'lead-generator/data.duckdb'
+          conn = duckdb.connect(main_db)
+
+          # Ensure tables exist
+          try:
+              conn.execute('CREATE SEQUENCE IF NOT EXISTS node_id_seq START 1')
+          except: pass
+          try:
+              conn.execute('''CREATE TABLE IF NOT EXISTS businesses (
+                  id INTEGER DEFAULT nextval('node_id_seq'),
+                  name TEXT, city TEXT, sector TEXT, country TEXT DEFAULT 'UAE',
+                  rating REAL DEFAULT 0, review_count INTEGER DEFAULT 0,
+                  website TEXT DEFAULT '', email TEXT DEFAULT '', phone TEXT DEFAULT '',
+                  address TEXT DEFAULT '', google_url TEXT DEFAULT '', category TEXT DEFAULT '',
+                  response_rate INTEGER DEFAULT 0, unanswered_reviews INTEGER DEFAULT 0,
+                  target_priority TEXT DEFAULT 'low', health_score INTEGER DEFAULT 50,
+                  osint_data TEXT DEFAULT '{}',
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (id)
+              )''')
+          except: pass
+          try:
+              conn.execute('''CREATE TABLE IF NOT EXISTS snapshots (
+                  id INTEGER DEFAULT nextval('node_id_seq'),
+                  business_id INTEGER, scan_date DATE DEFAULT CURRENT_DATE,
+                  rating REAL, review_count INTEGER, health_score INTEGER,
+                  sentiment_score REAL DEFAULT 0, replied_to_reviews INTEGER DEFAULT 0,
+                  status TEXT DEFAULT 'active',
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (id)
+              )''')
+          except: pass
+          try:
+              conn.execute('''CREATE TABLE IF NOT EXISTS scan_runs (
+                  id INTEGER DEFAULT nextval('node_id_seq'),
+                  run_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                  city TEXT, sector TEXT,
+                  businesses_found INTEGER DEFAULT 0, osint_scanned INTEGER DEFAULT 0,
+                  emails_found INTEGER DEFAULT 0, duration_seconds REAL DEFAULT 0,
+                  status TEXT DEFAULT 'running',
+                  PRIMARY KEY (id)
+              )''')
+          except: pass
+
+          # Merge from each artifact
+          for artifact_dir in glob.glob('artifacts/*/data.duckdb'):
+              print(f'Merging: {artifact_dir}')
+              try:
+                  src = duckdb.connect(artifact_dir, read_only=True)
+                  # Copy businesses
+                  rows = src.execute('SELECT * FROM businesses').fetchall()
+                  cols = [d[0] for d in src.description]
+                  for row in rows:
+                      data = dict(zip(cols, row))
+                      try:
+                          conn.execute('''INSERT INTO businesses
+                              (name, city, sector, country, rating, review_count,
+                               website, email, phone, address, google_url, category,
+                               response_rate, unanswered_reviews, target_priority,
+                               health_score, osint_data)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                          ''', [
+                              data.get('name'), data.get('city'), data.get('sector'),
+                              data.get('country', 'UAE'), data.get('rating', 0),
+                              data.get('review_count', 0), data.get('website', ''),
+                              data.get('email', ''), data.get('phone', ''),
+                              data.get('address', ''), data.get('google_url', ''),
+                              data.get('category', ''), data.get('response_rate', 0),
+                              data.get('unanswered_reviews', 0),
+                              data.get('target_priority', 'low'),
+                              data.get('health_score', 50),
+                              data.get('osint_data', '{}'),
+                          ])
+                      except Exception as e:
+                          if 'Duplicate' not in str(e):
+                              print(f'  Skip: {e}')
+                  src.close()
+              except Exception as e:
+                  print(f'  Error merging {artifact_dir}: {e}')
+
+          # Stats
+          total = conn.execute('SELECT COUNT(*) FROM businesses').fetchone()[0]
+          cities = conn.execute('SELECT COUNT(DISTINCT city) FROM businesses').fetchone()[0]
+          snaps = conn.execute('SELECT COUNT(*) FROM snapshots').fetchone()[0]
+          print(f'Merged: {total} businesses across {cities} cities, {snaps} snapshots')
+          conn.close()
+          "
+
+      - name: Commit updated database
+        run: |
+          git config user.name "FindLeads Bot"
+          git config user.email "findleads-bot@users.noreply.github.com"
+          git add lead-generator/data.duckdb
+          git diff --cached --quiet || git commit -m "chore: update data.duckdb [auto] ${{ github.run_number }}"
+          git push

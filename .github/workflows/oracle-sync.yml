@@ -1,0 +1,119 @@
+name: FindLeads — Oracle Cloud Sync
+
+on:
+  schedule:
+    - cron: '30 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: '3.12'
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 1: Run scraper on Oracle Cloud VM (4 ARM instances)
+  # ═══════════════════════════════════════════════════════════════
+  oracle-scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH to Oracle Cloud
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.ORACLE_SSH_KEY }}
+
+      - name: Add Oracle VM to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.ORACLE_VM_IP_1 }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.ORACLE_VM_IP_2 }} >> ~/.ssh/known_hosts
+
+      - name: Install & Run on VM 1 (Dubai scraper)
+        run: |
+          VM_IP="${{ secrets.ORACLE_VM_IP_1 }}"
+          VM_USER="${{ secrets.ORACLE_VM_USER || 'ubuntu' }}"
+          ssh $VM_USER@$VM_IP 'bash -s' << 'REMOTE_SCRIPT'
+            set -e
+            if [ ! -d "findleads" ]; then
+              git clone https://github.com/${{ github.repository }}.git findleads
+            fi
+            cd findleads/lead-generator
+            git pull
+            python3 -m pip install --quiet -r requirements.txt 2>/dev/null
+            playwright install chromium --with-deps 2>/dev/null || true
+            
+            # Run Dubai + Abu Dhabi
+            python pipeline/orchestrator.py --city "Dubai" --sector "beauty salon" --limit 15 --db data.duckdb || true
+            python pipeline/orchestrator.py --city "Dubai" --sector "dental clinic" --limit 15 --db data.duckdb || true
+            python pipeline/orchestrator.py --city "Abu Dhabi" --sector "beauty salon" --limit 15 --db data.duckdb || true
+            
+            # Commit and push
+            git config user.name "Oracle Bot 1"
+            git config user.email "oracle-bot-1@findleads"
+            git add data.duckdb
+            git diff --cached --quiet || git commit -m "chore: oracle-1 data [auto]"
+            git push
+          REMOTE_SCRIPT
+
+      - name: Install & Run on VM 2 (Saudi scraper)
+        run: |
+          VM_IP="${{ secrets.ORACLE_VM_IP_2 }}"
+          VM_USER="${{ secrets.ORACLE_VM_USER || 'ubuntu' }}"
+          ssh $VM_USER@$VM_IP 'bash -s' << 'REMOTE_SCRIPT'
+            set -e
+            if [ ! -d "findleads" ]; then
+              git clone https://github.com/${{ github.repository }}.git findleads
+            fi
+            cd findleads/lead-generator
+            git pull
+            python3 -m pip install --quiet -r requirements.txt 2>/dev/null
+            playwright install chromium --with-deps 2>/dev/null || true
+            
+            # Run Riyadh + Jeddah
+            python pipeline/orchestrator.py --city "Riyadh" --sector "beauty salon" --limit 15 --db data.duckdb || true
+            python pipeline/orchestrator.py --city "Riyadh" --sector "dental clinic" --limit 15 --db data.duckdb || true
+            python pipeline/orchestrator.py --city "Jeddah" --sector "beauty salon" --limit 15 --db data.duckdb || true
+            
+            # Commit and push
+            git config user.name "Oracle Bot 2"
+            git config user.email "oracle-bot-2@findleads"
+            git add data.duckdb
+            git diff --cached --quiet || git commit -m "chore: oracle-2 data [auto]"
+            git push
+          REMOTE_SCRIPT
+
+  # ═══════════════════════════════════════════════════════════════
+  # JOB 2: Download data from Oracle VMs and merge
+  # ═══════════════════════════════════════════════════════════════
+  oracle-merge:
+    runs-on: ubuntu-latest
+    needs: oracle-scrape
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Pull latest data from Oracle commits
+        run: |
+          git pull origin main
+
+      - name: Verify database
+        run: |
+          pip install duckdb
+          python -c "
+          import duckdb
+          conn = duckdb.connect('lead-generator/data.duckdb', read_only=True)
+          total = conn.execute('SELECT COUNT(*) FROM businesses').fetchone()[0]
+          cities = conn.execute('SELECT COUNT(DISTINCT city) FROM businesses').fetchone()[0]
+          sectors = conn.execute('SELECT COUNT(DISTINCT sector) FROM businesses').fetchone()[0]
+          snaps = conn.execute('SELECT COUNT(*) FROM snapshots').fetchone()[0]
+          print(f'Total: {total} businesses | {cities} cities | {sectors} sectors | {snaps} snapshots')
+          conn.close()
+          "
