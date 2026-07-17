@@ -325,7 +325,6 @@ We built an AI tool that helps businesses like yours reply to every review in 30
 Would you like to see how it works?
 
 Best,
-{SENDER_NAME}
 Reviewer Team"""
                     
                     emails_to_send.append({
