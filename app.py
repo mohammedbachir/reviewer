@@ -18,7 +18,7 @@ if ROOT_DIR not in sys.path:
 
 SCRAPE_SECRET = os.environ.get("SCRAPE_SECRET_KEY", "findleads2026")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-SUPABASE_KEY = os.environ.get("SCRAPE_SECRET_KEY", "findleads2026")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 logger = logging.getLogger("app")
 
@@ -194,7 +194,7 @@ def run_scrape():
     from scraper.finder import search_businesses
     from concurrent.futures import ThreadPoolExecutor, as_completed
     t0 = time.time()
-    HARD_DEADLINE = 52
+    HARD_DEADLINE = 25
     target = _get_target()
     city, sector = target["city"], target["sector"]
     max_results = min(target.get("max_results", 20), 20)
