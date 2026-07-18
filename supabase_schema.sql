@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS scan_runs (
 CREATE TABLE IF NOT EXISTS system_state (
     id BIGINT PRIMARY KEY DEFAULT 1,
     current_index INTEGER DEFAULT 0,
+    last_target TEXT DEFAULT '',
     last_run_at TIMESTAMPTZ,
     total_runs INTEGER DEFAULT 0,
     total_businesses INTEGER DEFAULT 0,
@@ -69,7 +70,7 @@ CREATE TABLE IF NOT EXISTS system_state (
 );
 
 -- Initialize system state
-INSERT INTO system_state (id, current_index) VALUES (1, 0)
+INSERT INTO system_state (id, current_index, last_target) VALUES (1, 0, '')
 ON CONFLICT (id) DO NOTHING;
 
 -- 5. Indexes

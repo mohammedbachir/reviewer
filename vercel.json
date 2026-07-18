@@ -1,18 +1,18 @@
 {
   "builds": [
     {
-      "src": "api/scrape.py",
+      "src": "app.py",
       "use": "@vercel/python@latest"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/scrape.py"
+      "src": "/(.*)",
+      "dest": "app.py"
     }
   ],
   "functions": {
-    "api/scrape.py": {
+    "app.py": {
       "maxDuration": 30,
       "runtime": "python3.11"
     }
