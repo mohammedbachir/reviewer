@@ -102,22 +102,34 @@ def run_scrape():
     emails = 0
     healths = []
 
-    for biz in businesses:
+    import concurrent.futures
+
+    def _enrich(biz):
         website = biz.get("website", "")
-        if website:
-            email = find_email_from_website(website)
-            if email:
-                biz["email"] = email
-                emails += 1
+        if not website:
+            return biz, False, 0
+        email = find_email_from_website(website)
+        domain = urlparse(website).netloc.replace("www.", "")
+        osint = analyze_domain(domain, biz.get("rating"), biz.get("review_count"))
+        if email:
+            biz["email"] = email
+        biz["health_score"] = osint["health_score"]
+        biz["ssl_grade"] = osint["ssl_grade"]
+        biz["tech_stack"] = osint["tech_stack"]
+        return biz, bool(email), osint["health_score"]
 
-            domain = urlparse(website).netloc.replace("www.", "")
-            osint = analyze_domain(domain, biz.get("rating"), biz.get("review_count"))
-            biz["health_score"] = osint["health_score"]
-            biz["ssl_grade"] = osint["ssl_grade"]
-            biz["tech_stack"] = osint["tech_stack"]
-            healths.append(osint["health_score"])
-
-            _upsert_business(biz, target)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
+        futures = {pool.submit(_enrich, biz): biz for biz in businesses}
+        for fut in concurrent.futures.as_completed(futures):
+            try:
+                biz, found_email, hp = fut.result()
+                if found_email:
+                    emails += 1
+                if hp:
+                    healths.append(hp)
+                _upsert_business(biz, target)
+            except Exception:
+                pass
 
     elapsed = time.time() - t0
     avg_health = sum(healths) / len(healths) if healths else 0
