@@ -1,41 +1,33 @@
 """
 FindLeads — Vercel Entry Point
-Serverless micro-scraping: curl_cffi + DuckDuckGo + Supabase
 """
 
 import os
 import sys
 import json
-import hashlib
 import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, ROOT_DIR)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
 
 SCRAPE_SECRET = os.environ.get("SCRAPE_SECRET_KEY", "findleads2026")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
-from scraper.finder import find_businesses
-from scraper.email_finder import find_email_from_website
-from scraper.osint_engine import analyze_domain
-from urllib.parse import urlparse
-
 
 def _get_target():
-    with open(os.path.join(ROOT_DIR, "targets.json")) as f:
+    targets_path = os.path.join(ROOT_DIR, "targets.json")
+    with open(targets_path) as f:
         raw = json.load(f)
     targets = raw if isinstance(raw, list) else raw.get("targets", [])
     try:
         from curl_cffi import requests as cffi_requests
         resp = cffi_requests.get(
             f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
-            headers={
-                "apikey": SUPABASE_KEY,
-                "Authorization": f"Bearer {SUPABASE_KEY}",
-            },
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
             timeout=10,
         )
         row = resp.json()[0]
@@ -49,44 +41,34 @@ def _get_target():
         cffi_requests.patch(
             f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
             json={"current_index": idx, "last_target": f"{target['city']}/{target['sector']}"},
-            headers={
-                "apikey": SUPABASE_KEY,
-                "Authorization": f"Bearer {SUPABASE_KEY}",
-                "Prefer": "return=minimal",
-            },
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
             timeout=10,
         )
     except Exception:
         pass
-
     return target
 
 
 def _upsert_business(biz, target):
-    from curl_cffi import requests as cffi_requests
-    data = {
-        "name": biz["name"],
-        "city": target["city"],
-        "sector": target["sector"],
-        "website": biz.get("website", ""),
-        "phone": biz.get("phone", ""),
-        "rating": biz.get("rating"),
-        "review_count": biz.get("review_count"),
-        "health_score": biz.get("health_score"),
-        "email": biz.get("email"),
-        "ssl_grade": biz.get("ssl_grade", ""),
-        "tech_stack": biz.get("tech_stack", []),
-    }
-    headers = {
-        "apikey": SUPABASE_KEY,
-        "Authorization": f"Bearer {SUPABASE_KEY}",
-        "Prefer": "resolution=merge-duplicates",
-    }
     try:
+        from curl_cffi import requests as cffi_requests
+        data = {
+            "name": biz["name"],
+            "city": target["city"],
+            "sector": target["sector"],
+            "website": biz.get("website", ""),
+            "phone": biz.get("phone", ""),
+            "rating": biz.get("rating"),
+            "review_count": biz.get("review_count"),
+            "health_score": biz.get("health_score"),
+            "email": biz.get("email"),
+            "ssl_grade": biz.get("ssl_grade", ""),
+            "tech_stack": biz.get("tech_stack", []),
+        }
         cffi_requests.post(
             f"{SUPABASE_URL}/rest/v1/businesses",
             json=data,
-            headers=headers,
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "resolution=merge-duplicates"},
             timeout=10,
         )
     except Exception:
@@ -94,6 +76,11 @@ def _upsert_business(biz, target):
 
 
 def run_scrape():
+    from scraper.finder import find_businesses
+    from scraper.email_finder import find_email_from_website
+    from scraper.osint_engine import analyze_domain
+    from urllib.parse import urlparse
+
     t0 = time.time()
     target = _get_target()
     city, sector = target["city"], target["sector"]
@@ -102,34 +89,27 @@ def run_scrape():
     emails = 0
     healths = []
 
-    import concurrent.futures
-
-    def _enrich(biz):
+    for biz in businesses:
         website = biz.get("website", "")
         if not website:
-            return biz, False, 0
-        email = find_email_from_website(website)
-        domain = urlparse(website).netloc.replace("www.", "")
-        osint = analyze_domain(domain, biz.get("rating"), biz.get("review_count"))
-        if email:
-            biz["email"] = email
-        biz["health_score"] = osint["health_score"]
-        biz["ssl_grade"] = osint["ssl_grade"]
-        biz["tech_stack"] = osint["tech_stack"]
-        return biz, bool(email), osint["health_score"]
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
-        futures = {pool.submit(_enrich, biz): biz for biz in businesses}
-        for fut in concurrent.futures.as_completed(futures):
-            try:
-                biz, found_email, hp = fut.result()
-                if found_email:
-                    emails += 1
-                if hp:
-                    healths.append(hp)
-                _upsert_business(biz, target)
-            except Exception:
-                pass
+            continue
+        try:
+            email = find_email_from_website(website)
+            if email:
+                biz["email"] = email
+                emails += 1
+        except Exception:
+            pass
+        try:
+            domain = urlparse(website).netloc.replace("www.", "")
+            osint = analyze_domain(domain, biz.get("rating"), biz.get("review_count"))
+            biz["health_score"] = osint["health_score"]
+            biz["ssl_grade"] = osint["ssl_grade"]
+            biz["tech_stack"] = osint["tech_stack"]
+            healths.append(osint["health_score"])
+        except Exception:
+            pass
+        _upsert_business(biz, target)
 
     elapsed = time.time() - t0
     avg_health = sum(healths) / len(healths) if healths else 0
@@ -174,9 +154,6 @@ class handler(BaseHTTPRequestHandler):
             if params.get("key") != SCRAPE_SECRET:
                 self._respond(403, {"error": "Invalid key"})
                 return
-        elif not SUPABASE_URL:
-            self._respond(500, {"error": "Missing SUPABASE_URL"})
-            return
 
         result = run_scrape()
         self._respond(200, result)
