@@ -285,7 +285,7 @@ def _check_whois_rdap(session, domain: str) -> List[str]:
     try:
         # First get the RDAP server from IANA
         tld = domain.split(".")[-1]
-        resp = session.get(f"https://rdap.nic.uk/domain/{domain}", timeout=8)
+        resp = session.get(f"https://rdap.nic.uk/domain/{domain}", timeout=4)
         if resp.status_code == 200:
             data = resp.json()
             for evt in data.get("events", []):
@@ -316,7 +316,7 @@ def _crawl_website(session, url: str, target_domain: str, max_pages: int = 2) ->
         visited.add(page_url)
 
         try:
-            resp = session.get(page_url, headers=HEADERS, timeout=6)
+            resp = session.get(page_url, headers=HEADERS, timeout=4)
             if resp.status_code != 200:
                 continue
 
@@ -379,7 +379,7 @@ def _check_crt_sh(session, domain: str) -> Set[str]:
     url = f"https://crt.sh/?q=%25.{domain}&output=json"
 
     try:
-        resp = session.get(url, headers={"User-Agent": "FindLeads/1.0"}, timeout=6)
+        resp = session.get(url, headers={"User-Agent": "FindLeads/1.0"}, timeout=4)
         if resp.status_code == 200:
             data = resp.json()
             for cert in data:

@@ -94,7 +94,7 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
 def _search_ddg(session, query: str, limit: int) -> List[Dict]:
     """Search DuckDuckGo HTML version."""
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-    resp = session.get(url, headers=HEADERS, timeout=5)
+    resp = session.get(url, headers=HEADERS, timeout=3)
 
     if resp.status_code != 200:
         return []
@@ -186,7 +186,7 @@ def _extract_rating_from_snippet(snippet: str) -> tuple:
 def _search_ddg_ratings(session, query: str, limit: int) -> Dict[str, Dict]:
     """Search DDG for Google Maps ratings."""
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-    resp = session.get(url, headers=HEADERS, timeout=5)
+    resp = session.get(url, headers=HEADERS, timeout=3)
 
     if resp.status_code != 200:
         return {}
@@ -234,7 +234,7 @@ def _merge_ratings(businesses: List[Dict], ratings: Dict[str, Dict]):
 def _search_google(session, query: str, limit: int) -> List[Dict]:
     """Search Google for business listings."""
     url = f"https://www.google.com/search?q={quote_plus(query)}&hl=en"
-    resp = session.get(url, headers=HEADERS, timeout=5)
+    resp = session.get(url, headers=HEADERS, timeout=3)
 
     if resp.status_code != 200:
         return []

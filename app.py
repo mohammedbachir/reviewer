@@ -149,7 +149,6 @@ def _generate_outreach_hook(biz, temperature):
 def _enrich_business(biz):
     from scraper.email_finder import find_best_email
     from scraper.osint_engine import analyze_domain
-    from scraper.review_engine import analyze_reviews
     website = biz.get("website", "")
     domain = ""
     if website:
@@ -174,16 +173,6 @@ def _enrich_business(biz):
             biz["tech_stack"] = osint["tech_stack"]
         except Exception as e:
             logger.debug(f"  OSINT error: {e}")
-    try:
-        review_data = analyze_reviews(biz.get("name", ""), biz.get("city", ""), website)
-        biz["sentiment"] = review_data.get("sentiment", "neutral")
-        biz["responds_to_reviews"] = review_data.get("responds_to_reviews", False)
-        if review_data.get("rating") and not biz.get("rating"):
-            biz["rating"] = review_data["rating"]
-        if review_data.get("review_count") and not biz.get("review_count"):
-            biz["review_count"] = review_data["review_count"]
-    except Exception as e:
-        logger.debug(f"  Review error: {e}")
     temperature = _score_lead(biz)
     biz["lead_temperature"] = temperature
     biz["outreach_hook"] = _generate_outreach_hook(biz, temperature)
@@ -194,15 +183,15 @@ def run_scrape():
     from scraper.finder import search_businesses
     from concurrent.futures import ThreadPoolExecutor, as_completed
     t0 = time.time()
-    HARD_DEADLINE = 25
+    HARD_DEADLINE = 22
     target = _get_target()
     city, sector = target["city"], target["sector"]
-    max_results = min(target.get("max_results", 20), 20)
+    max_results = min(target.get("max_results", 10), 10)
     businesses = search_businesses(city, sector, max_results)
     logger.info(f"Found {len(businesses)} businesses in {city}/{sector}")
     elapsed_search = time.time() - t0
     remaining = HARD_DEADLINE - elapsed_search
-    per_biz_timeout = max(8, remaining / max(len(businesses), 1))
+    per_biz_timeout = max(5, remaining / max(len(businesses), 1))
     enriched = []
     with ThreadPoolExecutor(max_workers=5) as executor:
         future_to_biz = {executor.submit(_enrich_business, biz): biz for biz in businesses}
@@ -213,11 +202,9 @@ def run_scrape():
             try:
                 result = future.result(timeout=per_biz_timeout)
                 enriched.append(result)
+                _upsert_business(result, target)
             except Exception as e:
                 logger.debug(f"  Enrichment error: {e}")
-    for biz in enriched:
-        if time.time() - t0 > HARD_DEADLINE: break
-        _upsert_business(biz, target)
     emails_found = sum(1 for b in enriched if b.get("email"))
     hot = sum(1 for b in enriched if b.get("lead_temperature") == "HOT")
     warm = sum(1 for b in enriched if b.get("lead_temperature") == "WARM")
