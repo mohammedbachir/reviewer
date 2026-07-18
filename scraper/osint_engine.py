@@ -131,7 +131,7 @@ def check_dns(domain: str) -> Dict:
 
     for rtype in ["A", "MX", "TXT", "NS"]:
         try:
-            resp = session.get(base, params={"name": domain, "type": rtype}, timeout=5)
+            resp = session.get(base, params={"name": domain, "type": rtype}, timeout=3)
             if resp.status_code == 200:
                 data = resp.json()
                 type_map = {"A": 1, "MX": 15, "TXT": 16, "NS": 2}
@@ -546,7 +546,7 @@ def detect_tech(domain: str) -> List[str]:
                 techs.add(tech_name)
 
         try:
-            resp_robots = session.get(f"https://{domain}/robots.txt", headers=HEADERS, timeout=5)
+            resp_robots = session.get(f"https://{domain}/robots.txt", headers=HEADERS, timeout=3)
             if resp_robots.status_code == 200:
                 robots_text = resp_robots.text.lower()
                 if "yoast" in robots_text:

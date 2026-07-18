@@ -119,14 +119,7 @@ def find_best_email(website_url: str, business_name: str = "") -> Dict:
     except Exception as e:
         logger.debug(f"  Permutation error: {e}")
 
-    # Source 5: Gravatar check on common patterns
-    try:
-        grav_emails = _check_gravatar_patterns(session, domain)
-        for em in grav_emails:
-            candidates.append({"email": em, "confidence": 55, "source": "gravatar"})
-        logger.info(f"  Gravatar: {len(grav_emails)} emails")
-    except Exception as e:
-        logger.debug(f"  Gravatar error: {e}")
+    # Source 5: Gravatar check (skipped — 3-5s overhead, low value vs permutation)
 
     # Source 6: WHOIS/RDAP (skipped — slow and unreliable)
 
@@ -323,7 +316,7 @@ def _crawl_website(session, url: str, target_domain: str, max_pages: int = 2) ->
         visited.add(page_url)
 
         try:
-            resp = session.get(page_url, headers=HEADERS, timeout=10)
+            resp = session.get(page_url, headers=HEADERS, timeout=6)
             if resp.status_code != 200:
                 continue
 
@@ -364,7 +357,7 @@ def _check_common_paths(session, base_url: str, target_domain: str) -> Set[str]:
     for path in COMMON_PATHS:
         url = base + path
         try:
-            resp = session.get(url, headers=HEADERS, timeout=8)
+            resp = session.get(url, headers=HEADERS, timeout=5)
             if resp.status_code == 200:
                 found = EMAIL_REGEX.findall(resp.text)
                 for email in found:

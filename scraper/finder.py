@@ -59,24 +59,6 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
     except Exception as e:
         logger.error(f"DDG error: {e}")
 
-    # Source 2: DuckDuckGo rating search
-    try:
-        rating_query = f"{business_type} {city} rating reviews site:google.com/maps"
-        rating_results = _search_ddg_ratings(session, rating_query, limit)
-        # Merge ratings into existing businesses
-        _merge_ratings(businesses, rating_results)
-        logger.info(f"Ratings: enriched {len(rating_results)} businesses")
-    except Exception as e:
-        logger.error(f"Rating search error: {e}")
-
-    # Source 3: Google Search (fallback)
-    try:
-        google_results = _search_google(session, query, limit)
-        businesses.extend(google_results)
-        logger.info(f"Google: found {len(google_results)} results")
-    except Exception as e:
-        logger.error(f"Google error: {e}")
-
     # Deduplicate by name
     businesses = _deduplicate(businesses)
     businesses = businesses[:limit]
@@ -99,7 +81,7 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
                         biz[link_type] = details[link_type]
             except Exception:
                 pass
-            time.sleep(random.uniform(0.3, 0.8))
+            time.sleep(random.uniform(0.2, 0.5))
 
     logger.info(f"Final: {len(businesses)} businesses")
     return businesses
@@ -112,7 +94,7 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
 def _search_ddg(session, query: str, limit: int) -> List[Dict]:
     """Search DuckDuckGo HTML version."""
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-    resp = session.get(url, headers=HEADERS, timeout=15)
+    resp = session.get(url, headers=HEADERS, timeout=8)
 
     if resp.status_code != 200:
         return []
@@ -204,7 +186,7 @@ def _extract_rating_from_snippet(snippet: str) -> tuple:
 def _search_ddg_ratings(session, query: str, limit: int) -> Dict[str, Dict]:
     """Search DDG for Google Maps ratings."""
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-    resp = session.get(url, headers=HEADERS, timeout=15)
+    resp = session.get(url, headers=HEADERS, timeout=8)
 
     if resp.status_code != 200:
         return {}
@@ -252,7 +234,7 @@ def _merge_ratings(businesses: List[Dict], ratings: Dict[str, Dict]):
 def _search_google(session, query: str, limit: int) -> List[Dict]:
     """Search Google for business listings."""
     url = f"https://www.google.com/search?q={quote_plus(query)}&hl=en"
-    resp = session.get(url, headers=HEADERS, timeout=15)
+    resp = session.get(url, headers=HEADERS, timeout=8)
 
     if resp.status_code != 200:
         return []
@@ -304,7 +286,7 @@ def _scrape_website_details(session, website_url: str) -> Dict:
     }
 
     try:
-        resp = session.get(website_url, headers=HEADERS, timeout=10)
+        resp = session.get(website_url, headers=HEADERS, timeout=6)
         if resp.status_code != 200:
             return result
 

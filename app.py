@@ -247,6 +247,8 @@ def run_scrape():
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     t0 = time.time()
+    HARD_DEADLINE = 52  # seconds — leave 8s buffer for Supabase upserts
+
     target = _get_target()
     city, sector = target["city"], target["sector"]
     max_results = min(target.get("max_results", 20), 20)
@@ -254,7 +256,10 @@ def run_scrape():
     businesses = search_businesses(city, sector, max_results)
     logger.info(f"Found {len(businesses)} businesses in {city}/{sector}")
 
-    # Parallel enrichment (3 workers)
+    elapsed_search = time.time() - t0
+    remaining = HARD_DEADLINE - elapsed_search
+    per_biz_timeout = max(8, remaining / max(len(businesses), 1))
+
     enriched = []
     with ThreadPoolExecutor(max_workers=5) as executor:
         future_to_biz = {
@@ -262,14 +267,20 @@ def run_scrape():
             for biz in businesses
         }
         for future in as_completed(future_to_biz):
+            if time.time() - t0 > HARD_DEADLINE:
+                for f in future_to_biz:
+                    f.cancel()
+                break
             try:
-                result = future.result(timeout=25)
+                result = future.result(timeout=per_biz_timeout)
                 enriched.append(result)
             except Exception as e:
-                logger.debug(f"  Enrichment error: {e}")
+                logger.debug(f"  Enrichment timeout/error: {e}")
 
-    # Upsert to Supabase
+    # Upsert to Supabase (only within deadline)
     for biz in enriched:
+        if time.time() - t0 > HARD_DEADLINE:
+            break
         _upsert_business(biz, target)
 
     # Statistics

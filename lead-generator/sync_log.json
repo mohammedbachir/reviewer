@@ -1,0 +1,16 @@
+[
+  {
+    "timestamp": "2026-07-17T19:47:29.423706",
+    "source": "local",
+    "destination": "backups",
+    "status": "error_no_source",
+    "size_bytes": 0
+  },
+  {
+    "timestamp": "2026-07-17T19:50:05.293453",
+    "source": "local",
+    "destination": "backups",
+    "status": "error_no_source",
+    "size_bytes": 0
+  }
+]
