@@ -1,0 +1,52 @@
+name: FindLeads Scraper
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright duckdb requests beautifulsoup4 vaderSentiment textblob pyyaml python-whois dnspython fpdf2 rich imap-tools aiosmtplib pillow python-dateutil jinja2 networkx certifi typing-extensions
+          playwright install chromium --with-deps
+
+      - name: Run scraper — Dubai Beauty Salons
+        run: python lead-generator/pipeline/orchestrator.py --city "Dubai" --sector "beauty salon" --limit 10 --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Run scraper — Dubai Dental Clinics
+        run: python lead-generator/pipeline/orchestrator.py --city "Dubai" --sector "dental clinic" --limit 10 --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Run scraper — Riyadh Beauty Salons
+        run: python lead-generator/pipeline/orchestrator.py --city "Riyadh" --sector "beauty salon" --limit 10 --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Run scraper — Austin Coffee Shops
+        run: python lead-generator/pipeline/orchestrator.py --city "Austin" --sector "coffee shop" --limit 10 --db lead-generator/data.duckdb
+        continue-on-error: true
+
+      - name: Commit & push data
+        run: |
+          git config user.name "FindLeads Bot"
+          git config user.email "bot@findleads.app"
+          git add lead-generator/data.duckdb
+          git diff --cached --quiet || git commit -m "chore: update data ${{ github.run_number }}"
+          git push
