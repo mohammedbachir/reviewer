@@ -16,6 +16,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "findleads2026")
 KIMI_API_KEY = os.environ.get("KIMI_API_KEY", "")
+OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 SCRAPE_SECRET = os.environ.get("SCRAPE_SECRET_KEY", "findleads2026")
 
 HEADERS = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"}
@@ -309,10 +310,7 @@ def get_analytics():
 # KIMI AI
 # ════════════════════════════════════════════════════════════════
 
-def ask_kimi(question):
-    if not KIMI_API_KEY:
-        return {"error": "Kimi API key not configured"}
-
+def ask_kimi(question, openrouter_key="", kimi_key=""):
     stats = get_stats()
     analytics = get_analytics()
 
@@ -330,7 +328,7 @@ def ask_kimi(question):
         "temperature_dist": analytics["temperature_distribution"],
         "ssl_dist": analytics["ssl_distribution"],
         "sentiment_dist": analytics["sentiment_distribution"],
-        "top_hot_leads": [{"name": h["name"], "city": h["city"], "health": h["health_score"], "ssl": h["ssl_grade"]} for h in hot_leads],
+        "top_hot_leads": [{"name": h.get("name",""), "city": h.get("city",""), "health": h.get("health_score"), "ssl": h.get("ssl_grade","")} for h in hot_leads],
     }
 
     system_prompt = f"""You are FindLeads AI Advisor. You help analyze business lead data.
@@ -345,28 +343,45 @@ Rules:
 - Never fabricate data — only use what's provided above
 - Suggest concrete next steps"""
 
-    try:
-        resp = cffi_requests.post(
-            "https://api.moonshot.cn/v1/chat/completions",
-            json={
-                "model": "moonshot-v1-8k",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": question},
-                ],
-                "temperature": 0.7,
-                "max_tokens": 500,
-            },
-            headers={"Authorization": f"Bearer {KIMI_API_KEY}", "Content-Type": "application/json"},
-            timeout=30,
-        )
-        if resp.status_code == 200:
-            data = resp.json()
-            return {"answer": data["choices"][0]["message"]["content"]}
-        else:
-            return {"error": f"Kimi API error: {resp.status_code}"}
-    except Exception as e:
-        return {"error": str(e)}
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": question},
+    ]
+
+    if openrouter_key:
+        try:
+            resp = cffi_requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                json={
+                    "model": "meta-llama/llama-3.2-3b-instruct:free",
+                    "messages": messages,
+                    "temperature": 0.7,
+                    "max_tokens": 500,
+                },
+                headers={"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json", "HTTP-Referer": "https://reviewer-lovat.vercel.app"},
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {"answer": data["choices"][0]["message"]["content"]}
+        except Exception:
+            pass
+
+    if kimi_key:
+        try:
+            resp = cffi_requests.post(
+                "https://api.moonshot.cn/v1/chat/completions",
+                json={"model": "moonshot-v1-8k", "messages": messages, "temperature": 0.7, "max_tokens": 500},
+                headers={"Authorization": f"Bearer {kimi_key}", "Content-Type": "application/json"},
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                return {"answer": data["choices"][0]["message"]["content"]}
+        except Exception:
+            pass
+
+    return {"error": "AI API not configured. Set OPENROUTER_API_KEY or KIMI_API_KEY."}
 
 
 # ════════════════════════════════════════════════════════════════

@@ -37,9 +37,13 @@ lead-generator/reports/
 # Temp files
 *.tmp
 *.bak
+.daemon_state.json
+temp_*.json
 
 # ═══════════════════════════════════════════════════════════════
 # IMPORTANT: data.duckdb is NOT ignored — it must be committed
 # so data persists across GitHub Actions runs.
 # ═══════════════════════════════════════════════════════════════
 # lead-generator/data.duckdb   ← TRACKED (do not ignore)
+
+.env*

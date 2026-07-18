@@ -1,0 +1,348 @@
+"""
+FindLeads — Local Scraper Daemon
+Runs on your PC, scrapes every 2 hours in parallel with Vercel cron.
+Direct Supabase writes — no timeout limit.
+"""
+
+import os
+import sys
+import json
+import time
+import logging
+from datetime import datetime, timezone
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from urllib.parse import urlparse
+
+from curl_cffi import requests as cffi_requests
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S",
+)
+log = logging.getLogger("daemon")
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from dotenv import load_dotenv
+load_dotenv(os.path.join(ROOT_DIR, ".env"))
+
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://lgbzpwzpkzbquuwwhbin.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json",
+}
+
+STATE_FILE = os.path.join(ROOT_DIR, ".daemon_state.json")
+INTERVAL_SECONDS = 2 * 60 * 60
+MAX_WORKERS = 5
+
+
+def load_state():
+    try:
+        with open(STATE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return {"current_index": -1, "total_runs": 0, "total_businesses": 0, "total_emails": 0}
+
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
+def get_target():
+    with open(os.path.join(ROOT_DIR, "targets.json")) as f:
+        raw = json.load(f)
+    targets = raw if isinstance(raw, list) else raw.get("targets", [])
+    state = load_state()
+    idx = (state["current_index"] + 1) % len(targets)
+    target = targets[idx]
+    state["current_index"] = idx
+    save_state(state)
+    return target, idx, len(targets)
+
+
+def upsert_business(biz, target):
+    tech = biz.get("tech_stack", [])
+    if isinstance(tech, list):
+        tech = json.dumps(tech)
+    data = {
+        "name": biz["name"],
+        "city": target["city"],
+        "sector": target["sector"],
+        "website": biz.get("website", ""),
+        "phone": biz.get("phone", ""),
+        "rating": biz.get("rating"),
+        "review_count": biz.get("review_count"),
+        "health_score": biz.get("health_score"),
+        "email": biz.get("email"),
+        "ssl_grade": biz.get("ssl_grade", ""),
+        "tech_stack": tech,
+        "lead_temperature": biz.get("lead_temperature", "COLD"),
+        "outreach_hook": biz.get("outreach_hook", ""),
+        "email_confidence": biz.get("email_confidence", 0),
+        "email_source": biz.get("email_source", ""),
+        "sentiment": biz.get("sentiment", "neutral"),
+    }
+    resp = cffi_requests.post(
+        f"{SUPABASE_URL}/rest/v1/businesses",
+        json=data,
+        headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
+        timeout=10,
+    )
+    return resp.status_code < 400
+
+
+def score_lead(biz):
+    ssl = biz.get("ssl_grade", "F")
+    rating = biz.get("rating", 0)
+    health = biz.get("health_score", 50)
+    techs = biz.get("tech_stack", [])
+    responds = biz.get("responds_to_reviews", False)
+    sentiment = biz.get("sentiment", "neutral")
+    score = 0
+    ssl_scores = {"F": 4, "D": 3, "C": 2, "B": 1, "A": 0}
+    score += ssl_scores.get(ssl, 2)
+    if rating > 0:
+        if rating < 2.0:
+            score += 4
+        elif rating < 3.5:
+            score += 3
+        elif rating < 4.0:
+            score += 2
+        elif rating < 4.5:
+            score += 1
+    if health < 40:
+        score += 3
+    elif health < 60:
+        score += 2
+    elif health < 80:
+        score += 1
+    outdated = [t for t in techs if "Outdated" in t or "Legacy" in t]
+    score += min(len(outdated), 3)
+    if not responds:
+        score += 2
+    if sentiment == "negative":
+        score += 2
+    elif sentiment == "neutral":
+        score += 1
+    if score >= 7:
+        return "HOT"
+    elif score >= 4:
+        return "WARM"
+    return "COLD"
+
+
+def generate_hook(biz, temperature):
+    name = biz.get("name", "your business")
+    ssl = biz.get("ssl_grade", "")
+    rating = biz.get("rating", 0)
+    techs = biz.get("tech_stack", [])
+    health = biz.get("health_score", 50)
+    hooks = []
+    if ssl in ("D", "F"):
+        hooks.append(f"Your website SSL certificate needs attention (grade {ssl})")
+    if rating > 0 and rating < 3.5:
+        hooks.append(f"Your Google rating ({rating}/5) could be improved")
+    outdated = [t for t in techs if "Outdated" in t or "Legacy" in t]
+    if outdated:
+        hooks.append(f"Your website uses outdated technology ({', '.join(outdated[:2])})")
+    if health < 50:
+        hooks.append(f"Your website health score is {health}/100")
+    if hooks:
+        return f"Hi {name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
+    elif temperature == "WARM":
+        return f"Hi {name}! We help businesses like yours improve customer engagement through better online reputation."
+    return f"Hi {name}! We help businesses improve their online presence and customer satisfaction."
+
+
+def enrich_business(biz):
+    from scraper.email_finder import find_best_email
+    from scraper.osint_engine import analyze_domain
+    from scraper.review_engine import analyze_reviews
+
+    website = biz.get("website", "")
+    domain = ""
+    if website:
+        try:
+            domain = urlparse(website).netloc.replace("www.", "")
+        except Exception:
+            pass
+
+    if website:
+        try:
+            result = find_best_email(website, biz.get("name", ""))
+            if result.get("email"):
+                biz["email"] = result["email"]
+                biz["email_confidence"] = result.get("confidence", 0)
+                biz["email_source"] = result.get("source", "")
+        except Exception as e:
+            log.debug(f"  Email error: {e}")
+
+    if domain:
+        try:
+            osint = analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
+            biz["health_score"] = osint["health_score"]
+            biz["ssl_grade"] = osint["ssl_grade"]
+            biz["tech_stack"] = osint["tech_stack"]
+        except Exception as e:
+            log.debug(f"  OSINT error: {e}")
+
+    try:
+        rv = analyze_reviews(biz.get("name", ""), biz.get("city", ""), website)
+        biz["sentiment"] = rv.get("sentiment", "neutral")
+        biz["responds_to_reviews"] = rv.get("responds_to_reviews", False)
+        if rv.get("rating") and not biz.get("rating"):
+            biz["rating"] = rv["rating"]
+        if rv.get("review_count") and not biz.get("review_count"):
+            biz["review_count"] = rv["review_count"]
+    except Exception as e:
+        log.debug(f"  Review error: {e}")
+
+    biz["lead_temperature"] = score_lead(biz)
+    biz["outreach_hook"] = generate_hook(biz, biz["lead_temperature"])
+    return biz
+
+
+def run_once():
+    from scraper.finder import search_businesses
+
+    t0 = time.time()
+    target, idx, total = get_target()
+    city, sector = target["city"], target["sector"]
+    max_results = min(target.get("max_results", 20), 20)
+
+    print()
+    print(f"{'='*60}")
+    print(f"  RUN #{idx + 1}/{total}  |  {city} / {sector}")
+    print(f"{'='*60}")
+
+    businesses = search_businesses(city, sector, max_results)
+    if not businesses:
+        print(f"  [!] No businesses found. Skipping.")
+        return
+
+    print(f"  Found {len(businesses)} businesses. Enriching with {MAX_WORKERS} workers...")
+
+    enriched = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
+        futures = {ex.submit(enrich_business, b): b for b in businesses}
+        done_count = 0
+        for future in as_completed(futures):
+            done_count += 1
+            try:
+                result = future.result(timeout=60)
+                enriched.append(result)
+                emails = sum(1 for b in enriched if b.get("email"))
+                hwc = {"HOT": 0, "WARM": 0, "COLD": 0}
+                for b in enriched:
+                    t = b.get("lead_temperature", "COLD")
+                    hwc[t] = hwc.get(t, 0) + 1
+                elapsed = time.time() - t0
+                print(
+                    f"  [{done_count}/{len(businesses)}] "
+                    f"{result.get('name', '?')[:35]:<35} "
+                    f"| {result.get('lead_temperature', '?'):<4} "
+                    f"| {result.get('ssl_grade', '?'):<2} "
+                    f"| email={'Y' if result.get('email') else 'N'} "
+                    f"| {elapsed:.0f}s"
+                )
+            except Exception as e:
+                log.debug(f"  Enrichment error: {e}")
+
+    saved = 0
+    failed = 0
+    for biz in enriched:
+        if upsert_business(biz, target):
+            saved += 1
+        else:
+            failed += 1
+
+    emails_found = sum(1 for b in enriched if b.get("email"))
+    hwc = {"HOT": 0, "WARM": 0, "COLD": 0}
+    for b in enriched:
+        hwc[b.get("lead_temperature", "COLD")] = hwc.get(b.get("lead_temperature", "COLD"), 0) + 1
+    avg_health = sum(b.get("health_score", 50) for b in enriched) / len(enriched) if enriched else 0
+    elapsed = time.time() - t0
+
+    state = load_state()
+    state["total_runs"] = state.get("total_runs", 0) + 1
+    state["total_businesses"] = state.get("total_businesses", 0) + len(enriched)
+    state["total_emails"] = state.get("total_emails", 0) + emails_found
+    state["last_run"] = datetime.now(timezone.utc).isoformat()
+    save_state(state)
+
+    print()
+    print(f"  RESULTS:")
+    print(f"  {'-'*40}")
+    print(f"  Target:       {city} / {sector}")
+    print(f"  Found:        {len(enriched)} businesses")
+    print(f"  Saved:        {saved} (failed: {failed})")
+    print(f"  Emails:       {emails_found}/{len(enriched)}")
+    print(f"  HOT:          {hwc.get('HOT', 0)}")
+    print(f"  WARM:         {hwc.get('WARM', 0)}")
+    print(f"  COLD:         {hwc.get('COLD', 0)}")
+    print(f"  Avg Health:   {avg_health:.0f}/100")
+    print(f"  Time:         {elapsed:.1f}s")
+    print(f"  Total Runs:   {state['total_runs']}")
+    print(f"  Total Biz:    {state['total_businesses']}")
+    print(f"  Total Emails: {state['total_emails']}")
+    print(f"{'='*60}")
+    print()
+
+    return {
+        "target": f"{city}/{sector}",
+        "businesses": len(enriched),
+        "emails": emails_found,
+        "hwc": hwc,
+        "elapsed": elapsed,
+    }
+
+
+def main():
+    print()
+    print("  ========================================")
+    print("  FindLeads Local Daemon")
+    print("  Scraper + Enricher + Supabase Writer")
+    print("  Interval: Every 2 hours")
+    print("  Press Ctrl+C to stop")
+    print("  ========================================")
+    print()
+
+    while True:
+        try:
+            run_once()
+        except KeyboardInterrupt:
+            print("\n  Stopped by user.")
+            break
+        except Exception as e:
+            log.error(f"Run failed: {e}")
+
+        next_run = datetime.now().strftime("%H:%M:%S")
+        target, idx, total = load_state(), 0, 0
+        try:
+            with open(os.path.join(ROOT_DIR, "targets.json")) as f:
+                raw = json.load(f)
+            targets = raw if isinstance(raw, list) else raw.get("targets", [])
+            total = len(targets)
+            next_idx = (load_state()["current_index"] + 1) % total
+            next_target = targets[next_idx]
+            print(f"  Next run in {INTERVAL_SECONDS // 3600}h ({next_target['city']}/{next_target['sector']})")
+        except Exception:
+            print(f"  Next run in {INTERVAL_SECONDS // 3600}h")
+
+        print(f"  Sleeping {INTERVAL_SECONDS // 3600}h... (Ctrl+C to stop)")
+        try:
+            time.sleep(INTERVAL_SECONDS)
+        except KeyboardInterrupt:
+            print("\n  Stopped by user.")
+            break
+
+
+if __name__ == "__main__":
+    main()

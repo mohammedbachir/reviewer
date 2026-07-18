@@ -249,7 +249,7 @@ class handler(BaseHTTPRequestHandler):
         if p == "/api/scrape":
             self._handle_scrape()
         elif p == "/api/health":
-            self._respond(200, {"status": "ok", "version": "4.0", "supabase_url_set": bool(SUPABASE_URL), "supabase_key_set": bool(SUPABASE_KEY)})
+            self._respond(200, {"status": "ok", "version": "4.0", "supabase_url_set": bool(SUPABASE_URL), "supabase_key_set": bool(SUPABASE_KEY), "openrouter_set": bool(os.environ.get("OPENROUTER_API_KEY", ""))})
         elif p == "/dashboard" or p == "/dashboard/":
             self._serve_dashboard()
         elif p.startswith("/api/dashboard/"):
@@ -322,6 +322,9 @@ class handler(BaseHTTPRequestHandler):
             self._respond(500, {"error": str(e)})
 
     def _handle_dashboard_api_post(self, path, query):
+        import importlib
+        import dashboard_api as _da
+        importlib.reload(_da)
         from dashboard_api import verify_token, ask_kimi, send_digest_email
         token = query.get("token", [""])[0]
         if not verify_token(token):
@@ -333,7 +336,7 @@ class handler(BaseHTTPRequestHandler):
                 if not question:
                     self._respond(400, {"error": "No question provided"})
                 else:
-                    self._respond(200, ask_kimi(question))
+                    self._respond(200, ask_kimi(question, os.environ.get("OPENROUTER_API_KEY", ""), os.environ.get("KIMI_API_KEY", "")))
             elif path == "/api/dashboard/digest":
                 self._respond(200, send_digest_email())
             else:
