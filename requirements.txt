@@ -1,58 +1,23 @@
-# ═══════════════════════════════════════════════════════════════
-# FindLeads — Root Requirements (for Hugging Face / Render)
-# ═══════════════════════════════════════════════════════════════
+# FindLeads — Replit Dependencies
+# Minimal set for orchestrator + Flask keep-alive
 
-# --- Web Server (Hugging Face / Render) ---
 flask>=3.0.0
-apscheduler>=3.10.0
-
-# --- Core Scraping ---
-playwright>=1.40.0
-
-# --- Database ---
 duckdb>=0.10.0
-networkx>=3.2
-
-# --- HTTP & Web ---
+playwright>=1.40.0
 requests>=2.28.0
 beautifulsoup4>=4.11.0
-urllib3>=2.0
-
-# --- Email ---
-aiosmtplib>=3.0.0
-
-# --- OSINT & Tech Detection ---
-python-whois>=0.9.0
-ipwhois>=1.3.0
-dnspython>=2.6.0
-
-# --- Sentiment Analysis ---
 vaderSentiment>=3.3.0
 textblob>=0.18.0
-
-# --- Reports & Export ---
-fpdf2>=2.7.0
-jinja2>=3.1.0
-
-# --- Progress & CLI ---
-rich>=13.0.0
-
-# --- YAML ---
 pyyaml>=6.0
-
-# --- Email (RLO) ---
+python-whois>=0.9.0
+dnspython>=2.6.0
+fpdf2>=2.7.0
+rich>=13.0.0
 imap-tools>=1.6.0
-
-# --- Image Generation ---
 Pillow>=10.0.0
-
-# --- Date/Time ---
 python-dateutil>=2.8.0
-
-# --- Networking ---
+jinja2>=3.1.0
+networkx>=3.2
 certifi>=2023.0
-charset-normalizer>=3.0
-idna>=3.0
-
-# --- Type Stubs ---
 typing-extensions>=4.0
+aiosmtplib>=3.0.0

@@ -1,8 +1,8 @@
-run = "python replit_main.py"
+run = "python app.py"
 language = "python3"
 
 [nix]
 channel = "stable-23_11"
 
 [deployment]
-run = ["sh", "-c", "python replit_main.py"]
+run = ["sh", "-c", "python app.py"]

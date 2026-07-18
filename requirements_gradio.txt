@@ -1,8 +1,0 @@
-# Hugging Face Gradio Version
-# (No Playwright — uses requests instead)
-
-gradio>=4.0.0
-apscheduler>=3.10.0
-duckdb>=0.10.0
-requests>=2.28.0
-beautifulsoup4>=4.11.0
