@@ -1,11 +1,19 @@
 {
   "builds": [
     {
+      "src": "public/**",
+      "use": "@vercel/static"
+    },
+    {
       "src": "app.py",
       "use": "@vercel/python@latest"
     }
   ],
   "routes": [
+    {
+      "src": "/dashboard",
+      "dest": "/public/dashboard.html"
+    },
     {
       "src": "/(.*)",
       "dest": "app.py"
