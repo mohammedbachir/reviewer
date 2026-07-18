@@ -26,11 +26,19 @@ def _sb_get(table, params="", count=False):
     h = dict(HEADERS)
     if count:
         h["Prefer"] = "count=exact"
-        h["Range"] = "0-0"
     resp = cffi_requests.get(url, headers=h, timeout=15)
     if count:
         cr = resp.headers.get("content-range", "")
-        return resp.json(), int(cr.split("/")[1]) if "/" in cr else 0
+        total = 0
+        if "/" in cr:
+            try:
+                total = int(cr.split("/")[1])
+            except Exception:
+                total = 0
+        data = resp.json()
+        if total == 0:
+            total = len(data) if isinstance(data, list) else 0
+        return data, total
     return resp.json()
 
 
@@ -61,27 +69,25 @@ def login(password):
 
 def get_stats():
     businesses, total = _sb_get("businesses", "select=id", count=True)
+    if total == 0:
+        all_biz = _sb_get("businesses", "select=id")
+        total = len(all_biz) if isinstance(all_biz, list) else 0
 
-    emails_data, _ = _sb_get("businesses", "select=id&email=not.is.null", count=True)
-    emails = len(emails_data) if emails_data else 0
+    all_data = _sb_get("businesses", "select=id,lead_temperature,email,health_score,name,city,sector,ssl_grade,created_at")
+    emails = sum(1 for b in all_data if b.get("email"))
+    hot = sum(1 for b in all_data if b.get("lead_temperature") == "HOT")
+    warm = sum(1 for b in all_data if b.get("lead_temperature") == "WARM")
+    cold = sum(1 for b in all_data if b.get("lead_temperature") == "COLD")
 
-    hot_data, _ = _sb_get("businesses", "select=id&lead_temperature=eq.HOT", count=True)
-    hot = len(hot_data) if hot_data else 0
+    health_vals = [b.get("health_score", 50) for b in all_data if b.get("health_score") is not None]
+    avg_health = round(sum(health_vals) / max(len(health_vals), 1))
 
-    warm_data, _ = _sb_get("businesses", "select=id&lead_temperature=eq.WARM", count=True)
-    warm = len(warm_data) if warm_data else 0
-
-    cold_data, _ = _sb_get("businesses", "select=id&lead_temperature=eq.COLD", count=True)
-    cold = len(cold_data) if cold_data else 0
-
-    health_data = _sb_get("businesses", "select=health_score")
-    avg_health = round(sum(b.get("health_score", 50) for b in health_data) / max(len(health_data), 1))
-
-    cities_data = _sb_get("businesses", "select=city")
     cities = {}
-    for b in cities_data:
+    for b in all_data:
         c = b.get("city", "Unknown")
         cities[c] = cities.get(c, 0) + 1
+
+    recent = sorted(all_data, key=lambda x: x.get("created_at") or "", reverse=True)[:10]
 
     return {
         "total_companies": total,
@@ -92,6 +98,8 @@ def get_stats():
         "avg_health_score": avg_health,
         "email_rate": round(emails / max(total, 1) * 100),
         "cities": cities,
+        "recent_companies": recent,
+        "temperature_distribution": {"HOT": hot, "WARM": warm, "COLD": cold},
     }
 
 
@@ -195,7 +203,9 @@ def get_companies(page=1, per_page=20, city="", sector="", temp="", email_filter
         params += "&"
     params += f"order={sort}&limit={per_page}&offset={(page - 1) * per_page}"
 
-    data, total = _sb_get("businesses", f"select=name,city,sector,lead_temperature,health_score,ssl_grade,email,email_confidence,sentiment,website,phone,instagram,facebook,rating,review_count&{params}", count=True)
+    data, total = _sb_get("businesses", f"select=id,name,city,sector,lead_temperature,health_score,ssl_grade,email,email_confidence,sentiment,website,phone,instagram,facebook,rating,review_count,created_at&{params}", count=True)
+    if total == 0 and data:
+        total = len(data)
 
     return {
         "companies": data,

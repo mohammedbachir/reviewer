@@ -314,10 +314,9 @@ async function doLogin() {
   const errEl = document.getElementById('login-err');
   errEl.textContent = '';
   if (!pw) { errEl.textContent = 'Password required'; return; }
-  try {
-    const r = await fetch('/api/dashboard/login?password=' + encodeURIComponent(pw), { method: 'POST' });
-    const data = await r.json();
-    if (data && data.token) {
+  const r = await fetch('/api/dashboard/login?password=' + encodeURIComponent(pw), { method: 'POST' });
+  const data = await r.json();
+  if (data && data.token) {
     localStorage.setItem('fl_token', data.token);
     token = data.token;
     document.getElementById('login-screen').style.display = 'none';
@@ -370,13 +369,13 @@ async function loadOverview() {
     '<div class="stat-card"><div class="label">Total Companies</div><div class="value">' + (s.total_companies || 0) + '</div></div>' +
     '<div class="stat-card"><div class="label">Total Emails</div><div class="value">' + (s.total_emails || 0) + '</div></div>' +
     '<div class="stat-card"><div class="label">HOT Leads</div><div class="value" style="color:#F87171">' + (s.hot_leads || 0) + '</div></div>' +
-    '<div class="stat-card"><div class="label">Avg Health Score</div><div class="value">' + (s.avg_health != null ? Number(s.avg_health).toFixed(1) : '0') + '</div><div class="sub">Email Rate <span class="badge badge-success">' + (s.email_rate != null ? Number(s.email_rate).toFixed(0) + '%' : 'N/A') + '</span></div></div>';
+    '<div class="stat-card"><div class="label">Avg Health Score</div><div class="value">' + (s.avg_health_score != null ? Number(s.avg_health_score).toFixed(0) : '0') + '</div><div class="sub">Email Rate <span class="badge badge-success">' + (s.email_rate != null ? Number(s.email_rate).toFixed(0) + '%' : 'N/A') + '</span></div></div>';
 
   const recent = s.recent_companies || s.last_runs || [];
   const tbody = document.getElementById('recent-table');
   tbody.innerHTML = '';
   recent.slice(0, 10).forEach(function(c, i) {
-    const tempBadge = tempBadgeHTML(c.temperature || c.temp || 'COLD');
+    const tempBadge = tempBadgeHTML(c.lead_temperature || c.temperature || c.temp || 'COLD');
     tbody.innerHTML += '<tr onclick="openCompany(' + (c.id || '') + ')">' +
       '<td>' + (i + 1) + '</td>' +
       '<td>' + esc(c.name || '') + '</td>' +
@@ -384,13 +383,13 @@ async function loadOverview() {
       '<td>' + esc(c.sector || '') + '</td>' +
       '<td>' + tempBadge + '</td>' +
       '<td>' + (c.health_score != null ? c.health_score : '-') + '</td>' +
-      '<td>' + esc(c.email || '') + '</td>' +
+      '<td>' + esc(c.email || '-') + '</td>' +
       '<td>' + (c.created_at ? new Date(c.created_at).toLocaleDateString() : '-') + '</td>' +
       '</tr>';
   });
 
-  const cityData = s.companies_by_city || s.city_distribution || {};
-  const tempData = s.temperature_distribution || { HOT: 0, WARM: 0, COLD: 0 };
+  const cityData = s.cities || s.companies_by_city || s.city_distribution || {};
+  const tempData = s.temperature_distribution || s.lead_temperatures || { HOT: 0, WARM: 0, COLD: 0 };
 
   renderChart('chart-cities', 'bar', {
     labels: Object.keys(cityData),
@@ -434,7 +433,7 @@ async function loadAlgorithms() {
       '<td><span style="color:' + col + ';font-weight:600">' + esc(cat) + '</span></td>' +
       '<td>' + (a.uses || a.use_count || 0) + '</td>' +
       '<td>' + (a.avg_time || a.avg_time_ms || '-') + '</td>' +
-      '<td>' + (a.success_rate != null ? (a.success_rate * 100).toFixed(0) + '%' : '-') + '</td>' +
+      '<td>' + (a.success_rate || '-') + '</td>' +
       '<td><span class="badge ' + (a.status === 'active' || a.status === 'running' ? 'badge-success' : 'badge-cold') + '">' + esc(a.status || 'idle') + '</span></td>' +
       '</tr>';
   });
@@ -486,11 +485,11 @@ async function loadCompanies(page) {
     return;
   }
   companies.forEach(function(c) {
-    const tempBadge = tempBadgeHTML(c.temperature || c.temp || 'COLD');
-    const emailStatus = c.email_status || c.email_validity || '-';
+    const tempBadge = tempBadgeHTML(c.lead_temperature || c.temperature || c.temp || 'COLD');
+    const email = c.email || '-';
     const health = c.health_score != null ? c.health_score : '-';
     const ssl = c.ssl_grade || c.ssl || '-';
-    const conf = c.confidence != null ? (Number(c.confidence) * 100).toFixed(0) + '%' : '-';
+    const conf = c.email_confidence != null ? Number(c.email_confidence).toFixed(0) + '%' : '-';
     tbody.innerHTML += '<tr onclick="openCompany(' + (c.id || '') + ')">' +
       '<td>' + esc(c.name || '') + '</td>' +
       '<td>' + esc(c.city || '') + '</td>' +
@@ -498,7 +497,7 @@ async function loadCompanies(page) {
       '<td>' + tempBadge + '</td>' +
       '<td>' + health + '</td>' +
       '<td>' + esc(ssl) + '</td>' +
-      '<td>' + esc(emailStatus) + '</td>' +
+      '<td>' + esc(email) + '</td>' +
       '<td>' + conf + '</td>' +
       '</tr>';
   });
@@ -518,7 +517,7 @@ async function openCompany(id) {
     fieldHTML('Twitter', c.twitter || c.social_twitter || '-') +
     fieldHTML('Facebook', c.facebook || c.social_facebook || '-');
 
-  const temp = c.temperature || c.temp || 'COLD';
+  const temp = c.lead_temperature || c.temperature || c.temp || 'COLD';
   document.getElementById('modal-temp').innerHTML = tempBadgeHTML(temp);
 
   const hook = c.outreach_hook || c.hook || 'No outreach hook available.';
@@ -606,7 +605,7 @@ async function sendChat() {
   messages.innerHTML += '<div class="chat-bubble ai" id="typing-indicator">Thinking...</div>';
   messages.scrollTop = messages.scrollHeight;
 
-  const data = await api('ask-ai?token=' + getToken() + '&question=' + encodeURIComponent(msg), { method: 'POST' });
+  const data = await api('ask-ai?question=' + encodeURIComponent(msg), { method: 'POST' });
   const typing = document.getElementById('typing-indicator');
   if (typing) typing.remove();
   if (data && data.answer) {
@@ -628,10 +627,10 @@ async function loadAnalytics() {
   const sslDist = data.ssl_distribution || data.ssl_grades || {};
   const sentDist = data.sentiment_distribution || data.sentiment || {};
 
-  const statsHtml = '<div class="stat-card"><div class="label">Total Companies</div><div class="value">' + (data.total_companies || 0) + '</div></div>' +
-    '<div class="stat-card"><div class="label">Avg Health</div><div class="value">' + (data.avg_health != null ? Number(data.avg_health).toFixed(1) : '0') + '</div></div>' +
+  const statsHtml = '<div class="stat-card"><div class="label">Total Companies</div><div class="value">' + (data.total || 0) + '</div></div>' +
     '<div class="stat-card"><div class="label">HOT Leads</div><div class="value" style="color:#F87171">' + (tempDist.HOT || 0) + '</div></div>' +
-    '<div class="stat-card"><div class="label">Email Rate</div><div class="value">' + (data.email_rate != null ? Number(data.email_rate).toFixed(0) + '%' : 'N/A') + '</div></div>';
+    '<div class="stat-card"><div class="label">WARM Leads</div><div class="value" style="color:#FBBF24">' + (tempDist.WARM || 0) + '</div></div>' +
+    '<div class="stat-card"><div class="label">COLD Leads</div><div class="value" style="color:#60A5FA">' + (tempDist.COLD || 0) + '</div></div>';
   document.getElementById('analytics-stats').innerHTML = statsHtml;
 
   renderChart('chart-temp-dist', 'doughnut', {
