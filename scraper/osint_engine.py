@@ -164,7 +164,7 @@ def check_page_speed(domain: str) -> Dict:
     session = _create_session()
     start = time.time()
     try:
-        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=8)
+        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=5)
         elapsed = int((time.time() - start) * 1000)
         result["load_time_ms"] = elapsed
         result["status_code"] = resp.status_code
@@ -499,7 +499,7 @@ def detect_tech(domain: str) -> List[str]:
     techs = set()
 
     try:
-        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=10)
+        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=5)
         content = resp.text
         content_lower = content.lower()
         headers_str = json.dumps(dict(resp.headers)).lower()

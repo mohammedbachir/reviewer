@@ -8,10 +8,25 @@ import os
 import sys
 import json
 import time
+import socket
 import logging
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
+
+import dns.resolver
+dns.resolver.default_resolver = dns.resolver.Resolver()
+dns.resolver.default_resolver.nameservers = ["8.8.8.8", "8.8.4.4"]
+
+_original_getaddrinfo = socket.getaddrinfo
+def _patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    try:
+        answers = dns.resolver.resolve(host, "A")
+        ip = str(answers[0])
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (ip, port))]
+    except Exception:
+        return _original_getaddrinfo(host, port, family, type, proto, flags)
+socket.getaddrinfo = _patched_getaddrinfo
 
 from curl_cffi import requests as cffi_requests
 
@@ -59,6 +74,10 @@ def get_target():
     with open(os.path.join(ROOT_DIR, "targets.json")) as f:
         raw = json.load(f)
     targets = raw if isinstance(raw, list) else raw.get("targets", [])
+    # Normalize 'category' → 'sector' for backward compatibility
+    for t in targets:
+        if "sector" not in t and "category" in t:
+            t["sector"] = t["category"]
     state = load_state()
     idx = (state["current_index"] + 1) % len(targets)
     target = targets[idx]
@@ -256,12 +275,12 @@ def run_once():
                 log.debug(f"  Enrichment error: {e}")
 
     saved = 0
-    failed = 0
+    skipped = 0
     for biz in enriched:
         if upsert_business(biz, target):
             saved += 1
         else:
-            failed += 1
+            skipped += 1
 
     emails_found = sum(1 for b in enriched if b.get("email"))
     hwc = {"HOT": 0, "WARM": 0, "COLD": 0}
@@ -282,7 +301,7 @@ def run_once():
     print(f"  {'-'*40}")
     print(f"  Target:       {city} / {sector}")
     print(f"  Found:        {len(enriched)} businesses")
-    print(f"  Saved:        {saved} (failed: {failed})")
+    print(f"  Saved:        {saved} (skipped: {skipped} duplicates)")
     print(f"  Emails:       {emails_found}/{len(enriched)}")
     print(f"  HOT:          {hwc.get('HOT', 0)}")
     print(f"  WARM:         {hwc.get('WARM', 0)}")

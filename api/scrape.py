@@ -98,10 +98,16 @@ def _supabase_upsert(table: str, data: dict):
 # ════════════════════════════════════════════════════════════════
 
 def _load_targets():
-    """Load targets from targets.json."""
+    """Load targets from targets.json. Handles both bare array and {"targets":[...]} formats.
+    Normalizes 'category' key to 'sector' for backward compatibility."""
     targets_path = os.path.join(ROOT, "targets.json")
     with open(targets_path) as f:
-        return json.load(f)["targets"]
+        raw = json.load(f)
+    targets = raw if isinstance(raw, list) else raw.get("targets", [])
+    for t in targets:
+        if "sector" not in t and "category" in t:
+            t["sector"] = t["category"]
+    return targets
 
 
 def _get_current_index() -> int:

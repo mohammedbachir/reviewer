@@ -28,6 +28,10 @@ def _get_target():
     with open(targets_path) as f:
         raw = json.load(f)
     targets = raw if isinstance(raw, list) else raw.get("targets", [])
+    # Normalize 'category' → 'sector' for backward compatibility
+    for t in targets:
+        if "sector" not in t and "category" in t:
+            t["sector"] = t["category"]
     try:
         from curl_cffi import requests as cffi_requests
         resp = cffi_requests.get(

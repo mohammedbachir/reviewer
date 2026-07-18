@@ -104,7 +104,7 @@ def _search_google_maps_reviews(session, business_name: str, city: str) -> Dict:
     query = f'"{business_name}" {city} site:google.com/maps reviews'
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
 
-    resp = session.get(url, headers=HEADERS, timeout=6)
+    resp = session.get(url, headers=HEADERS, timeout=4)
     if resp.status_code != 200:
         return result
 
@@ -157,7 +157,7 @@ def _search_review_snippets(session, business_name: str, city: str) -> Dict:
     query = f'"{business_name}" {city} reviews opinions complaints'
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
 
-    resp = session.get(url, headers=HEADERS, timeout=6)
+    resp = session.get(url, headers=HEADERS, timeout=4)
     if resp.status_code != 200:
         return result
 
@@ -224,7 +224,7 @@ def _check_owner_response(session, business_name: str, city: str) -> Dict:
     query = f'"{business_name}" {city} owner response review reply'
     url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
 
-    resp = session.get(url, headers=HEADERS, timeout=6)
+    resp = session.get(url, headers=HEADERS, timeout=4)
     if resp.status_code != 200:
         return result
 
