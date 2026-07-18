@@ -7,9 +7,3 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.11"
-      - key: OPENROUTER_API_KEY
-        sync: false
-      - key: GMAIL_USER
-        sync: false
-      - key: GMAIL_PASS
-        sync: false

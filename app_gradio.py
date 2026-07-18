@@ -1,0 +1,240 @@
+"""
+FindLeads — Hugging Face Gradio App
+Runs WITHOUT Docker (uses requests instead of Playwright).
+Free tier on Hugging Face Spaces.
+"""
+
+import os
+import sys
+import threading
+import time
+from datetime import datetime
+
+import gradio as gr
+from apscheduler.schedulers.background import BackgroundScheduler
+
+# Add lead-generator to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lead-generator"))
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "lead-generator", "data.duckdb")
+
+# ═══════════════════════════════════════════════════════════════
+# Simple Scraper (no Playwright — uses Google search)
+# ═══════════════════════════════════════════════════════════════
+import requests
+from bs4 import BeautifulSoup
+
+def simple_scrape(city, sector, limit=10):
+    """Simple scraping using requests (no Playwright needed)."""
+    import duckdb
+
+    query = f"{sector} in {city}"
+    print(f"[SimpleScraper] Searching: {query}")
+
+    businesses = []
+
+    # Use Google search to find businesses
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+
+    try:
+        url = f"https://www.google.com/search?q={query}"
+        resp = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        # Extract business cards from Google search results
+        for result in soup.select("div.g")[:limit]:
+            title_el = result.select_one("h3")
+            link_el = result.select_one("a")
+            snippet_el = result.select_one(".VwiC3b")
+
+            if title_el and link_el:
+                name = title_el.get_text(strip=True)
+                website = link_el.get("href", "")
+                snippet = snippet_el.get_text(strip=True) if snippet_el else ""
+
+                businesses.append({
+                    "name": name,
+                    "city": city,
+                    "sector": sector,
+                    "website": website,
+                    "rating": 0,
+                    "review_count": 0,
+                    "phone": "",
+                    "address": "",
+                    "email": "",
+                    "health_score": 50,
+                })
+
+        print(f"[SimpleScraper] Found {len(businesses)} businesses")
+
+    except Exception as e:
+        print(f"[SimpleScraper] Error: {e}")
+
+    # Store in DuckDB
+    if businesses:
+        try:
+            conn = duckdb.connect(DB_PATH)
+            try:
+                conn.execute("CREATE SEQUENCE IF NOT EXISTS node_id_seq START 1")
+            except:
+                pass
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS businesses (
+                        id INTEGER DEFAULT nextval('node_id_seq'),
+                        name TEXT, city TEXT, sector TEXT, country TEXT DEFAULT 'UAE',
+                        rating REAL DEFAULT 0, review_count INTEGER DEFAULT 0,
+                        website TEXT DEFAULT '', email TEXT DEFAULT '', phone TEXT DEFAULT '',
+                        address TEXT DEFAULT '', google_url TEXT DEFAULT '', category TEXT DEFAULT '',
+                        response_rate INTEGER DEFAULT 0, unanswered_reviews INTEGER DEFAULT 0,
+                        target_priority TEXT DEFAULT 'low', health_score INTEGER DEFAULT 50,
+                        osint_data TEXT DEFAULT '{}',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (id)
+                    )
+                """)
+            except:
+                pass
+
+            for biz in businesses:
+                try:
+                    conn.execute("""
+                        INSERT INTO businesses (name, city, sector, rating, review_count, website, email, health_score)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, [biz["name"], biz["city"], biz["sector"], biz["rating"],
+                          biz["review_count"], biz["website"], biz["email"], biz["health_score"]])
+                except:
+                    pass
+
+            total = conn.execute("SELECT COUNT(*) FROM businesses").fetchone()[0]
+            conn.close()
+            print(f"[SimpleScraper] Total in DB: {total}")
+        except Exception as e:
+            print(f"[SimpleScraper] DB error: {e}")
+
+    return businesses
+
+# ═══════════════════════════════════════════════════════════════
+# Scheduled Job
+# ═══════════════════════════════════════════════════════════════
+CITIES = [
+    ("Dubai", "beauty salon"),
+    ("Dubai", "dental clinic"),
+    ("Riyadh", "beauty salon"),
+    ("Austin", "coffee shop"),
+]
+
+def run_scheduled():
+    """Run scraper for all cities."""
+    print(f"\n{'='*60}")
+    print(f"  FindLeads — SCHEDULED RUN")
+    print(f"  {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'='*60}")
+
+    for city, sector in CITIES:
+        print(f"\n>>> {sector} in {city}")
+        try:
+            simple_scrape(city, sector, limit=5)
+        except Exception as e:
+            print(f"  ERROR: {e}")
+
+    print(f"\n{'='*60}")
+    print(f"  SCHEDULED RUN COMPLETE")
+    print(f"{'='*60}")
+
+# ═══════════════════════════════════════════════════════════════
+# Gradio Interface
+# ═══════════════════════════════════════════════════════════════
+def scrape_now(city, sector, limit):
+    """Manual scrape function."""
+    businesses = simple_scrape(city, sector, int(limit))
+
+    if not businesses:
+        return "No businesses found."
+
+    result = f"Found {len(businesses)} businesses:\n\n"
+    for i, biz in enumerate(businesses, 1):
+        result += f"{i}. {biz['name']}\n"
+        result += f"   City: {biz['city']}\n"
+        result += f"   Sector: {biz['sector']}\n"
+        result += f"   Website: {biz['website']}\n\n"
+
+    return result
+
+def get_stats():
+    """Get database statistics."""
+    import duckdb
+
+    try:
+        conn = duckdb.connect(DB_PATH, read_only=True)
+        total = conn.execute("SELECT COUNT(*) FROM businesses").fetchone()[0]
+        cities = conn.execute("SELECT COUNT(DISTINCT city) FROM businesses").fetchone()[0]
+        emails = conn.execute("SELECT COUNT(*) FROM businesses WHERE email != ''").fetchone()[0]
+        conn.close()
+
+        return f"""
+**Database Statistics:**
+
+- Total Businesses: {total}
+- Cities Covered: {cities}
+- Emails Found: {emails}
+- Last Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+        """
+    except Exception as e:
+        return f"Error: {e}"
+
+# ═══════════════════════════════════════════════════════════════
+# Build Gradio App
+# ═══════════════════════════════════════════════════════════════
+with gr.Blocks(title="FindLeads Scraper", theme=gr.themes.Soft()) as demo:
+    gr.Markdown("# FindLeads — Automated Scraper")
+    gr.Markdown("Scrapes Google for businesses that don't reply to reviews.")
+
+    with gr.Tab("Manual Scrape"):
+        with gr.Row():
+            city_input = gr.Textbox(label="City", value="Dubai")
+            sector_input = gr.Textbox(label="Sector", value="beauty salon")
+            limit_input = gr.Slider(label="Limit", minimum=1, maximum=50, value=10)
+        scrape_btn = gr.Button("Start Scraping", variant="primary")
+        output_text = gr.Textbox(label="Results", lines=15)
+        scrape_btn.click(scrape_now, inputs=[city_input, sector_input, limit_input], outputs=output_text)
+
+    with gr.Tab("Statistics"):
+        stats_btn = gr.Button("Refresh Stats", variant="secondary")
+        stats_text = gr.Markdown()
+        stats_btn.click(get_stats, outputs=stats_text)
+        stats_text.value = get_stats()
+
+    with gr.Tab("About"):
+        gr.Markdown("""
+        ## How it works
+        1. Scrapes Google for businesses in your city
+        2. Finds businesses with many unanswered reviews
+        3. Stores data in DuckDB database
+        4. Runs every 6 hours automatically
+
+        ## Tech Stack
+        - Python + BeautifulSoup (no Playwright needed)
+        - DuckDB for storage
+        - APScheduler for scheduling
+        - Gradio for interface
+        """)
+
+# ═══════════════════════════════════════════════════════════════
+# Start Scheduler
+# ═══════════════════════════════════════════════════════════════
+scheduler = BackgroundScheduler()
+scheduler.add_job(run_scheduled, "interval", hours=6)
+scheduler.start()
+
+# Run on startup
+threading.Thread(target=run_scheduled, daemon=True).start()
+
+# ═══════════════════════════════════════════════════════════════
+# Launch
+# ═══════════════════════════════════════════════════════════════
+if __name__ == "__main__":
+    demo.launch()
