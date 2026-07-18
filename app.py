@@ -134,18 +134,23 @@ def run_scrape():
 
 
 class handler(BaseHTTPRequestHandler):
+    def _path_base(self):
+        return self.path.split("?")[0] if self.path else "/"
+
     def do_GET(self):
-        if self.path == "/api/scrape":
+        p = self._path_base()
+        if p == "/api/scrape":
             self._handle_scrape()
-        elif self.path == "/api/health":
+        elif p == "/api/health":
             self._respond(200, {"status": "ok", "version": "2.0"})
-        elif self.path == "/":
+        elif p == "/":
             self._respond(200, {"name": "FindLeads", "version": "2.0", "architecture": "serverless"})
         else:
             self._respond(404, {"error": "Not found"})
 
     def do_POST(self):
-        if self.path == "/api/scrape":
+        p = self._path_base()
+        if p == "/api/scrape":
             self._handle_scrape()
         else:
             self._respond(404, {"error": "Not found"})
@@ -153,7 +158,7 @@ class handler(BaseHTTPRequestHandler):
     def _handle_scrape(self):
         if self.path and "?" in self.path:
             query = self.path.split("?", 1)[1]
-            params = dict(p.split("=") for p in query.split("&") if "=" in p)
+            params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
             if params.get("key") != SCRAPE_SECRET:
                 self._respond(403, {"error": "Invalid key"})
                 return

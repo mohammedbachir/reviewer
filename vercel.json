@@ -10,11 +10,5 @@
       "src": "/(.*)",
       "dest": "app.py"
     }
-  ],
-  "functions": {
-    "app.py": {
-      "maxDuration": 30,
-      "runtime": "python3.11"
-    }
-  }
+  ]
 }
