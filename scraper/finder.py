@@ -2,6 +2,7 @@
 FindLeads — Business Finder (curl_cffi)
 Lightweight HTTP-based scraper. No Playwright. No browser.
 Strategy: DuckDuckGo HTML search + website crawling for details.
+Extracts: rating, review_count, owner_name, social links from DDG snippets.
 """
 
 import json
@@ -17,9 +18,6 @@ from curl_cffi import requests as cffi_requests
 
 logger = logging.getLogger("finder")
 
-# ════════════════════════════════════════════════════════════════
-# SESSION
-# ════════════════════════════════════════════════════════════════
 
 def _create_session():
     return cffi_requests.Session(impersonate="chrome120")
@@ -42,10 +40,10 @@ PHONE_REGEX = re.compile(
 # MAIN SEARCH
 # ════════════════════════════════════════════════════════════════
 
-def search_google_maps(city: str, business_type: str, limit: int = 20) -> List[Dict]:
+def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Dict]:
     """
     Search for businesses using DuckDuckGo HTML.
-    Returns list of business dicts.
+    Returns list of business dicts with rating, review_count, etc.
     """
     query = f"{business_type} in {city} phone number website"
     logger.info(f"Searching: {query}")
@@ -61,7 +59,17 @@ def search_google_maps(city: str, business_type: str, limit: int = 20) -> List[D
     except Exception as e:
         logger.error(f"DDG error: {e}")
 
-    # Source 2: Google Search (local pack)
+    # Source 2: DuckDuckGo rating search
+    try:
+        rating_query = f"{business_type} {city} rating reviews site:google.com/maps"
+        rating_results = _search_ddg_ratings(session, rating_query, limit)
+        # Merge ratings into existing businesses
+        _merge_ratings(businesses, rating_results)
+        logger.info(f"Ratings: enriched {len(rating_results)} businesses")
+    except Exception as e:
+        logger.error(f"Rating search error: {e}")
+
+    # Source 3: Google Search (fallback)
     try:
         google_results = _search_google(session, query, limit)
         businesses.extend(google_results)
@@ -84,6 +92,11 @@ def search_google_maps(city: str, business_type: str, limit: int = 20) -> List[D
                     biz["address"] = details["address"]
                 if not biz.get("email") and details.get("email"):
                     biz["email"] = details["email"]
+                if not biz.get("owner_name") and details.get("owner_name"):
+                    biz["owner_name"] = details["owner_name"]
+                for link_type in ["instagram", "facebook", "twitter"]:
+                    if not biz.get(link_type) and details.get(link_type):
+                        biz[link_type] = details[link_type]
             except Exception:
                 pass
             time.sleep(random.uniform(0.3, 0.8))
@@ -107,7 +120,6 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
     html = resp.text
     businesses = []
 
-    # Extract result titles, URLs, and snippets
     titles = re.findall(r'class="result__a"[^>]*>(.*?)</a>', html, re.DOTALL)
     links = re.findall(r'class="result__url"[^>]*>\s*(.*?)\s*</a>', html, re.DOTALL)
     snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
@@ -120,12 +132,10 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
         if not name or not url_raw:
             continue
 
-        # Clean URL
         website = url_raw.split("?")[0].rstrip("/")
         if not website.startswith("http"):
             website = "https://" + website
 
-        # Skip large directories (Yelp, TripAdvisor, etc.)
         skip_domains = [
             "yelp.com", "tripadvisor.com", "facebook.com", "linkedin.com",
             "wikipedia.org", "yellowpages.com", "google.com", "bing.com",
@@ -134,13 +144,13 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
         if any(d in website for d in skip_domains):
             continue
 
-        # Extract phone from snippet
         phone = ""
         phone_match = PHONE_REGEX.search(snippet)
         if phone_match:
             phone = phone_match.group(0)
 
-        # Clean name (remove "- Domain.com" suffix)
+        rating, review_count = _extract_rating_from_snippet(snippet)
+
         name = re.sub(r'\s*[-–|]\s*(?:Best|Top|All|Dubai|Riyadh|Austin|Miami).*', '', name, flags=re.IGNORECASE)
         name = re.sub(r'\s*[-–|]\s*\w+\.(?:com|ae|sa|net|org).*', '', name)
         name = name.strip(" -–|")
@@ -148,17 +158,91 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
         if len(name) > 3:
             businesses.append({
                 "name": name,
-                "rating": 0,
-                "review_count": 0,
+                "rating": rating,
+                "review_count": review_count,
                 "website": website,
                 "phone": phone,
                 "address": "",
                 "google_url": "",
                 "place_id": "",
                 "category": "",
+                "owner_name": "",
+                "instagram": "",
+                "facebook": "",
+                "twitter": "",
             })
 
     return businesses
+
+
+def _extract_rating_from_snippet(snippet: str) -> tuple:
+    """Extract star rating and review count from DDG snippet."""
+    rating = 0
+    review_count = 0
+
+    # Pattern: "4.5" or "4.5/5" or "4.5 stars"
+    star_match = re.search(r'(\d+\.?\d*)\s*(?:out of 5|stars?|★|/5)', snippet, re.IGNORECASE)
+    if star_match:
+        try:
+            r = float(star_match.group(1))
+            if 1 <= r <= 5:
+                rating = r
+        except ValueError:
+            pass
+
+    # Pattern: "123 reviews" or "123 Google reviews"
+    rev_match = re.search(r'(\d+)\s*(?:Google\s+)?reviews?', snippet, re.IGNORECASE)
+    if rev_match:
+        try:
+            review_count = int(rev_match.group(1))
+        except ValueError:
+            pass
+
+    return rating, review_count
+
+
+def _search_ddg_ratings(session, query: str, limit: int) -> Dict[str, Dict]:
+    """Search DDG for Google Maps ratings."""
+    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+    resp = session.get(url, headers=HEADERS, timeout=15)
+
+    if resp.status_code != 200:
+        return {}
+
+    html = resp.text
+    snippets = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
+    titles = re.findall(r'class="result__a"[^>]*>(.*?)</a>', html, re.DOTALL)
+
+    results = {}
+    for i in range(min(len(titles), limit)):
+        name = _clean_html(titles[i]).strip() if i < len(titles) else ""
+        snippet = _clean_html(snippets[i]).strip() if i < len(snippets) else ""
+
+        rating, review_count = _extract_rating_from_snippet(snippet)
+
+        if rating > 0 or review_count > 0:
+            # Try to match to existing business by name similarity
+            key = name.lower().strip()
+            key = re.sub(r'\s*[-–|].*', '', key)
+            if len(key) > 3:
+                results[key] = {"rating": rating, "review_count": review_count}
+
+    return results
+
+
+def _merge_ratings(businesses: List[Dict], ratings: Dict[str, Dict]):
+    """Merge DDG ratings into business list."""
+    for biz in businesses:
+        biz_key = biz["name"].lower().strip()
+        biz_key = re.sub(r'\s*[-–|].*', '', biz_key)
+
+        for rating_key, rating_data in ratings.items():
+            if biz_key in rating_key or rating_key in biz_key:
+                if not biz.get("rating") and rating_data.get("rating"):
+                    biz["rating"] = rating_data["rating"]
+                if not biz.get("review_count") and rating_data.get("review_count"):
+                    biz["review_count"] = rating_data["review_count"]
+                break
 
 
 # ════════════════════════════════════════════════════════════════
@@ -176,8 +260,6 @@ def _search_google(session, query: str, limit: int) -> List[Dict]:
     html = resp.text
     businesses = []
 
-    # Extract from Google's local pack / organic results
-    # Pattern: look for business names in h3 tags
     h3_pattern = re.findall(r'<h3[^>]*>(.*?)</h3>', html, re.DOTALL)
     for h3 in h3_pattern[:limit]:
         name = _clean_html(h3).strip()
@@ -192,15 +274,17 @@ def _search_google(session, query: str, limit: int) -> List[Dict]:
                 "google_url": "",
                 "place_id": "",
                 "category": "",
+                "owner_name": "",
+                "instagram": "",
+                "facebook": "",
+                "twitter": "",
             })
 
-    # Try to find website links near the h3 tags
     links = re.findall(r'href="(https?://[^"]*)"', html)
     skip_domains = ["google.com", "gstatic.com", "googleapis.com", "youtube.com",
                     "facebook.com", "twitter.com", "instagram.com"]
     website_links = [l for l in links if not any(d in l for d in skip_domains)]
 
-    # Match websites to businesses (rough heuristic)
     for i, biz in enumerate(businesses):
         if i < len(website_links):
             biz["website"] = website_links[i].split("?")[0]
@@ -213,8 +297,11 @@ def _search_google(session, query: str, limit: int) -> List[Dict]:
 # ════════════════════════════════════════════════════════════════
 
 def _scrape_website_details(session, website_url: str) -> Dict:
-    """Scrape phone, address, email from business website."""
-    result = {"phone": "", "address": "", "email": ""}
+    """Scrape phone, address, email, owner_name, social links from business website."""
+    result = {
+        "phone": "", "address": "", "email": "",
+        "owner_name": "", "instagram": "", "facebook": "", "twitter": "",
+    }
 
     try:
         resp = session.get(website_url, headers=HEADERS, timeout=10)
@@ -232,7 +319,6 @@ def _scrape_website_details(session, website_url: str) -> Dict:
         # Email
         emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', content)
         if emails:
-            # Prefer info@, contact@, etc.
             domain = urlparse(website_url).netloc.replace("www.", "")
             domain_emails = [e for e in emails if domain in e]
             if domain_emails:
@@ -252,6 +338,29 @@ def _scrape_website_details(session, website_url: str) -> Dict:
                 result["address"] = _clean_html(match.group(1)).strip()
                 break
 
+        # Owner name (look for common patterns)
+        owner_patterns = [
+            r'(?:founder|owner|ceo|director|manager)[:\s]*([A-Z][a-z]+ [A-Z][a-z]+)',
+            r'(?:founded by|owned by|managed by)[:\s]*([A-Z][a-z]+ [A-Z][a-z]+)',
+            r'"name"\s*:\s*"([A-Z][a-z]+ [A-Z][a-z]+)"',
+        ]
+        for pattern in owner_patterns:
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                result["owner_name"] = match.group(1).strip()
+                break
+
+        # Social links
+        social_patterns = {
+            "instagram": r'instagram\.com/([a-zA-Z0-9_.]+)',
+            "facebook": r'facebook\.com/([a-zA-Z0-9_.]+)',
+            "twitter": r'twitter\.com/([a-zA-Z0-9_.]+)',
+        }
+        for platform, pattern in social_patterns.items():
+            match = re.search(pattern, content, re.IGNORECASE)
+            if match:
+                result[platform] = f"https://{platform}.com/{match.group(1)}"
+
     except Exception:
         pass
 
@@ -263,7 +372,6 @@ def _scrape_website_details(session, website_url: str) -> Dict:
 # ════════════════════════════════════════════════════════════════
 
 def _clean_html(text: str) -> str:
-    """Remove HTML tags and entities."""
     text = re.sub(r'<[^>]+>', '', text)
     text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
     text = text.replace('&#x27;', "'").replace('&quot;', '"').replace('&nbsp;', ' ')
@@ -272,7 +380,6 @@ def _clean_html(text: str) -> str:
 
 
 def _deduplicate(businesses: List[Dict]) -> List[Dict]:
-    """Remove duplicate businesses by name similarity."""
     seen = set()
     unique = []
     for biz in businesses:
@@ -285,7 +392,7 @@ def _deduplicate(businesses: List[Dict]) -> List[Dict]:
 
 def find_businesses(city: str, business_type: str, limit: int = 20) -> List[Dict]:
     """Main entry point."""
-    return search_google_maps(city, business_type, limit)
+    return search_businesses(city, business_type, limit)
 
 
 if __name__ == "__main__":
@@ -297,3 +404,6 @@ if __name__ == "__main__":
         print(f"    Website: {r.get('website', 'N/A')}")
         print(f"    Phone: {r.get('phone', 'N/A')}")
         print(f"    Email: {r.get('email', 'N/A')}")
+        print(f"    Rating: {r.get('rating', 0)}")
+        print(f"    Reviews: {r.get('review_count', 0)}")
+        print(f"    Owner: {r.get('owner_name', 'N/A')}")
