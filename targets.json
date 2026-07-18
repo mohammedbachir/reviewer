@@ -1,0 +1,29 @@
+{
+  "targets": [
+    {"city": "Dubai", "sector": "beauty salon"},
+    {"city": "Dubai", "sector": "dental clinic"},
+    {"city": "Dubai", "sector": "restaurant"},
+    {"city": "Dubai", "sector": "coffee shop"},
+    {"city": "Abu Dhabi", "sector": "beauty salon"},
+    {"city": "Abu Dhabi", "sector": "dental clinic"},
+    {"city": "Riyadh", "sector": "beauty salon"},
+    {"city": "Riyadh", "sector": "dental clinic"},
+    {"city": "Riyadh", "sector": "restaurant"},
+    {"city": "Jeddah", "sector": "beauty salon"},
+    {"city": "Jeddah", "sector": "dental clinic"},
+    {"city": "Austin", "sector": "coffee shop"},
+    {"city": "Austin", "sector": "restaurant"},
+    {"city": "Miami", "sector": "dental clinic"},
+    {"city": "Miami", "sector": "beauty salon"},
+    {"city": "London", "sector": "coffee shop"},
+    {"city": "London", "sector": "restaurant"},
+    {"city": "Cairo", "sector": "dental clinic"},
+    {"city": "Cairo", "sector": "beauty salon"},
+    {"city": "Istanbul", "sector": "restaurant"},
+    {"city": "Cape Town", "sector": "coffee shop"},
+    {"city": "Singapore", "sector": "beauty salon"},
+    {"city": "Tokyo", "sector": "restaurant"},
+    {"city": "Paris", "sector": "coffee shop"},
+    {"city": "Berlin", "sector": "restaurant"}
+  ]
+}

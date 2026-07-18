@@ -1,9 +1,20 @@
 {
-  "version": 2,
+  "builds": [
+    {
+      "src": "api/scrape.py",
+      "use": "@vercel/python@latest"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/scrape.py"
+    }
+  ],
   "functions": {
-    "api/**/*.js": {
-      "memory": 256,
-      "maxDuration": 30
+    "api/scrape.py": {
+      "maxDuration": 30,
+      "runtime": "python3.11"
     }
   }
 }
