@@ -169,12 +169,26 @@ def _generate_outreach_hook(biz, temperature):
     dangerous = [p for p in open_ports if p in (3306, 5432, 6379, 27017)]
     if dangerous:
         hooks.append(f"Critical services exposed on your server (ports: {', '.join(str(p) for p in dangerous[:2])})")
+
+    clean_name = _clean_name_for_hook(name)
+
     if hooks:
-        return f"Hi {name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
+        return f"Hi {clean_name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
     elif temperature == "WARM":
-        return f"Hi {name}! We help businesses like yours improve customer engagement through better online reputation."
+        return f"Hi {clean_name}! We help businesses like yours improve customer engagement through better online reputation."
     else:
-        return f"Hi {name}! We help businesses improve their online presence and customer satisfaction."
+        return f"Hi {clean_name}! We help businesses improve their online presence and customer satisfaction."
+
+
+def _clean_name_for_hook(name: str) -> str:
+    if not name:
+        return "there"
+    skip = ["home", "contact", "about", "services", "welcome"]
+    if name.lower().strip() in skip:
+        return "there"
+    if len(name) > 50 or "|" in name or "near" in name.lower() or "yellowpages" in name.lower():
+        return "there"
+    return name.strip()
 
 
 def _enrich_business(biz):
@@ -310,7 +324,7 @@ class handler(BaseHTTPRequestHandler):
             self._respond(401, {"error": "Invalid password"})
 
     def _handle_dashboard_api(self, path, query):
-        from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors
+        from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security
         token = query.get("token", [""])[0]
         if not verify_token(token):
             self._respond(401, {"error": "Unauthorized"})
@@ -342,6 +356,8 @@ class handler(BaseHTTPRequestHandler):
                 self._respond(200, get_cities())
             elif path == "/api/dashboard/sectors":
                 self._respond(200, get_sectors())
+            elif path == "/api/dashboard/security":
+                self._respond(200, get_security())
             else:
                 self._respond(404, {"error": "Not found"})
         except Exception as e:

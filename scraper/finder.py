@@ -68,6 +68,8 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
         if biz.get("website"):
             try:
                 details = _scrape_website_details(session, biz["website"])
+                if details.get("real_name") and len(details["real_name"]) > 3:
+                    biz["name"] = details["real_name"]
                 if not biz.get("phone") and details.get("phone"):
                     biz["phone"] = details["phone"]
                 if not biz.get("address") and details.get("address"):
@@ -120,10 +122,26 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
 
         skip_domains = [
             "yelp.com", "tripadvisor.com", "facebook.com", "linkedin.com",
-            "wikipedia.org", "yellowpages.com", "google.com", "bing.com",
-            "duckduckgo.com", "instagram.com", "twitter.com",
+            "wikipedia.org", "yellowpages.com", "yellowpages.ca", "google.com",
+            "bing.com", "duckduckgo.com", "instagram.com", "twitter.com",
+            "bbb.org", "bbb.com", "angieslist.com", "angi.com", "thumbtack.com",
+            "homeadvisor.com", "porch.com", "houzz.com", "mapquest.com",
+            "foursquare.com", "cylex.us.com", "chamberofcommerce.com",
+            "manta.com", "zoominfo.com", "glassdoor.com", "indeed.com",
+            "clutch.co", "expertise.com", "bark.com", "tackk.com",
+            "yellowpages.ae", "afroseek.com", "brownbook.net",
         ]
         if any(d in website for d in skip_domains):
+            continue
+
+        skip_title_kw = ["near me", "near ", "yellowpages", "better business", "bbb",
+                         "top 10", "best 10", "compare ", "reviews of", "list of",
+                         "directory", "find a ", "how to find", "cost of", "price of",
+                         "vs ", "versus ", "reddit", "quora", "yelp.com", "facebook.com",
+                         "youtube.com", "pinterest.com", "tiktok.com", "instagram.com",
+                         "apple maps", "openstreetmap"]
+        name_lower = name.lower()
+        if any(kw in name_lower for kw in skip_title_kw):
             continue
 
         phone = ""
@@ -133,9 +151,7 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
 
         rating, review_count = _extract_rating_from_snippet(snippet)
 
-        name = re.sub(r'\s*[-–|]\s*(?:Best|Top|All|Dubai|Riyadh|Austin|Miami).*', '', name, flags=re.IGNORECASE)
-        name = re.sub(r'\s*[-–|]\s*\w+\.(?:com|ae|sa|net|org).*', '', name)
-        name = name.strip(" -–|")
+        name = _clean_business_name(name, website)
 
         if len(name) > 3:
             businesses.append({
@@ -155,6 +171,39 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
             })
 
     return businesses
+
+
+SKIP_NAME_PATTERNS = [
+    r"^HOME\s*[\|–\-]",
+    r"^Contact\s+Us",
+    r"^About\s+Us",
+    r"^Services\s*[\|–\-]",
+    r"^Our\s+Services",
+    r"^About\s*[\|–\-]",
+    r"^Home\s*[\|–\-]",
+]
+
+
+def _clean_business_name(title: str, website: str) -> str:
+    name = title
+    name = re.sub(r'\s*[\|–]\s*\w+\.(?:com|ae|sa|net|org|ca|co|us|io).*', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'\s*[\|–]\s*(?:Best|Top|Cheap|Affordable|Professional|Trusted|Leading|#\d+).*', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'\s*[\|–]\s*(?:Dubai|Riyadh|AbuDhabi|Toronto|Calgary|Austin|Miami|Scottsdale|Naples|Jeddah|Saudi\s*Arabia|UAE|ON|AZ|TX|FL|CA).*', '', name, flags=re.IGNORECASE)
+    name = re.sub(r'\s*[\|–]\s*\d{4}\b.*', '', name)
+    name = re.sub(r'\s*[\(][\)]*\s*$', '', name)
+    name = re.sub(r'\s*[\|–]\s*$', '', name)
+    name = name.strip(" -–|()")
+
+    for pat in SKIP_NAME_PATTERNS:
+        if re.match(pat, name, re.IGNORECASE):
+            name = ""
+            break
+
+    domain_part = website.replace("https://", "").replace("http://", "").replace("www.", "").split(".")[0]
+    if len(domain_part) > 2 and len(name) < 5:
+        name = domain_part.replace("-", " ").title()
+
+    return name.strip()
 
 
 def _extract_rating_from_snippet(snippet: str) -> tuple:
@@ -283,6 +332,7 @@ def _scrape_website_details(session, website_url: str) -> Dict:
     result = {
         "phone": "", "address": "", "email": "",
         "owner_name": "", "instagram": "", "facebook": "", "twitter": "",
+        "real_name": "",
     }
 
     try:
@@ -293,12 +343,34 @@ def _scrape_website_details(session, website_url: str) -> Dict:
         content = resp.text
         content_lower = content.lower()
 
-        # Phone
+        og_site = re.search(r'<meta[^>]*property=["\']og:site_name["\'][^>]*content=["\']([^"\']+)', content, re.IGNORECASE)
+        if not og_site:
+            og_site = re.search(r'<meta[^>]*content=["\']([^"\']+)["\'][^>]*property=["\']og:site_name', content, re.IGNORECASE)
+        if og_site:
+            result["real_name"] = og_site.group(1).strip()
+
+        if not result["real_name"]:
+            title_tag = re.search(r'<title[^>]*>([^<]+)</title>', content, re.IGNORECASE)
+            if title_tag:
+                t = title_tag.group(1).strip()
+                t = re.sub(r'\s*[\|–]\s*(?:Home|Welcome|Offic|Servic|About|Contact).*', '', t, flags=re.IGNORECASE)
+                t = re.sub(r'\s*[\|–]\s*\w+\.(com|ae|sa|net|org|ca|co).*', '', t, flags=re.IGNORECASE)
+                t = t.strip(" -–|")
+                if 3 < len(t) < 60:
+                    result["real_name"] = t
+
+        if not result["real_name"]:
+            h1_match = re.search(r'<h1[^>]*>([^<]{3,60})</h1>', content, re.IGNORECASE)
+            if h1_match:
+                h1 = h1_match.group(1).strip()
+                h1 = re.sub(r'<[^>]+>', '', h1).strip()
+                if 3 < len(h1) < 60 and not any(kw in h1.lower() for kw in ["welcome", "home", "about us", "contact", "services"]):
+                    result["real_name"] = h1
+
         phone_match = PHONE_REGEX.search(content)
         if phone_match:
             result["phone"] = phone_match.group(0)
 
-        # Email
         emails = re.findall(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}', content)
         if emails:
             domain = urlparse(website_url).netloc.replace("www.", "")
@@ -308,7 +380,6 @@ def _scrape_website_details(session, website_url: str) -> Dict:
             elif emails:
                 result["email"] = emails[0]
 
-        # Address (look for common patterns)
         addr_patterns = [
             r'(?:address|location|directions)[:\s]*([A-Z][^<\n]{10,100})',
             r'data-tooltip="([^"]*(?:street|road|avenue|suite|floor|building)[^"]*)"',
@@ -320,7 +391,6 @@ def _scrape_website_details(session, website_url: str) -> Dict:
                 result["address"] = _clean_html(match.group(1)).strip()
                 break
 
-        # Owner name (look for common patterns)
         owner_patterns = [
             r'(?:founder|owner|ceo|director|manager)[:\s]*([A-Z][a-z]+ [A-Z][a-z]+)',
             r'(?:founded by|owned by|managed by)[:\s]*([A-Z][a-z]+ [A-Z][a-z]+)',
@@ -332,7 +402,6 @@ def _scrape_website_details(session, website_url: str) -> Dict:
                 result["owner_name"] = match.group(1).strip()
                 break
 
-        # Social links
         social_patterns = {
             "instagram": r'instagram\.com/([a-zA-Z0-9_.]+)',
             "facebook": r'facebook\.com/([a-zA-Z0-9_.]+)',

@@ -227,6 +227,12 @@ def get_company(company_id):
             biz["tech_stack"] = json.loads(biz["tech_stack"])
         except Exception:
             pass
+    for field in ["vulnerabilities", "open_ports", "security_warnings", "breach_names"]:
+        if isinstance(biz.get(field), str):
+            try:
+                biz[field] = json.loads(biz[field])
+            except Exception:
+                pass
     return biz
 
 
@@ -304,6 +310,93 @@ def get_analytics():
         "sector_distribution": sector_dist,
         "total": len(businesses),
     }
+
+
+# ════════════════════════════════════════════════════════════════
+# SECURITY
+# ════════════════════════════════════════════════════════════════
+
+def get_security():
+    businesses = _sb_get("businesses", "select=id,name,city,sector,lead_temperature,health_score,ssl_grade,vulnerabilities,open_ports,breach_count,breach_names,security_warnings")
+
+    total_vulns = 0
+    total_breaches = 0
+    total_ports = 0
+    total_warnings = 0
+    companies_with_vulns = 0
+    companies_with_ports = 0
+    companies_with_breaches = 0
+    vuln_dist = {}
+    port_dist = {}
+    warning_dist = {}
+    companies_with_issues = []
+
+    for b in businesses:
+        vulns = _parse_json_list(b.get("vulnerabilities"))
+        ports = _parse_json_list(b.get("open_ports"))
+        warnings = _parse_json_list(b.get("security_warnings"))
+        breach_count = b.get("breach_count", 0) or 0
+        breach_names = _parse_json_list(b.get("breach_names"))
+
+        if vulns:
+            companies_with_vulns += 1
+            total_vulns += len(vulns)
+            for v in vulns:
+                vuln_dist[v] = vuln_dist.get(v, 0) + 1
+
+        if ports:
+            companies_with_ports += 1
+            total_ports += len(ports)
+            for p in ports:
+                port_dist[str(p)] = port_dist.get(str(p), 0) + 1
+
+        if breach_count:
+            companies_with_breaches += 1
+            total_breaches += breach_count
+            for bn in breach_names:
+                warning_dist[bn] = warning_dist.get(bn, 0) + 1
+
+        if warnings:
+            total_warnings += len(warnings)
+            for w in warnings:
+                warning_dist[w] = warning_dist.get(w, 0) + 1
+
+        if vulns or ports or breach_count or warnings:
+            companies_with_issues.append(b)
+
+    companies_with_issues.sort(key=lambda x: (
+        len(_parse_json_list(x.get("vulnerabilities"))),
+        x.get("breach_count", 0) or 0,
+        len(_parse_json_list(x.get("open_ports")))
+    ), reverse=True)
+
+    return {
+        "total_vulnerabilities": total_vulns,
+        "total_breaches": total_breaches,
+        "total_open_ports": total_ports,
+        "total_warnings": total_warnings,
+        "companies_with_vulns": companies_with_vulns,
+        "companies_with_ports": companies_with_ports,
+        "companies_with_breaches": companies_with_breaches,
+        "vulnerability_distribution": dict(sorted(vuln_dist.items(), key=lambda x: -x[1])[:15]),
+        "port_distribution": dict(sorted(port_dist.items(), key=lambda x: -x[1])[:10]),
+        "warning_distribution": dict(sorted(warning_dist.items(), key=lambda x: -x[1])[:10]),
+        "companies_with_issues": companies_with_issues[:50],
+    }
+
+
+def _parse_json_list(val):
+    if not val:
+        return []
+    if isinstance(val, list):
+        return val
+    if isinstance(val, str):
+        try:
+            parsed = json.loads(val)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+    return []
 
 
 # ════════════════════════════════════════════════════════════════

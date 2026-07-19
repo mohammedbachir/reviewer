@@ -209,11 +209,25 @@ def generate_hook(biz, temperature):
     dangerous = [p for p in open_ports if p in (3306, 5432, 6379, 27017)]
     if dangerous:
         hooks.append(f"Critical services exposed on your server (ports: {', '.join(str(p) for p in dangerous[:2])})")
+
+    clean_name = _clean_name_for_hook(name)
+
     if hooks:
-        return f"Hi {name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
+        return f"Hi {clean_name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
     elif temperature == "WARM":
-        return f"Hi {name}! We help businesses like yours improve customer engagement through better online reputation."
-    return f"Hi {name}! We help businesses improve their online presence and customer satisfaction."
+        return f"Hi {clean_name}! We help businesses like yours improve customer engagement through better online reputation."
+    return f"Hi {clean_name}! We help businesses improve their online presence and customer satisfaction."
+
+
+def _clean_name_for_hook(name: str) -> str:
+    if not name:
+        return "there"
+    skip = ["home", "contact", "about", "services", "welcome"]
+    if name.lower().strip() in skip:
+        return "there"
+    if len(name) > 50 or "|" in name or "near" in name.lower() or "yellowpages" in name.lower():
+        return "there"
+    return name.strip()
 
 
 def enrich_business(biz):

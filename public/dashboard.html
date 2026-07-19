@@ -145,6 +145,7 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
   <div class="topbar">
     <div class="topbar-title">FindLeads Dashboard</div>
     <button class="tab-btn active" data-page="overview">Overview</button>
+    <button class="tab-btn" data-page="security">Security</button>
     <button class="tab-btn" data-page="algorithms">Algorithms</button>
     <button class="tab-btn" data-page="companies">Companies</button>
     <button class="tab-btn" data-page="ai">AI Advisor</button>
@@ -161,6 +162,27 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     <div class="charts-row">
       <div class="chart-wrap"><canvas id="chart-cities"></canvas></div>
       <div class="chart-wrap"><canvas id="chart-temp-overview"></canvas></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-security">
+    <div class="stats-grid" id="security-stats"></div>
+    <div class="charts-row">
+      <div class="chart-wrap"><canvas id="chart-vulns"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-breaches"></canvas></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-wrap"><canvas id="chart-ports"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-warnings"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>Companies with Vulnerabilities</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company</th><th>City</th><th>SSL</th><th>Health</th><th>Vulns</th><th>Ports</th><th>Breaches</th><th>Warnings</th><th>Temp</th></tr></thead>
+          <tbody id="security-table"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -261,6 +283,10 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
       <h3>Reviews & Sentiment</h3>
       <div id="modal-sentiment"></div>
     </div>
+    <div class="modal-section">
+      <h3>Security Intelligence</h3>
+      <div id="modal-security"></div>
+    </div>
   </div>
 </div>
 
@@ -337,6 +363,7 @@ function doLogout() {
 
 function initDashboard() {
   loadOverview();
+  loadSecurity();
   loadAlgorithms();
   loadFilters();
   loadCompanies(1);
@@ -358,6 +385,7 @@ document.querySelectorAll('.tab-btn[data-page]').forEach(function(btn) {
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     document.getElementById('page-' + btn.dataset.page).classList.add('active');
     if (btn.dataset.page === 'analytics') loadAnalytics();
+    if (btn.dataset.page === 'security') loadSecurity();
   });
 });
 
@@ -552,6 +580,43 @@ async function openCompany(id) {
     fieldHTML('Rating', rating) +
     '</div>';
 
+  var vulns = parseJSON(c.vulnerabilities);
+  var ports = parseJSON(c.open_ports);
+  var warnings = parseJSON(c.security_warnings);
+  var breachNames = parseJSON(c.breach_names);
+  var breachCount = c.breach_count || breachNames.length || 0;
+  var secHTML = '<div class="modal-row">' +
+    fieldHTML('Vulnerabilities', '<span style="color:' + (vulns.length ? '#EF4444' : '#10B981') + ';font-weight:700">' + vulns.length + ' CVEs</span>') +
+    fieldHTML('Open Ports', '<span style="color:' + (ports.length ? '#F59E0B' : '#10B981') + ';font-weight:700">' + ports.length + ' ports</span>') +
+    fieldHTML('Breaches', '<span style="color:' + (breachCount ? '#FBBF24' : '#10B981') + ';font-weight:700">' + breachCount + '</span>') +
+    '</div>';
+  if (vulns.length) {
+    secHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">CVEs: ';
+    vulns.slice(0, 5).forEach(function(v) { secHTML += '<span class="tech-tag" style="border-color:rgba(239,68,68,.3);color:#F87171">' + esc(v) + '</span>'; });
+    if (vulns.length > 5) secHTML += '<span class="tech-tag">+' + (vulns.length - 5) + ' more</span>';
+    secHTML += '</div>';
+  }
+  if (ports.length) {
+    secHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Ports: ';
+    ports.slice(0, 8).forEach(function(p) { secHTML += '<span class="tech-tag" style="border-color:rgba(245,158,11,.3);color:#FBBF24">' + esc(p) + '</span>'; });
+    secHTML += '</div>';
+  }
+  if (breachNames.length) {
+    secHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Breaches: ';
+    breachNames.slice(0, 5).forEach(function(b) { secHTML += '<span class="tech-tag" style="border-color:rgba(251,191,36,.3);color:#FBBF24">' + esc(b) + '</span>'; });
+    if (breachNames.length > 5) secHTML += '<span class="tech-tag">+' + (breachNames.length - 5) + ' more</span>';
+    secHTML += '</div>';
+  }
+  if (warnings.length) {
+    secHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Warnings: ';
+    warnings.forEach(function(w) { secHTML += '<div style="color:#F59E0B;margin:2px 0">⚠ ' + esc(w) + '</div>'; });
+    secHTML += '</div>';
+  }
+  if (!vulns.length && !ports.length && !breachCount && !warnings.length) {
+    secHTML += '<div style="margin-top:8px;color:#10B981;font-size:13px">✓ No security issues detected</div>';
+  }
+  document.getElementById('modal-security').innerHTML = secHTML;
+
   document.getElementById('modal-overlay').classList.add('show');
 }
 
@@ -660,6 +725,88 @@ async function loadAnalytics() {
     labels: sentLabels,
     datasets: [{ data: sentValues, backgroundColor: sentColors, borderWidth: 0 }]
   }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
+}
+
+async function loadSecurity() {
+  const data = await api('security');
+  if (!data) return;
+
+  const totalVulns = data.total_vulnerabilities || 0;
+  const totalBreaches = data.total_breaches || 0;
+  const totalPorts = data.total_open_ports || 0;
+  const companiesWithVulns = data.companies_with_vulns || 0;
+  const companiesWithPorts = data.companies_with_ports || 0;
+  const companiesWithBreaches = data.companies_with_breaches || 0;
+  const totalWarnings = data.total_warnings || 0;
+
+  document.getElementById('security-stats').innerHTML =
+    '<div class="stat-card"><div class="label">Companies with Vulns</div><div class="value" style="color:#EF4444">' + companiesWithVulns + '</div><div class="sub">' + totalVulns + ' total CVEs</div></div>' +
+    '<div class="stat-card"><div class="label">Companies with Breaches</div><div class="value" style="color:#F59E0B">' + companiesWithBreaches + '</div><div class="sub">' + totalBreaches + ' total breaches</div></div>' +
+    '<div class="stat-card"><div class="label">Exposed Ports</div><div class="value" style="color:#F87171">' + totalPorts + '</div><div class="sub">' + companiesWithPorts + ' companies</div></div>' +
+    '<div class="stat-card"><div class="label">Security Warnings</div><div class="value" style="color:#FBBF24">' + totalWarnings + '</div></div>';
+
+  const vulnDist = data.vulnerability_distribution || {};
+  renderChart('chart-vulns', 'bar', {
+    labels: Object.keys(vulnDist).length ? Object.keys(vulnDist) : ['No Data'],
+    datasets: [{ label: 'CVEs', data: Object.keys(vulnDist).length ? Object.values(vulnDist) : [0], backgroundColor: 'rgba(239,68,68,0.6)', borderColor: '#EF4444', borderWidth: 1 }]
+  }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94A3B8', maxRotation: 45 }, grid: { display: false } } } });
+
+  const breachDist = data.breach_distribution || {};
+  renderChart('chart-breaches', 'doughnut', {
+    labels: Object.keys(breachDist).length ? Object.keys(breachDist) : ['Clean'],
+    datasets: [{ data: Object.keys(breachDist).length ? Object.values(breachDist) : [1], backgroundColor: Object.keys(breachDist).length ? ['#EF4444', '#F59E0B', '#3B82F6', '#10B981', '#8B5CF6'] : ['#10B981'], borderWidth: 0 }]
+  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
+
+  const portDist = data.port_distribution || {};
+  renderChart('chart-ports', 'bar', {
+    labels: Object.keys(portDist).length ? Object.keys(portDist) : ['No Data'],
+    datasets: [{ label: 'Companies', data: Object.keys(portDist).length ? Object.values(portDist) : [0], backgroundColor: 'rgba(245,158,11,0.6)', borderColor: '#F59E0B', borderWidth: 1 }]
+  }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94A3B8' }, grid: { display: false } } } });
+
+  const warnDist = data.warning_distribution || {};
+  renderChart('chart-warnings', 'doughnut', {
+    labels: Object.keys(warnDist).length ? Object.keys(warnDist) : ['No Warnings'],
+    datasets: [{ data: Object.keys(warnDist).length ? Object.values(warnDist) : [1], backgroundColor: ['#EF4444', '#F59E0B', '#FBBF24', '#3B82F6'], borderWidth: 0 }]
+  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
+
+  const companies = data.companies_with_issues || [];
+  const tbody = document.getElementById('security-table');
+  tbody.innerHTML = '';
+  if (!companies.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:20px">No security issues found</td></tr>';
+    return;
+  }
+  companies.forEach(function(c) {
+    const vulns = parseJSON(c.vulnerabilities);
+    const ports = parseJSON(c.open_ports);
+    const warnings = parseJSON(c.security_warnings);
+    const breachNames = parseJSON(c.breach_names);
+    const tempBadge = tempBadgeHTML(c.lead_temperature || 'COLD');
+    const ssl = c.ssl_grade || '-';
+    const sslCol = sslGradeColor(ssl);
+    const health = c.health_score != null ? c.health_score : '-';
+    const breachCount = c.breach_count || breachNames.length || 0;
+    tbody.innerHTML += '<tr onclick="openCompany(' + (c.id || '') + ')">' +
+      '<td>' + esc(c.name || '') + '</td>' +
+      '<td>' + esc(c.city || '') + '</td>' +
+      '<td><span style="color:' + sslCol + ';font-weight:700">' + esc(ssl) + '</span></td>' +
+      '<td>' + health + '</td>' +
+      '<td><span style="color:#EF4444;font-weight:600">' + vulns.length + '</span></td>' +
+      '<td><span style="color:#F59E0B;font-weight:600">' + ports.length + '</span></td>' +
+      '<td><span style="color:#FBBF24;font-weight:600">' + breachCount + '</span></td>' +
+      '<td>' + warnings.length + '</td>' +
+      '<td>' + tempBadge + '</td>' +
+      '</tr>';
+  });
+}
+
+function parseJSON(val) {
+  if (!val) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === 'string') {
+    try { var parsed = JSON.parse(val); return Array.isArray(parsed) ? parsed : []; } catch(e) { return []; }
+  }
+  return [];
 }
 
 function renderChart(id, type, data, options) {
