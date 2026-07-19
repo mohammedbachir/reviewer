@@ -231,9 +231,34 @@ def _clean_business_name(title: str, website: str) -> str:
             name = ""
             break
 
-    domain_part = website.replace("https://", "").replace("http://", "").replace("www.", "").split(".")[0]
-    if len(domain_part) > 2 and len(name) < 5:
-        name = domain_part.replace("-", " ").title()
+    GENERIC_WORDS = {
+        'medspa', 'plastic surgery', 'cosmetic dentistry', 'dental implants',
+        'solar panel installer', 'solar panels', 'solar installer', 'solar energy',
+        'hvac contractor', 'hvac services', 'air conditioning', 'heating and cooling',
+        'roofing contractor', 'roofing services', 'personal injury lawyer',
+        'personal injury attorney', 'moving company', 'movers', 'tax consultant',
+        'tax accountant', 'managed it services', 'it services', 'plumber', 'plumbing',
+        'electrician', 'landscaping', 'pool builder', 'estate planning',
+        'dental clinic', 'dental office', 'beauty salon', 'hair salon',
+        'ac repair', 'ac installation', 'furnace repair',
+    }
+    GENERIC_PATTERNS = [
+        r'^best\b', r'^top\b', r'^cheap\b', r'^affordable\b',
+        r'\bcontractor\b', r'\bservices?\b', r'\binstaller\b',
+        r'\bcompany\b', r'\bconsultant\b', r'\bin\b\s+\w+$',
+    ]
+    name_lower = name.lower().strip()
+    is_generic = name_lower in GENERIC_WORDS
+    if not is_generic:
+        for pat in GENERIC_PATTERNS:
+            if re.search(pat, name_lower):
+                is_generic = True
+                break
+    if is_generic or len(name.split()) < 2:
+        domain_part = website.replace("https://", "").replace("http://", "").replace("www.", "").split(".")[0]
+        domain_name = domain_part.replace("-", " ").replace("_", " ").title()
+        if len(domain_name) > 4:
+            name = domain_name
 
     return name.strip()
 

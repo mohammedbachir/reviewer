@@ -142,6 +142,14 @@ def score_lead(biz):
     vulns = biz.get("vulnerabilities", [])
     open_ports = biz.get("open_ports", [])
     breach_count = biz.get("breach_count", 0)
+
+    if breach_count > 0:
+        return "HOT"
+    if ssl == "F":
+        return "HOT"
+    if health < 50:
+        return "HOT"
+
     score = 0
     ssl_scores = {"F": 4, "D": 3, "C": 2, "B": 1, "A": 0}
     score += ssl_scores.get(ssl, 2)
@@ -154,9 +162,7 @@ def score_lead(biz):
             score += 2
         elif rating < 4.5:
             score += 1
-    if health < 40:
-        score += 3
-    elif health < 60:
+    if health < 60:
         score += 2
     elif health < 80:
         score += 1
@@ -175,10 +181,6 @@ def score_lead(biz):
     dangerous_ports = [p for p in open_ports if p in (3306, 5432, 6379, 27017, 9200, 11211)]
     if dangerous_ports:
         score += min(len(dangerous_ports), 3)
-    if breach_count >= 3:
-        score += 4
-    elif breach_count >= 1:
-        score += 2
     if score >= 7:
         return "HOT"
     elif score >= 4:

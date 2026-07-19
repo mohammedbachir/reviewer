@@ -119,6 +119,14 @@ def _score_lead(biz):
     vulns = biz.get("vulnerabilities", [])
     open_ports = biz.get("open_ports", [])
     breach_count = biz.get("breach_count", 0)
+
+    if breach_count > 0:
+        return "HOT"
+    if ssl == "F":
+        return "HOT"
+    if health < 50:
+        return "HOT"
+
     score = 0
     ssl_scores = {"F": 4, "D": 3, "C": 2, "B": 1, "A": 0}
     score += ssl_scores.get(ssl, 2)
@@ -127,8 +135,7 @@ def _score_lead(biz):
         elif rating < 3.5: score += 3
         elif rating < 4.0: score += 2
         elif rating < 4.5: score += 1
-    if health < 40: score += 3
-    elif health < 60: score += 2
+    if health < 60: score += 2
     elif health < 80: score += 1
     outdated = [t for t in techs if "Outdated" in t or "Legacy" in t]
     score += min(len(outdated), 3)
@@ -139,8 +146,6 @@ def _score_lead(biz):
     elif len(vulns) >= 1: score += 2
     dangerous_ports = [p for p in open_ports if p in (3306, 5432, 6379, 27017, 9200, 11211)]
     if dangerous_ports: score += min(len(dangerous_ports), 3)
-    if breach_count >= 3: score += 4
-    elif breach_count >= 1: score += 2
     if score >= 7: return "HOT"
     elif score >= 4: return "WARM"
     else: return "COLD"
@@ -229,6 +234,19 @@ def _enrich_business(biz):
     return biz
 
 
+def _log_scan_run(city, sector, businesses_found, emails_found, osint_scanned, duration, status):
+    try:
+        from curl_cffi import requests as cffi_requests
+        cffi_requests.post(
+            f"{SUPABASE_URL}/rest/v1/scan_runs",
+            json={"city": city, "sector": sector, "businesses_found": businesses_found, "emails_found": emails_found, "osint_scanned": osint_scanned, "duration_seconds": round(duration, 1), "status": status},
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
+            timeout=8,
+        )
+    except Exception:
+        pass
+
+
 def run_scrape():
     from scraper.finder import search_businesses
     t0 = time.time()
@@ -237,12 +255,16 @@ def run_scrape():
     city, sector = target["city"], target["sector"]
     businesses = search_businesses(city, sector, 1)
     if not businesses:
+        _log_scan_run(city, sector, 0, 0, 0, time.time() - t0, "no_results")
         return {"status": "no_results", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
     biz = businesses[0]
     if time.time() - t0 > HARD_DEADLINE:
+        _log_scan_run(city, sector, 0, 0, 0, time.time() - t0, "timeout")
         return {"status": "timeout", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
     enriched = _enrich_business(biz)
     _upsert_business(enriched, target)
+    has_email = 1 if enriched.get("email") else 0
+    _log_scan_run(city, sector, 1, has_email, 1, time.time() - t0, "completed")
     return {
         "status": "completed",
         "target": f"{city} / {sector}",
