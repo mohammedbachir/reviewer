@@ -64,6 +64,15 @@ def _upsert_business(biz, target):
         tech = biz.get("tech_stack", [])
         if isinstance(tech, list):
             tech = json.dumps(tech)
+        vulns = biz.get("vulnerabilities", [])
+        if isinstance(vulns, list):
+            vulns = json.dumps(vulns)
+        open_ports = biz.get("open_ports", [])
+        if isinstance(open_ports, list):
+            open_ports = json.dumps(open_ports)
+        security_warnings = biz.get("security_warnings", [])
+        if isinstance(security_warnings, list):
+            security_warnings = json.dumps(security_warnings)
         data = {
             "name": biz["name"],
             "city": target["city"],
@@ -81,6 +90,12 @@ def _upsert_business(biz, target):
             "email_confidence": biz.get("email_confidence", 0),
             "email_source": biz.get("email_source", ""),
             "sentiment": biz.get("sentiment", "neutral"),
+            "vulnerabilities": vulns,
+            "open_ports": open_ports,
+            "breaches": biz.get("breaches", 0),
+            "security_warnings": security_warnings,
+            "breach_count": biz.get("breach_count", 0),
+            "breach_names": json.dumps(biz.get("breach_names", [])),
         }
         resp = cffi_requests.post(
             f"{SUPABASE_URL}/rest/v1/businesses",
@@ -101,6 +116,9 @@ def _score_lead(biz):
     techs = biz.get("tech_stack", [])
     responds = biz.get("responds_to_reviews", False)
     sentiment = biz.get("sentiment", "neutral")
+    vulns = biz.get("vulnerabilities", [])
+    open_ports = biz.get("open_ports", [])
+    breach_count = biz.get("breach_count", 0)
     score = 0
     ssl_scores = {"F": 4, "D": 3, "C": 2, "B": 1, "A": 0}
     score += ssl_scores.get(ssl, 2)
@@ -117,6 +135,12 @@ def _score_lead(biz):
     if not responds: score += 2
     if sentiment == "negative": score += 2
     elif sentiment == "neutral": score += 1
+    if len(vulns) >= 3: score += 4
+    elif len(vulns) >= 1: score += 2
+    dangerous_ports = [p for p in open_ports if p in (3306, 5432, 6379, 27017, 9200, 11211)]
+    if dangerous_ports: score += min(len(dangerous_ports), 3)
+    if breach_count >= 3: score += 4
+    elif breach_count >= 1: score += 2
     if score >= 7: return "HOT"
     elif score >= 4: return "WARM"
     else: return "COLD"
@@ -128,6 +152,8 @@ def _generate_outreach_hook(biz, temperature):
     rating = biz.get("rating", 0)
     techs = biz.get("tech_stack", [])
     health = biz.get("health_score", 50)
+    vulns = biz.get("vulnerabilities", [])
+    open_ports = biz.get("open_ports", [])
     hooks = []
     if ssl in ("D", "F"):
         hooks.append(f"Your website SSL certificate needs attention (grade {ssl})")
@@ -138,6 +164,11 @@ def _generate_outreach_hook(biz, temperature):
         hooks.append(f"Your website uses outdated technology ({', '.join(outdated[:2])})")
     if health < 50:
         hooks.append(f"Your website health score is {health}/100")
+    if len(vulns) >= 1:
+        hooks.append(f"Your website has {len(vulns)} known security vulnerabilities")
+    dangerous = [p for p in open_ports if p in (3306, 5432, 6379, 27017)]
+    if dangerous:
+        hooks.append(f"Critical services exposed on your server (ports: {', '.join(str(p) for p in dangerous[:2])})")
     if hooks:
         return f"Hi {name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
     elif temperature == "WARM":
@@ -163,6 +194,8 @@ def _enrich_business(biz):
                 biz["email"] = email_result["email"]
                 biz["email_confidence"] = email_result.get("confidence", 0)
                 biz["email_source"] = email_result.get("source", "")
+            biz["breach_count"] = email_result.get("breach_count", 0)
+            biz["breach_names"] = email_result.get("breach_names", [])
         except Exception as e:
             logger.debug(f"  Email error: {e}")
     if domain:
@@ -171,6 +204,9 @@ def _enrich_business(biz):
             biz["health_score"] = osint["health_score"]
             biz["ssl_grade"] = osint["ssl_grade"]
             biz["tech_stack"] = osint["tech_stack"]
+            biz["vulnerabilities"] = osint.get("vulnerabilities", [])
+            biz["open_ports"] = osint.get("open_ports", [])
+            biz["security_warnings"] = osint.get("security_warnings", [])
         except Exception as e:
             logger.debug(f"  OSINT error: {e}")
     temperature = _score_lead(biz)

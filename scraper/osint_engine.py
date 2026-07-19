@@ -44,6 +44,10 @@ def analyze_domain(domain: str, rating: float = 0, review_count: int = 0) -> Dic
         "dns": {},
         "page_speed": {},
         "has_website": True,
+        "vulnerabilities": [],
+        "open_ports": [],
+        "breaches": 0,
+        "security_warnings": [],
         "analyzed_at": datetime.now(timezone.utc).isoformat(),
     }
 
@@ -70,9 +74,32 @@ def analyze_domain(domain: str, rating: float = 0, review_count: int = 0) -> Dic
     except Exception as e:
         logger.debug(f"Tech detection error: {e}")
 
+    # ════════════════════════════════════════════════════════════
+    # MULTI-SOURCE: Shodan InternetDB + LeakIX (only if domain exists)
+    # ════════════════════════════════════════════════════════════
+    if domain:
+        try:
+            internetdb = check_internetdb(domain)
+            result["open_ports"] = internetdb.get("ports", [])
+            result["vulnerabilities"] = internetdb.get("vulns", [])
+            result["security_warnings"] = internetdb.get("warnings", [])
+        except Exception as e:
+            logger.debug(f"InternetDB error: {e}")
+
+        try:
+            leakix = check_leakix(domain)
+            if leakix.get("exposed_services"):
+                result["open_ports"] = list(set(result["open_ports"] + leakix["exposed_services"]))
+            if leakix.get("vulns"):
+                result["vulnerabilities"] = list(set(result["vulnerabilities"] + leakix["vulns"]))
+            if leakix.get("warnings"):
+                result["security_warnings"] = result["security_warnings"] + leakix["warnings"]
+        except Exception as e:
+            logger.debug(f"LeakIX error: {e}")
+
     result["health_score"] = _calculate_health(result, rating, review_count)
 
-    logger.info(f"  Health: {result['health_score']}/100 | SSL: {result['ssl_grade']} | Tech: {len(result['tech_stack'])}")
+    logger.info(f"  Health: {result['health_score']}/100 | SSL: {result['ssl_grade']} | Tech: {len(result['tech_stack'])} | Vulns: {len(result['vulnerabilities'])} | Ports: {len(result['open_ports'])}")
     return result
 
 
@@ -563,6 +590,65 @@ def detect_tech(domain: str) -> List[str]:
 
 
 # ════════════════════════════════════════════════════════════════
+# SHODAN INTERNETDB — Open ports + CVEs (FREE, no API key)
+# ════════════════════════════════════════════════════════════════
+
+def check_internetdb(domain: str) -> Dict:
+    result = {"ports": [], "vulns": [], "cves": [], "warnings": []}
+    try:
+        session = _create_session()
+        resp = session.get(f"https://internetdb.shodan.io/{domain}", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            result["ports"] = data.get("ports", [])
+            result["vulns"] = data.get("vulns", [])
+            result["cves"] = data.get("vulns", [])  # vulns are CVE IDs
+            dangerous_ports = {3306: "MySQL exposed publicly", 5432: "PostgreSQL exposed publicly",
+                               6379: "Redis exposed publicly", 27017: "MongoDB exposed publicly",
+                               9200: "Elasticsearch exposed publicly", 11211: "Memcached exposed publicly"}
+            for port in result["ports"]:
+                if port in dangerous_ports:
+                    result["warnings"].append(dangerous_ports[port])
+            critical_vulns = [v for v in result["vulns"] if any(x in v for x in ["Log4Shell", "Heartbleed", "ProxyLogon", "ProxyShell"])]
+            if critical_vulns:
+                result["warnings"].append(f"Critical CVE: {', '.join(critical_vulns[:2])}")
+            if len(result["vulns"]) >= 3:
+                result["warnings"].append(f"{len(result['vulns'])} known vulnerabilities detected")
+            if result["ports"]:
+                logger.info(f"  InternetDB: {len(result['ports'])} ports, {len(result['vulns'])} vulns")
+    except Exception as e:
+        logger.debug(f"  InternetDB error: {e}")
+    return result
+
+
+# ════════════════════════════════════════════════════════════════
+# LEAKIX — Exposed services + vulnerabilities (FREE basic)
+# ════════════════════════════════════════════════════════════════
+
+def check_leakix(domain: str) -> Dict:
+    result = {"exposed_services": [], "vulns": [], "warnings": []}
+    try:
+        session = _create_session()
+        resp = session.get(f"https://leakix.net/api/v1/search/{domain}", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            services = set()
+            for entry in data[:10]:
+                port = entry.get("port")
+                if port:
+                    services.add(port)
+                vuln = entry.get("vuln")
+                if vuln:
+                    result["vulns"].append(vuln)
+            result["exposed_services"] = list(services)
+            if result["exposed_services"]:
+                logger.info(f"  LeakIX: {len(result['exposed_services'])} services, {len(result['vulns'])} vulns")
+    except Exception as e:
+        logger.debug(f"  LeakIX error: {e}")
+    return result
+
+
+# ════════════════════════════════════════════════════════════════
 # HEALTH SCORE
 # ════════════════════════════════════════════════════════════════
 
@@ -612,6 +698,19 @@ def _calculate_health(osint: Dict, rating: float, review_count: int) -> int:
         score += 4
     elif review_count >= 10:
         score += 2
+
+    vulns = osint.get("vulnerabilities", [])
+    if len(vulns) >= 5:
+        score -= 15
+    elif len(vulns) >= 3:
+        score -= 10
+    elif len(vulns) >= 1:
+        score -= 5
+
+    open_ports = osint.get("open_ports", [])
+    dangerous = [p for p in open_ports if p in (3306, 5432, 6379, 27017, 9200, 11211)]
+    if dangerous:
+        score -= len(dangerous) * 3
 
     return max(0, min(100, score))
 

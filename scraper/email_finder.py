@@ -127,6 +127,18 @@ def find_best_email(website_url: str, business_name: str = "") -> Dict:
     best = _rank_candidates(candidates, domain)
     all_found = sorted(set(c["email"] for c in candidates))
 
+    # ════════════════════════════════════════════════════════════
+    # MULTI-SOURCE: XposedOrNot breach check (only if we found an email)
+    # ════════════════════════════════════════════════════════════
+    breach_data = {}
+    if best and best["email"]:
+        try:
+            breach_data = check_breaches(best["email"])
+            if breach_data.get("breach_count", 0) > 0:
+                logger.info(f"  Breaches: {best['email']} found in {breach_data['breach_count']} breaches")
+        except Exception as e:
+            logger.debug(f"  Breach check error: {e}")
+
     if best:
         logger.info(f"  Best: {best['email']} (confidence: {best['confidence']}%)")
     else:
@@ -137,6 +149,8 @@ def find_best_email(website_url: str, business_name: str = "") -> Dict:
         "confidence": best["confidence"] if best else 0,
         "source": best["source"] if best else "none",
         "all_found": all_found,
+        "breach_count": breach_data.get("breach_count", 0),
+        "breach_names": breach_data.get("breach_names", []),
     }
 
 
@@ -394,6 +408,69 @@ def _check_crt_sh(session, domain: str) -> Set[str]:
         pass
 
     return emails
+
+
+# ════════════════════════════════════════════════════════════════
+# XPOSEDORNOT — Email breach check (FREE, 100/day, no key)
+# ════════════════════════════════════════════════════════════════
+
+def check_breaches(email: str) -> Dict:
+    result = {"breach_count": 0, "breach_names": []}
+    try:
+        session = _create_session()
+        resp = session.get(
+            f"https://api.xposedornot.com/v1/check-email/{email}",
+            headers={"User-Agent": "FindLeads/1.0"},
+            timeout=5,
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            breaches = data.get("breaches", [])
+            if breaches and isinstance(breaches, list):
+                all_names = []
+                for group in breaches:
+                    if isinstance(group, list):
+                        all_names.extend(group)
+                    elif isinstance(group, str):
+                        all_names.append(group)
+                result["breach_count"] = len(all_names)
+                result["breach_names"] = all_names[:10]
+    except Exception as e:
+        logger.debug(f"  XposedOrNot error: {e}")
+    return result
+
+
+# ════════════════════════════════════════════════════════════════
+# EMAILREP — Email reputation scoring (optional, needs API key)
+# ════════════════════════════════════════════════════════════════
+
+def check_emailrep(email: str, api_key: str = "") -> Dict:
+    result = {"score": 0, "reputation": "", "suspicious": False, "details": {}}
+    try:
+        session = _create_session()
+        headers = {"User-Agent": "FindLeads/1.0"}
+        if api_key:
+            headers["Key"] = api_key
+        resp = session.get(f"https://emailrep.io/{email}", headers=headers, timeout=4)
+        if resp.status_code == 200:
+            data = resp.json()
+            result["score"] = data.get("score", 0)
+            result["reputation"] = data.get("reputation", "")
+            result["suspicious"] = data.get("suspicious", False)
+            details = data.get("details", {})
+            result["details"] = {
+                "blacklisted": details.get("blacklisted", False),
+                "malicious_activity": details.get("malicious_activity", False),
+                "credentials_leaked": details.get("credentials_leaked", False),
+                "data_breach": details.get("data_breach", False),
+                "first_seen": details.get("first_seen", ""),
+                "last_seen": details.get("last_seen", ""),
+                "domain_exists": details.get("domain_exists", True),
+                "profiles": details.get("profiles", []),
+            }
+    except Exception as e:
+        logger.debug(f"  EmailRep error: {e}")
+    return result
 
 
 # ════════════════════════════════════════════════════════════════

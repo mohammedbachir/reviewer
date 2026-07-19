@@ -11,3 +11,13 @@ ALTER TABLE businesses ADD COLUMN IF NOT EXISTS owner_name TEXT DEFAULT '';
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS instagram TEXT DEFAULT '';
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS facebook TEXT DEFAULT '';
 ALTER TABLE businesses ADD COLUMN IF NOT EXISTS twitter TEXT DEFAULT '';
+
+-- FindLeads v5.0 — Multi-Source Intelligence columns
+-- Run this AFTER the columns above
+
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS vulnerabilities JSONB DEFAULT '[]';
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS open_ports JSONB DEFAULT '[]';
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS breaches INTEGER DEFAULT 0;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS security_warnings JSONB DEFAULT '[]';
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS breach_count INTEGER DEFAULT 0;
+ALTER TABLE businesses ADD COLUMN IF NOT EXISTS breach_names JSONB DEFAULT '[]';
