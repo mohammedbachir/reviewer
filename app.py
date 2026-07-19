@@ -231,44 +231,26 @@ def _enrich_business(biz):
 
 def run_scrape():
     from scraper.finder import search_businesses
-    from concurrent.futures import ThreadPoolExecutor, as_completed
     t0 = time.time()
     HARD_DEADLINE = 22
     target = _get_target()
     city, sector = target["city"], target["sector"]
-    max_results = min(target.get("max_results", 10), 10)
-    businesses = search_businesses(city, sector, max_results)
-    logger.info(f"Found {len(businesses)} businesses in {city}/{sector}")
-    elapsed_search = time.time() - t0
-    remaining = HARD_DEADLINE - elapsed_search
-    per_biz_timeout = max(5, remaining / max(len(businesses), 1))
-    enriched = []
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_biz = {executor.submit(_enrich_business, biz): biz for biz in businesses}
-        for future in as_completed(future_to_biz):
-            if time.time() - t0 > HARD_DEADLINE:
-                for f in future_to_biz: f.cancel()
-                break
-            try:
-                result = future.result(timeout=per_biz_timeout)
-                enriched.append(result)
-                _upsert_business(result, target)
-            except Exception as e:
-                logger.debug(f"  Enrichment error: {e}")
-    emails_found = sum(1 for b in enriched if b.get("email"))
-    hot = sum(1 for b in enriched if b.get("lead_temperature") == "HOT")
-    warm = sum(1 for b in enriched if b.get("lead_temperature") == "WARM")
-    cold = sum(1 for b in enriched if b.get("lead_temperature") == "COLD")
-    avg_health = sum(b.get("health_score", 50) for b in enriched) / len(enriched) if enriched else 0
-    elapsed = time.time() - t0
+    businesses = search_businesses(city, sector, 1)
+    if not businesses:
+        return {"status": "no_results", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
+    biz = businesses[0]
+    if time.time() - t0 > HARD_DEADLINE:
+        return {"status": "timeout", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
+    enriched = _enrich_business(biz)
+    _upsert_business(enriched, target)
     return {
         "status": "completed",
         "target": f"{city} / {sector}",
-        "businesses_found": len(enriched),
-        "emails_found": emails_found,
-        "avg_health_score": round(avg_health),
-        "lead_temperatures": {"HOT": hot, "WARM": warm, "COLD": cold},
-        "elapsed_seconds": round(elapsed, 1),
+        "business_name": enriched.get("name", ""),
+        "email": enriched.get("email", ""),
+        "lead_temperature": enriched.get("lead_temperature", ""),
+        "health_score": enriched.get("health_score", 0),
+        "elapsed_seconds": round(time.time() - t0, 1),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 

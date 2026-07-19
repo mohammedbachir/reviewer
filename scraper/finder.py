@@ -8,6 +8,7 @@ Extracts: rating, review_count, owner_name, social links from DDG snippets.
 import json
 import os
 import re
+import html
 import time
 import random
 import logging
@@ -153,9 +154,22 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
 
         name = _clean_business_name(name, website)
 
-        if len(name) > 3:
+        if len(name) < 4:
+            continue
+
+        real_name = name
+        try:
+            details = _scrape_website_details(website)
+            scraped_name = details.get("real_name", "")
+            if scraped_name and len(scraped_name) > 2 and len(scraped_name) < 60:
+                real_name = _clean_business_name(scraped_name, website)
+            phone = phone or details.get("phone", "")
+        except Exception:
+            pass
+
+        if len(real_name) > 3:
             businesses.append({
-                "name": name,
+                "name": real_name,
                 "rating": rating,
                 "review_count": review_count,
                 "website": website,
@@ -186,13 +200,29 @@ SKIP_NAME_PATTERNS = [
 
 def _clean_business_name(title: str, website: str) -> str:
     name = title
+
+    pipe_match = re.split(r'\s*[\|–]\s*', name, maxsplit=1)
+    if len(pipe_match) > 1:
+        name = pipe_match[0].strip()
+
     name = re.sub(r'\s*[\|–]\s*\w+\.(?:com|ae|sa|net|org|ca|co|us|io).*', '', name, flags=re.IGNORECASE)
     name = re.sub(r'\s*[\|–]\s*(?:Best|Top|Cheap|Affordable|Professional|Trusted|Leading|#\d+).*', '', name, flags=re.IGNORECASE)
-    name = re.sub(r'\s*[\|–]\s*(?:Dubai|Riyadh|AbuDhabi|Toronto|Calgary|Austin|Miami|Scottsdale|Naples|Jeddah|Saudi\s*Arabia|UAE|ON|AZ|TX|FL|CA).*', '', name, flags=re.IGNORECASE)
     name = re.sub(r'\s*[\|–]\s*\d{4}\b.*', '', name)
     name = re.sub(r'\s*[\(][\)]*\s*$', '', name)
     name = re.sub(r'\s*[\|–]\s*$', '', name)
     name = name.strip(" -–|()")
+
+    CITIES = [
+        "Miami", "Miami Beach", "Scottsdale", "Phoenix", "Austin", "Houston",
+        "Dallas", "San Antonio", "Denver", "Tampa", "Chicago", "Atlanta",
+        "Los Angeles", "Toronto", "Calgary", "Naples", "Riyadh", "Jeddah",
+        "Dubai", "AbuDhabi", "Abu Dhabi", "New York", "San Diego", "Las Vegas",
+    ]
+    for city in CITIES:
+        pattern = re.compile(rf'^{re.escape(city)}\s*', re.IGNORECASE)
+        name = pattern.sub('', name)
+
+    name = re.sub(r'\s*(?:TX|FL|AZ|CA|ON|AB|IL|GA|CO)\s*$', '', name).strip()
 
     for pat in SKIP_NAME_PATTERNS:
         if re.match(pat, name, re.IGNORECASE):
@@ -347,12 +377,12 @@ def _scrape_website_details(session, website_url: str) -> Dict:
         if not og_site:
             og_site = re.search(r'<meta[^>]*content=["\']([^"\']+)["\'][^>]*property=["\']og:site_name', content, re.IGNORECASE)
         if og_site:
-            result["real_name"] = og_site.group(1).strip()
+            result["real_name"] = html.unescape(og_site.group(1).strip())
 
         if not result["real_name"]:
             title_tag = re.search(r'<title[^>]*>([^<]+)</title>', content, re.IGNORECASE)
             if title_tag:
-                t = title_tag.group(1).strip()
+                t = html.unescape(title_tag.group(1).strip())
                 t = re.sub(r'\s*[\|–]\s*(?:Home|Welcome|Offic|Servic|About|Contact).*', '', t, flags=re.IGNORECASE)
                 t = re.sub(r'\s*[\|–]\s*\w+\.(com|ae|sa|net|org|ca|co).*', '', t, flags=re.IGNORECASE)
                 t = t.strip(" -–|")
@@ -362,7 +392,7 @@ def _scrape_website_details(session, website_url: str) -> Dict:
         if not result["real_name"]:
             h1_match = re.search(r'<h1[^>]*>([^<]{3,60})</h1>', content, re.IGNORECASE)
             if h1_match:
-                h1 = h1_match.group(1).strip()
+                h1 = html.unescape(h1_match.group(1).strip())
                 h1 = re.sub(r'<[^>]+>', '', h1).strip()
                 if 3 < len(h1) < 60 and not any(kw in h1.lower() for kw in ["welcome", "home", "about us", "contact", "services"]):
                     result["real_name"] = h1
@@ -424,8 +454,7 @@ def _scrape_website_details(session, website_url: str) -> Dict:
 
 def _clean_html(text: str) -> str:
     text = re.sub(r'<[^>]+>', '', text)
-    text = text.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
-    text = text.replace('&#x27;', "'").replace('&quot;', '"').replace('&nbsp;', ' ')
+    text = html.unescape(text)
     text = re.sub(r'\s+', ' ', text)
     return text.strip()
 

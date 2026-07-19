@@ -11,7 +11,7 @@ import time
 import socket
 import logging
 from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from urllib.parse import urlparse
 
 import dns.resolver
@@ -289,93 +289,38 @@ def run_once():
     t0 = time.time()
     target, idx, total = get_target()
     city, sector = target["city"], target["sector"]
-    max_results = min(target.get("max_results", 20), 20)
 
     print()
     print(f"{'='*60}")
     print(f"  RUN #{idx + 1}/{total}  |  {city} / {sector}")
     print(f"{'='*60}")
 
-    businesses = search_businesses(city, sector, max_results)
+    businesses = search_businesses(city, sector, 1)
     if not businesses:
         print(f"  [!] No businesses found. Skipping.")
         return
 
-    print(f"  Found {len(businesses)} businesses. Enriching with {MAX_WORKERS} workers...")
+    biz = businesses[0]
+    print(f"  Enriching: {biz.get('name', '?')[:40]}...")
 
-    enriched = []
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-        futures = {ex.submit(enrich_business, b): b for b in businesses}
-        done_count = 0
-        for future in as_completed(futures):
-            done_count += 1
-            try:
-                result = future.result(timeout=60)
-                enriched.append(result)
-                emails = sum(1 for b in enriched if b.get("email"))
-                hwc = {"HOT": 0, "WARM": 0, "COLD": 0}
-                for b in enriched:
-                    t = b.get("lead_temperature", "COLD")
-                    hwc[t] = hwc.get(t, 0) + 1
-                elapsed = time.time() - t0
-                print(
-                    f"  [{done_count}/{len(businesses)}] "
-                    f"{result.get('name', '?')[:35]:<35} "
-                    f"| {result.get('lead_temperature', '?'):<4} "
-                    f"| {result.get('ssl_grade', '?'):<2} "
-                    f"| email={'Y' if result.get('email') else 'N'} "
-                    f"| {elapsed:.0f}s"
-                )
-            except Exception as e:
-                log.debug(f"  Enrichment error: {e}")
+    result = enrich_business(biz)
+    upsert_business(result, target)
+    emails = 1 if result.get("email") else 0
+    temp = result.get("lead_temperature", "COLD")
+    print(f"  [{temp}] {result.get('name', '?')[:35]}")
+    if result.get("email"):
+        print(f"  Email: {result.get('email')}")
+    print(f"  Health: {result.get('health_score', 0)} | Vulns: {len(result.get('vulnerabilities', []))}")
 
-    saved = 0
-    skipped = 0
-    for biz in enriched:
-        if upsert_business(biz, target):
-            saved += 1
-        else:
-            skipped += 1
-
-    emails_found = sum(1 for b in enriched if b.get("email"))
-    hwc = {"HOT": 0, "WARM": 0, "COLD": 0}
-    for b in enriched:
-        hwc[b.get("lead_temperature", "COLD")] = hwc.get(b.get("lead_temperature", "COLD"), 0) + 1
-    avg_health = sum(b.get("health_score", 50) for b in enriched) / len(enriched) if enriched else 0
     elapsed = time.time() - t0
+    print(f"  Done in {elapsed:.1f}s")
 
     state = load_state()
     state["total_runs"] = state.get("total_runs", 0) + 1
-    state["total_businesses"] = state.get("total_businesses", 0) + len(enriched)
-    state["total_emails"] = state.get("total_emails", 0) + emails_found
+    state["total_businesses"] = state.get("total_businesses", 0) + 1
+    state["total_emails"] = state.get("total_emails", 0) + (1 if result.get("email") else 0)
     state["last_run"] = datetime.now(timezone.utc).isoformat()
     save_state(state)
-
-    print()
-    print(f"  RESULTS:")
-    print(f"  {'-'*40}")
-    print(f"  Target:       {city} / {sector}")
-    print(f"  Found:        {len(enriched)} businesses")
-    print(f"  Saved:        {saved} (skipped: {skipped} duplicates)")
-    print(f"  Emails:       {emails_found}/{len(enriched)}")
-    print(f"  HOT:          {hwc.get('HOT', 0)}")
-    print(f"  WARM:         {hwc.get('WARM', 0)}")
-    print(f"  COLD:         {hwc.get('COLD', 0)}")
-    print(f"  Avg Health:   {avg_health:.0f}/100")
-    print(f"  Time:         {elapsed:.1f}s")
-    print(f"  Total Runs:   {state['total_runs']}")
-    print(f"  Total Biz:    {state['total_businesses']}")
-    print(f"  Total Emails: {state['total_emails']}")
-    print(f"{'='*60}")
-    print()
-
-    return {
-        "target": f"{city}/{sector}",
-        "businesses": len(enriched),
-        "emails": emails_found,
-        "hwc": hwc,
-        "elapsed": elapsed,
-    }
 
 
 def main():
