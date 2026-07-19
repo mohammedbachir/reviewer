@@ -70,7 +70,7 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
             try:
                 details = _scrape_website_details(session, biz["website"])
                 if details.get("real_name") and len(details["real_name"]) > 3:
-                    biz["name"] = details["real_name"]
+                    biz["name"] = _clean_business_name(details["real_name"], biz["website"])
                 if not biz.get("phone") and details.get("phone"):
                     biz["phone"] = details["phone"]
                 if not biz.get("address") and details.get("address"):
@@ -159,7 +159,9 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
 
         real_name = name
         try:
-            details = _scrape_website_details(website)
+            from curl_cffi import requests as cffi_requests
+            _sess = cffi_requests.Session()
+            details = _scrape_website_details(_sess, website)
             scraped_name = details.get("real_name", "")
             if scraped_name and len(scraped_name) > 2 and len(scraped_name) < 60:
                 real_name = _clean_business_name(scraped_name, website)
