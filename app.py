@@ -155,34 +155,47 @@ def _generate_outreach_hook(biz, temperature):
     name = biz.get("name", "your business")
     ssl = biz.get("ssl_grade", "")
     rating = biz.get("rating", 0)
-    techs = biz.get("tech_stack", [])
+    review_count = biz.get("review_count", 0)
     health = biz.get("health_score", 50)
     vulns = biz.get("vulnerabilities", [])
     open_ports = biz.get("open_ports", [])
-    hooks = []
-    if ssl in ("D", "F"):
-        hooks.append(f"Your website SSL certificate needs attention (grade {ssl})")
-    if rating > 0 and rating < 3.5:
-        hooks.append(f"Your Google rating ({rating}/5) could be improved")
-    outdated = [t for t in techs if "Outdated" in t or "Legacy" in t]
-    if outdated:
-        hooks.append(f"Your website uses outdated technology ({', '.join(outdated[:2])})")
-    if health < 50:
-        hooks.append(f"Your website health score is {health}/100")
-    if len(vulns) >= 1:
-        hooks.append(f"Your website has {len(vulns)} known security vulnerabilities")
-    dangerous = [p for p in open_ports if p in (3306, 5432, 6379, 27017)]
-    if dangerous:
-        hooks.append(f"Critical services exposed on your server (ports: {', '.join(str(p) for p in dangerous[:2])})")
+    breach_count = biz.get("breach_count", 0)
+    breach_names = biz.get("breach_names", [])
 
     clean_name = _clean_name_for_hook(name)
 
-    if hooks:
-        return f"Hi {clean_name}! I noticed: {'; '.join(hooks[:2])}. We help businesses improve their online presence."
-    elif temperature == "WARM":
-        return f"Hi {clean_name}! We help businesses like yours improve customer engagement through better online reputation."
-    else:
-        return f"Hi {clean_name}! We help businesses improve their online presence and customer satisfaction."
+    if breach_count > 0:
+        breach_list = ", ".join(breach_names[:2]) if breach_names else "known breaches"
+        ssl_note = f" and your SSL certificate needs attention (Grade {ssl})" if ssl in ("C", "D", "F") else ""
+        return f"Hi {clean_name}/Team! I noticed your domain was involved in {breach_count} data breaches ({breach_list}){ssl_note}. We help businesses secure their data and improve their online presence. Reply to learn how."
+
+    if ssl in ("F", "D"):
+        health_note = f"and your website health score is {health}/100" if health < 60 else ""
+        return f"Hi {clean_name}! Your SSL certificate has a failing grade ({ssl}) {health_note}. This drives customers away and hurts your rankings. We can fix that — reply to learn how."
+
+    if ssl == "C" and health < 60:
+        return f"Hi {clean_name}! Your site scored {health}/100 with SSL Grade {ssl} — both need improvement. We help businesses like yours get found and trusted online. Reply for a free audit."
+
+    if health < 50:
+        return f"Hi {clean_name}! Your website health score is {health}/100 — that's leaving money on the table. Let us help you fix it and attract more customers. Reply for a free review."
+
+    if len(vulns) >= 1:
+        return f"Hi {clean_name}! Your website has {len(vulns)} known security vulnerabilities that could cost you customers. We can secure your online presence — reply to learn how."
+
+    dangerous = [p for p in open_ports if p in (3306, 5432, 6379, 27017)]
+    if dangerous:
+        return f"Hi {clean_name}! Critical services are exposed on your server (ports: {', '.join(str(p) for p in dangerous[:2])}). This is a security risk. We can help lock it down — reply for details."
+
+    if rating > 0 and rating < 3.5:
+        return f"Hi {clean_name}! Your Google rating ({rating}/5) is costing you potential customers. We help businesses like yours turn their online reputation into a growth engine. Reply to see how."
+
+    if temperature == "HOT":
+        return f"Hi {clean_name}! We help businesses like yours turn their online presence into a lead machine. Your competitors are already investing in this. Reply if you want to see how."
+
+    if temperature == "WARM":
+        return f"Hi {clean_name}! We help businesses like yours improve customer engagement through better online reputation. Reply if you're interested in a free assessment."
+
+    return f"Hi {clean_name}! We help businesses improve their online presence and customer satisfaction. Reply for a free consultation."
 
 
 def _clean_name_for_hook(name: str) -> str:
