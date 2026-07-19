@@ -191,7 +191,9 @@ def check_page_speed(domain: str) -> Dict:
     session = _create_session()
     start = time.time()
     try:
-        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=5)
+        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=3)
+
+
         elapsed = int((time.time() - start) * 1000)
         result["load_time_ms"] = elapsed
         result["status_code"] = resp.status_code
@@ -526,7 +528,9 @@ def detect_tech(domain: str) -> List[str]:
     techs = set()
 
     try:
-        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=5)
+        resp = session.get(f"https://{domain}", headers=HEADERS, timeout=3)
+
+
         content = resp.text
         content_lower = content.lower()
         headers_str = json.dumps(dict(resp.headers)).lower()
@@ -597,7 +601,7 @@ def check_internetdb(domain: str) -> Dict:
     result = {"ports": [], "vulns": [], "cves": [], "warnings": []}
     try:
         session = _create_session()
-        resp = session.get(f"https://internetdb.shodan.io/{domain}", timeout=5)
+        resp = session.get(f"https://internetdb.shodan.io/{domain}", timeout=3)
         if resp.status_code == 200:
             data = resp.json()
             result["ports"] = data.get("ports", [])
@@ -629,7 +633,7 @@ def check_leakix(domain: str) -> Dict:
     result = {"exposed_services": [], "vulns": [], "warnings": []}
     try:
         session = _create_session()
-        resp = session.get(f"https://leakix.net/api/v1/search/{domain}", timeout=5)
+        resp = session.get(f"https://leakix.net/api/v1/search/{domain}", timeout=3)
         if resp.status_code == 200:
             data = resp.json()
             services = set()

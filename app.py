@@ -210,8 +210,7 @@ def _clean_name_for_hook(name: str) -> str:
 
 
 def _enrich_business(biz):
-    from scraper.email_finder import find_best_email
-    from scraper.osint_engine import analyze_domain
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     website = biz.get("website", "")
     domain = ""
     if website:
@@ -219,28 +218,42 @@ def _enrich_business(biz):
             domain = urlparse(website).netloc.replace("www.", "")
         except Exception:
             pass
-    if website:
+
+    def _do_email():
+        from scraper.email_finder import find_best_email
         try:
-            email_result = find_best_email(website, biz.get("name", ""))
-            if email_result.get("email"):
-                biz["email"] = email_result["email"]
-                biz["email_confidence"] = email_result.get("confidence", 0)
-                biz["email_source"] = email_result.get("source", "")
-            biz["breach_count"] = email_result.get("breach_count", 0)
-            biz["breach_names"] = email_result.get("breach_names", [])
-        except Exception as e:
-            logger.debug(f"  Email error: {e}")
-    if domain:
+            return find_best_email(website, biz.get("name", ""))
+        except Exception:
+            return {}
+
+    def _do_osint():
+        from scraper.osint_engine import analyze_domain
         try:
-            osint = analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
-            biz["health_score"] = osint["health_score"]
-            biz["ssl_grade"] = osint["ssl_grade"]
-            biz["tech_stack"] = osint["tech_stack"]
-            biz["vulnerabilities"] = osint.get("vulnerabilities", [])
-            biz["open_ports"] = osint.get("open_ports", [])
-            biz["security_warnings"] = osint.get("security_warnings", [])
-        except Exception as e:
-            logger.debug(f"  OSINT error: {e}")
+            return analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
+        except Exception:
+            return {}
+
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        f_email = ex.submit(_do_email) if website else None
+        f_osint = ex.submit(_do_osint) if domain else None
+        email_result = f_email.result(timeout=8) if f_email else {}
+        osint = f_osint.result(timeout=8) if f_osint else {}
+
+    if email_result.get("email"):
+        biz["email"] = email_result["email"]
+        biz["email_confidence"] = email_result.get("confidence", 0)
+        biz["email_source"] = email_result.get("source", "")
+    biz["breach_count"] = email_result.get("breach_count", 0)
+    biz["breach_names"] = email_result.get("breach_names", [])
+
+    if osint:
+        biz["health_score"] = osint.get("health_score", 50)
+        biz["ssl_grade"] = osint.get("ssl_grade", "C")
+        biz["tech_stack"] = osint.get("tech_stack", [])
+        biz["vulnerabilities"] = osint.get("vulnerabilities", [])
+        biz["open_ports"] = osint.get("open_ports", [])
+        biz["security_warnings"] = osint.get("security_warnings", [])
+
     temperature = _score_lead(biz)
     biz["lead_temperature"] = temperature
     biz["outreach_hook"] = _generate_outreach_hook(biz, temperature)

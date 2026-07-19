@@ -250,7 +250,7 @@ def _check_mx_exists(session, domain: str) -> bool:
         resp = session.get(
             "https://dns.google/resolve",
             params={"name": domain, "type": "MX"},
-            timeout=5,
+            timeout=3,
         )
         if resp.status_code == 200:
             data = resp.json()
@@ -421,7 +421,7 @@ def check_breaches(email: str) -> Dict:
         resp = session.get(
             f"https://api.xposedornot.com/v1/check-email/{email}",
             headers={"User-Agent": "FindLeads/1.0"},
-            timeout=5,
+            timeout=3,
         )
         if resp.status_code == 200:
             data = resp.json()

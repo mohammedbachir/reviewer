@@ -84,7 +84,6 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
                         biz[link_type] = details[link_type]
             except Exception:
                 pass
-            time.sleep(random.uniform(0.2, 0.5))
 
     logger.info(f"Final: {len(businesses)} businesses")
     return businesses
@@ -393,7 +392,7 @@ def _scrape_website_details(session, website_url: str) -> Dict:
     }
 
     try:
-        resp = session.get(website_url, headers=HEADERS, timeout=6)
+        resp = session.get(website_url, headers=HEADERS, timeout=3)
         if resp.status_code != 200:
             return result
 
