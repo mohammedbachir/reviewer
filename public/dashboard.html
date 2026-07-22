@@ -99,29 +99,40 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
 .modal-row .field .fv{font-size:14px}
 .tech-tag{display:inline-block;padding:3px 10px;margin:2px;border-radius:20px;font-size:11px;background:rgba(255,255,255,.08);color:var(--text-dim);border:1px solid var(--border)}
 
-/* Engine Diagram */
-.engine-header{text-align:center;margin-bottom:32px}
-.engine-title{font-size:28px;font-weight:800;letter-spacing:2px;background:linear-gradient(135deg,#DC2626,#F59E0B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
-.engine-subtitle{color:var(--text-dim);font-size:14px}
-.engine-pipeline{max-width:900px;margin:0 auto}
-.engine-layer{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:0;position:relative}
-.layer-label{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px}
-.layer-desc{font-size:13px;color:var(--text-dim);margin-bottom:16px}
-.engine-components{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
-.engine-node{flex:1;min-width:280px;background:#0F172A;border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:all .3s}
-.engine-node:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 25px rgba(220,38,38,.15)}
-.node-icon{font-size:24px;margin-bottom:8px}
-.node-name{font-size:16px;font-weight:700;margin-bottom:2px}
-.node-file{font-size:11px;color:var(--text-dim);font-family:monospace;margin-bottom:8px}
-.node-desc{font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:8px}
-.node-stats{font-size:11px}
-.engine-arrow{font-size:24px;color:var(--accent);font-weight:700;flex-shrink:0}
-.engine-connector{display:flex;align-items:center;justify-content:center;padding:8px 0}
-.connector-line{flex:1;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
-.connector-dot{width:12px;height:12px;background:var(--accent);border-radius:50%;flex-shrink:0;margin:0 8px}
-.engine-footer{display:flex;justify-content:center;gap:24px;margin-top:32px;flex-wrap:wrap}
-.engine-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;text-align:center}
-.engine-stat{font-size:14px;font-weight:700;color:var(--accent)}
+/* Engineering Blueprint */
+.eng-canvas{background:#0a0e1a;border:1px solid #1e293b;border-radius:4px;padding:32px;font-family:'JetBrains Mono',monospace}
+.eng-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:1px solid #1e293b}
+.eng-title{font-size:22px;font-weight:700;color:#e2e8f0;letter-spacing:3px}
+.eng-subtitle{font-size:11px;color:#64748b;letter-spacing:1px;margin-top:4px;text-transform:uppercase}
+.eng-header-right{display:flex;gap:8px}
+.eng-badge{font-size:10px;padding:4px 10px;border:1px solid #334155;color:#64748b;letter-spacing:.5px}
+.eng-badge-live{border-color:#10b981;color:#10b981}
+.eng-pipeline{display:flex;flex-direction:column;gap:0}
+.eng-row{display:flex;gap:24px;padding:20px 0;border-bottom:1px solid rgba(30,41,59,.5)}
+.eng-row-label{min-width:140px;max-width:140px}
+.eng-row-num{font-size:28px;font-weight:700;color:#1e293b;letter-spacing:2px}
+.eng-row-title{font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:1.5px;margin-top:4px}
+.eng-row-desc{font-size:10px;color:#475569;margin-top:4px;line-height:1.4}
+.eng-row-content{display:flex;gap:12px;flex:1;align-items:stretch}
+.eng-box{flex:1;background:#0f172a;border:1px solid #1e293b;padding:16px;display:flex;flex-direction:column;transition:border-color .2s}
+.eng-box:hover{border-color:#334155}
+.eng-box-wide{flex:2}
+.eng-box-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.eng-box-id{font-size:10px;color:#475569;letter-spacing:.5px}
+.eng-box-status{font-size:9px;padding:2px 8px;border:1px solid #10b981;color:#10b981;letter-spacing:.5px}
+.eng-box-name{font-size:14px;font-weight:600;color:#e2e8f0;margin-bottom:2px}
+.eng-box-file{font-size:10px;color:#6366f1;margin-bottom:10px}
+.eng-box-desc{font-size:11px;color:#94a3b8;line-height:1.6;flex:1}
+.eng-box-specs{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid #1e293b}
+.eng-box-specs span{font-size:9px;color:#64748b;padding:2px 8px;background:#1e293b}
+.eng-flow-arrow{display:flex;align-items:center;justify-content:center;width:40px;flex-shrink:0}
+.eng-connector{display:flex;align-items:center;padding:0 0 0 160px}
+.eng-connector-line{flex:1;height:1px;background:#1e293b}
+.eng-connector-label{font-size:9px;color:#475569;padding:0 12px;letter-spacing:1px;text-transform:uppercase;white-space:nowrap}
+.eng-footer{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:24px;padding-top:20px;border-top:1px solid #1e293b;flex-wrap:wrap}
+.eng-footer-item{font-size:11px;color:#64748b;letter-spacing:.5px}
+.eng-footer-sep{color:#1e293b}
+.eng-row-orch{border-bottom:none}
 .copy-btn{padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--info);font-size:12px;cursor:pointer;margin-left:8px;transition:all .15s}
 .copy-btn:hover{background:var(--info);color:#fff;border-color:var(--info)}
 .health-bar{width:100%;height:8px;background:#0F172A;border-radius:4px;overflow:hidden;margin-top:4px}
@@ -318,158 +329,166 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
   </div>
 
   <div class="page" id="page-algorithms">
-    <div class="engine-header">
-      <div class="engine-title">CRISORA ENGINE</div>
-      <div class="engine-subtitle">75 algorithms across 6 layers — zero-cost intelligence pipeline</div>
-    </div>
-
-    <div class="engine-pipeline">
-      <!-- Layer 1: Discovery -->
-      <div class="engine-layer">
-        <div class="layer-label">LAYER 1 — DISCOVERY</div>
-        <div class="layer-desc">Finding businesses across 35 cities × 34 sectors</div>
-        <div class="engine-components">
-          <div class="engine-node scout">
-            <div class="node-icon">🔍</div>
-            <div class="node-name">The Scout</div>
-            <div class="node-file">finder.py</div>
-            <div class="node-desc">Multi-source discovery via Overpass API + BizData + DuckDuckGo</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 336 targets rotating</div>
-          </div>
-          <div class="engine-arrow">→</div>
-          <div class="engine-node sniper">
-            <div class="node-icon">🎯</div>
-            <div class="node-name">The Sniper</div>
-            <div class="node-file">email_finder.py</div>
-            <div class="node-desc">Email Permutation + DNSMX + Gravatar + crt.sh + website crawl</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 7 permutation methods</div>
-          </div>
+    <div class="eng-canvas">
+      <div class="eng-header">
+        <div class="eng-header-left">
+          <div class="eng-title">CRISORA</div>
+          <div class="eng-subtitle">Intelligence Pipeline — System Architecture</div>
+        </div>
+        <div class="eng-header-right">
+          <div class="eng-badge">SPEC v3.1</div>
+          <div class="eng-badge eng-badge-live">OPERATIONAL</div>
         </div>
       </div>
 
-      <div class="engine-connector">
-        <div class="connector-line"></div>
-        <div class="connector-dot"></div>
-        <div class="connector-line"></div>
-      </div>
+      <div class="eng-pipeline">
 
-      <!-- Layer 2: Intelligence -->
-      <div class="engine-layer">
-        <div class="layer-label">LAYER 2 — INTELLIGENCE</div>
-        <div class="layer-desc">Deep reconnaissance on every target</div>
-        <div class="engine-components">
-          <div class="engine-node xray">
-            <div class="node-icon">📡</div>
-            <div class="node-name">X-Ray</div>
-            <div class="node-file">osint_engine.py</div>
-            <div class="node-desc">TechDetect (100+ tech) + SSL + DNS + PageSpeed + Security Headers + AbuseIPDB + NVD + CertSpotter + crt.sh + Firebase + Archive + API Keys + Sherlock</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 12 tools, 5 parallel workers</div>
+        <div class="eng-row">
+          <div class="eng-row-label">
+            <div class="eng-row-num">01</div>
+            <div class="eng-row-title">DISCOVERY</div>
+            <div class="eng-row-desc">Target identification and lead acquisition</div>
           </div>
-          <div class="engine-arrow">→</div>
-          <div class="engine-node oracle">
-            <div class="node-icon">👁️</div>
-            <div class="node-name">The Oracle</div>
-            <div class="node-file">review_engine.py</div>
-            <div class="node-desc">Review search via ddgs (multi-engine) + sentiment analysis + response detection</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 1.5:1 sentiment threshold</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="engine-connector">
-        <div class="connector-line"></div>
-        <div class="connector-dot"></div>
-        <div class="connector-line"></div>
-      </div>
-
-      <!-- Layer 3: Analysis -->
-      <div class="engine-layer">
-        <div class="layer-label">LAYER 3 — ANALYSIS</div>
-        <div class="layer-desc">Scoring, prediction, and risk assessment</div>
-        <div class="engine-components">
-          <div class="engine-node sentinel">
-            <div class="node-icon">🧠</div>
-            <div class="node-name">Sentinel</div>
-            <div class="node-file">crisis_predictor.py</div>
-            <div class="node-desc">Online ML (Hoeffding Tree) + Graph Risk Contagion + CVSS scoring + OSINT rules + 35 features</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> Hybrid: Rules 80% + ML 20%</div>
-          </div>
-          <div class="engine-arrow">→</div>
-          <div class="engine-node thermometer">
-            <div class="node-icon">🌡️</div>
-            <div class="node-name">The Thermometer</div>
-            <div class="node-file">lead_scorer</div>
-            <div class="node-desc">HOT/WARM/COLD classification from SSL + rating + health + tech + sentiment + crisis</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> Force-HOT rules active</div>
+          <div class="eng-row-content">
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">SCT-01</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Scout</div>
+              <div class="eng-box-file">finder.py</div>
+              <div class="eng-box-desc">Multi-source business discovery via Overpass API, BizData, and DuckDuckGo HTML. City/sector rotation across 35 cities and 34 industry sectors.</div>
+              <div class="eng-box-specs"><span>336 targets</span><span>3 sources</span><span>~8s/query</span></div>
+            </div>
+            <div class="eng-flow-arrow"><svg width="40" height="2" viewBox="0 0 40 2"><line x1="0" y1="1" x2="36" y2="1" stroke="#334155" stroke-width="1.5"/><polygon points="36,1 40,1 38,-2" fill="#334155"/></svg></div>
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">SCT-02</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Sniper</div>
+              <div class="eng-box-file">email_finder.py</div>
+              <div class="eng-box-desc">Email permutation engine with DNS MX verification, Gravatar hash lookup, crt.sh correlation, and direct website crawl.</div>
+              <div class="eng-box-specs"><span>7 methods</span><span>DNS verified</span><span>~12s/domain</span></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="engine-connector">
-        <div class="connector-line"></div>
-        <div class="connector-dot"></div>
-        <div class="connector-line"></div>
-      </div>
+        <div class="eng-connector"><div class="eng-connector-line"></div><div class="eng-connector-label">leads</div><div class="eng-connector-line"></div></div>
 
-      <!-- Layer 4: Action -->
-      <div class="engine-layer">
-        <div class="layer-label">LAYER 4 — ACTION</div>
-        <div class="layer-desc">Outreach and data persistence</div>
-        <div class="engine-components">
-          <div class="engine-node beacon">
-            <div class="node-icon">📡</div>
-            <div class="node-name">The Beacon</div>
-            <div class="node-file">outreach_hook</div>
-            <div class="node-desc">Pain-point-driven personalized outreach messages (breach → SSL → health → vulns → generic)</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 8 priority hooks</div>
+        <div class="eng-row">
+          <div class="eng-row-label">
+            <div class="eng-row-num">02</div>
+            <div class="eng-row-title">INTELLIGENCE</div>
+            <div class="eng-row-desc">Deep reconnaissance and data collection</div>
           </div>
-          <div class="engine-arrow">→</div>
-          <div class="engine-node vault">
-            <div class="node-icon">🗄️</div>
-            <div class="node-name">The Vault</div>
-            <div class="node-file">supabase_upsert</div>
-            <div class="node-desc">PostgreSQL storage with UPSERT (merge duplicates) + temporal snapshots + model persistence</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> ~1600 records</div>
+          <div class="eng-row-content">
+            <div class="eng-box eng-box-wide">
+              <div class="eng-box-head"><div class="eng-box-id">INT-01</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">X-Ray</div>
+              <div class="eng-box-file">osint_engine.py</div>
+              <div class="eng-box-desc">12-tool OSINT suite: TechDetect HTTP signatures for 100+ technologies, SSL/TLS grading, DNS analysis, page speed, security headers, AbuseIPDB, NVD CVE lookup, CertSpotter/crt.sh subdomains, Firebase exposure, Wayback Machine archive, API key extraction.</div>
+              <div class="eng-box-specs"><span>12 tools</span><span>5 workers</span><span>100+ tech sigs</span></div>
+            </div>
+            <div class="eng-flow-arrow"><svg width="40" height="2" viewBox="0 0 40 2"><line x1="0" y1="1" x2="36" y2="1" stroke="#334155" stroke-width="1.5"/><polygon points="36,1 40,1 38,-2" fill="#334155"/></svg></div>
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">INT-02</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Oracle</div>
+              <div class="eng-box-file">review_engine.py</div>
+              <div class="eng-box-desc">Review intelligence via multi-engine search. Sentiment analysis with threshold-based scoring and automated response detection.</div>
+              <div class="eng-box-specs"><span>3 engines</span><span>sentiment</span><span>~6s/query</span></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="engine-connector">
-        <div class="connector-line"></div>
-        <div class="connector-dot"></div>
-        <div class="connector-line"></div>
-      </div>
+        <div class="eng-connector"><div class="eng-connector-line"></div><div class="eng-connector-label">signals</div><div class="eng-connector-line"></div></div>
 
-      <!-- Layer 5: Orchestration -->
-      <div class="engine-layer">
-        <div class="layer-label">LAYER 5 — ORCHESTRATION</div>
-        <div class="layer-desc">Self-healing daemon with parallel execution</div>
-        <div class="engine-components">
-          <div class="engine-node conductor">
-            <div class="node-icon">⚡</div>
-            <div class="node-name">The Conductor</div>
-            <div class="node-file">local_daemon.py</div>
-            <div class="node-desc">Zero-sleep loop + watchdog (60s stall detection) + parallel enrichment (5 workers) + graph cache + ToolHealthChecker + backfill mechanism</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 24/7 on GCP e2-micro</div>
+        <div class="eng-row">
+          <div class="eng-row-label">
+            <div class="eng-row-num">03</div>
+            <div class="eng-row-title">ANALYSIS</div>
+            <div class="eng-row-desc">Risk assessment and classification</div>
           </div>
-          <div class="engine-arrow">→</div>
-          <div class="engine-node gatekeeper">
-            <div class="node-icon">🛡️</div>
-            <div class="node-name">The Gatekeeper</div>
-            <div class="node-file">tool_health_checker</div>
-            <div class="node-desc">Tests CertSpotter + crt.sh + InternetDB + Supabase + DNS before each run — backfills when tools recover</div>
-            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 120s health cache</div>
+          <div class="eng-row-content">
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">ANL-01</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">Sentinel</div>
+              <div class="eng-box-file">crisis_predictor.py</div>
+              <div class="eng-box-desc">Hybrid crisis prediction. Rule-based layer with hard floors for critical signals. ML layer using online Hoeffding Tree. Graph Risk Contagion propagates risk across networks. CVSS v3.1 scoring.</div>
+              <div class="eng-box-specs"><span>35 features</span><span>Rules 80% + ML 20%</span><span>CVSS v3.1</span></div>
+            </div>
+            <div class="eng-flow-arrow"><svg width="40" height="2" viewBox="0 0 40 2"><line x1="0" y1="1" x2="36" y2="1" stroke="#334155" stroke-width="1.5"/><polygon points="36,1 40,1 38,-2" fill="#334155"/></svg></div>
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">ANL-02</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Thermometer</div>
+              <div class="eng-box-file">lead_scorer</div>
+              <div class="eng-box-desc">Lead temperature classification. Multi-signal scoring from SSL, health, tech stack, sentiment, crisis probability. Force-HOT override for critical targets.</div>
+              <div class="eng-box-specs"><span>HOT / WARM / COLD</span><span>Force-HOT rules</span><span>~0ms</span></div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="engine-footer">
-      <div class="engine-stat">75 Algorithms</div>
-      <div class="engine-stat">12 OSINT Tools</div>
-      <div class="engine-stat">35 Cities × 34 Sectors</div>
-      <div class="engine-stat">5 Parallel Workers</div>
-      <div class="engine-stat">$0/month</div>
+        <div class="eng-connector"><div class="eng-connector-line"></div><div class="eng-connector-label">scored leads</div><div class="eng-connector-line"></div></div>
+
+        <div class="eng-row">
+          <div class="eng-row-label">
+            <div class="eng-row-num">04</div>
+            <div class="eng-row-title">ACTION</div>
+            <div class="eng-row-desc">Outreach execution and data persistence</div>
+          </div>
+          <div class="eng-row-content">
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">ACT-01</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Beacon</div>
+              <div class="eng-box-file">outreach_hook</div>
+              <div class="eng-box-desc">Pain-point-driven outreach generator. 8-hook priority system targeting breaches, SSL failures, critical health, vulnerabilities, open ports, sentiment, and generic templates.</div>
+              <div class="eng-box-specs"><span>8 hooks</span><span>pain-point targeting</span><span>~0ms</span></div>
+            </div>
+            <div class="eng-flow-arrow"><svg width="40" height="2" viewBox="0 0 40 2"><line x1="0" y1="1" x2="36" y2="1" stroke="#334155" stroke-width="1.5"/><polygon points="36,1 40,1 38,-2" fill="#334155"/></svg></div>
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">ACT-02</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Vault</div>
+              <div class="eng-box-file">supabase_upsert</div>
+              <div class="eng-box-desc">PostgreSQL persistence with UPSERT merge semantics. Temporal snapshots for trend analysis. Model state serialization for ML continuity.</div>
+              <div class="eng-box-specs"><span>UPSERT merge</span><span>snapshots</span><span>~1s/write</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="eng-connector"><div class="eng-connector-line"></div><div class="eng-connector-label">persisted</div><div class="eng-connector-line"></div></div>
+
+        <div class="eng-row eng-row-orch">
+          <div class="eng-row-label">
+            <div class="eng-row-num">05</div>
+            <div class="eng-row-title">ORCHESTRATION</div>
+            <div class="eng-row-desc">Self-healing execution and health monitoring</div>
+          </div>
+          <div class="eng-row-content">
+            <div class="eng-box eng-box-wide">
+              <div class="eng-box-head"><div class="eng-box-id">ORC-01</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Conductor</div>
+              <div class="eng-box-file">local_daemon.py</div>
+              <div class="eng-box-desc">Zero-sleep execution loop. Watchdog with 60s stall detection and auto-healing. Parallel enrichment via 5 concurrent workers. Graph cache with 5min TTL. Dynamic model fallback across 4 free providers.</div>
+              <div class="eng-box-specs"><span>zero-sleep</span><span>5 workers</span><span>60s watchdog</span><span>auto-restart</span></div>
+            </div>
+            <div class="eng-flow-arrow"><svg width="40" height="2" viewBox="0 0 40 2"><line x1="0" y1="1" x2="36" y2="1" stroke="#334155" stroke-width="1.5"/><polygon points="36,1 40,1 38,-2" fill="#334155"/></svg></div>
+            <div class="eng-box">
+              <div class="eng-box-head"><div class="eng-box-id">ORC-02</div><div class="eng-box-status">ACTIVE</div></div>
+              <div class="eng-box-name">The Gatekeeper</div>
+              <div class="eng-box-file">tool_health_checker</div>
+              <div class="eng-box-desc">Pre-flight validation for CertSpotter, crt.sh, InternetDB, Supabase, and DNS. 120s health cache. Backfill mechanism re-processes incomplete records on tool recovery.</div>
+              <div class="eng-box-specs"><span>5 probes</span><span>120s cache</span><span>auto-backfill</span></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="eng-footer">
+        <div class="eng-footer-item">75 Algorithms</div>
+        <div class="eng-footer-sep">/</div>
+        <div class="eng-footer-item">12 OSINT Tools</div>
+        <div class="eng-footer-sep">/</div>
+        <div class="eng-footer-item">35 Cities</div>
+        <div class="eng-footer-sep">/</div>
+        <div class="eng-footer-item">34 Sectors</div>
+        <div class="eng-footer-sep">/</div>
+        <div class="eng-footer-item">~1600 Records</div>
+      </div>
     </div>
   </div>
 
