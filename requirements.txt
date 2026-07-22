@@ -1,6 +1,11 @@
-# FindLeads — Vercel Requirements (Lightweight)
-# HTTP-only, no Playwright, no browser
+# FindLeads — Requirements
+# HTTP-only + security analysis
 
 curl_cffi>=0.15.0
 dnspython>=2.6.0
 python-dotenv>=1.0.0
+river>=0.21.0
+networkx>=3.0
+flask>=3.0.0
+sslyze>=5.0.0
+ddgs>=9.0.0

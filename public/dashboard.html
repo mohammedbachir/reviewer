@@ -114,6 +114,49 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
 .sentiment-negative{color:#F87171}
 .sentiment-neutral{color:#94A3B8}
 
+.export-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.export-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.export-btn svg{width:14px;height:14px;fill:currentColor}
+
+.export-center{display:flex;flex-direction:column;gap:20px}
+.export-controls{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.export-controls h3{font-size:14px;margin-bottom:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+.export-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.export-filters .filter-group{display:flex;flex-direction:column;gap:4px}
+.export-filters .filter-group label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.3px}
+.export-filters .filter-group select,
+.export-filters .filter-group input{padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);background:#0F172A;color:var(--text);font-size:13px;outline:none;min-width:130px}
+.export-filters .filter-group select:focus,
+.export-filters .filter-group input:focus{border-color:var(--accent)}
+
+.export-columns{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.export-columns h3{font-size:14px;margin-bottom:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+.columns-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.columns-grid label{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:4px;cursor:pointer;font-size:13px;transition:background .15s}
+.columns-grid label:hover{background:rgba(255,255,255,.04)}
+.columns-grid input[type="checkbox"]{accent-color:var(--accent);width:14px;height:14px}
+.columns-actions{display:flex;gap:8px;margin-bottom:12px}
+.columns-actions button{padding:4px 12px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;transition:all .2s}
+.columns-actions button:hover{color:var(--text);border-color:var(--text-dim)}
+
+.export-preview{background:var(--card);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.export-preview h3{font-size:14px;margin-bottom:4px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px}
+.export-preview .preview-count{font-size:13px;color:var(--text-dim);margin-bottom:12px}
+.export-preview .preview-count span{color:var(--accent);font-weight:700}
+
+.export-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.export-actions .big-btn{padding:12px 28px;border:none;border-radius:var(--radius);background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;display:inline-flex;align-items:center;gap:8px}
+.export-actions .big-btn:hover{background:var(--accent-hover)}
+.export-actions .big-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.quick-presets{display:flex;gap:8px;flex-wrap:wrap}
+.quick-presets button{padding:8px 16px;border:1px solid var(--border);border-radius:var(--radius);background:transparent;color:var(--text-dim);font-size:12px;cursor:pointer;transition:all .2s}
+.quick-presets button:hover{background:rgba(220,38,38,.15);color:#F87171;border-color:var(--accent)}
+.quick-presets button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.page-header h2{font-size:18px;font-weight:700;margin:0}
+
 @media(max-width:768px){
 .topbar{padding:10px 12px}
 .tab-btn{padding:6px 10px;font-size:12px}
@@ -146,17 +189,26 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     <div class="topbar-title">FindLeads Dashboard</div>
     <button class="tab-btn active" data-page="overview">Overview</button>
     <button class="tab-btn" data-page="security">Security</button>
+    <button class="tab-btn" data-page="osint">OSINT</button>
+    <button class="tab-btn" data-page="crisis">Crisis AI</button>
     <button class="tab-btn" data-page="algorithms">Algorithms</button>
     <button class="tab-btn" data-page="companies">Companies</button>
     <button class="tab-btn" data-page="ai">AI Advisor</button>
     <button class="tab-btn" data-page="analytics">Analytics</button>
+    <button class="tab-btn" data-page="export">Export</button>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
 
   <div class="page active" id="page-overview">
     <div class="stats-grid" id="overview-stats"></div>
     <div class="card">
-      <h2>Last 10 Scrape Runs</h2>
+      <div class="page-header">
+        <h2>Last 10 Scrape Runs</h2>
+        <button class="export-btn" onclick="quickExport('all')">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export All
+        </button>
+      </div>
       <div class="table-wrap"><table><thead><tr><th>#</th><th>Company</th><th>City</th><th>Sector</th><th>Temp</th><th>Health</th><th>Email</th><th>Date</th></tr></thead><tbody id="recent-table"></tbody></table></div>
     </div>
     <div class="charts-row">
@@ -176,7 +228,13 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
       <div class="chart-wrap"><canvas id="chart-warnings"></canvas></div>
     </div>
     <div class="card">
-      <h2>Companies with Vulnerabilities</h2>
+      <div class="page-header">
+        <h2>Companies with Vulnerabilities</h2>
+        <button class="export-btn" onclick="exportSecurityReport()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export Security
+        </button>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Company</th><th>City</th><th>SSL</th><th>Health</th><th>Vulns</th><th>Ports</th><th>Breaches</th><th>Warnings</th><th>Temp</th></tr></thead>
@@ -186,9 +244,65 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     </div>
   </div>
 
+  <div class="page" id="page-osint">
+    <div class="stats-grid" id="osint-stats"></div>
+    <div class="charts-row">
+      <div class="chart-wrap"><canvas id="chart-osint-risks"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-osint-tools"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="page-header">
+        <h2>Most Exposed Companies (OSINT)</h2>
+        <button class="export-btn" onclick="exportOSINT()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export OSINT
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company</th><th>City</th><th>Temp</th><th>Firebase</th><th>Archive</th><th>API Keys</th><th>Sherlock</th><th>crt.sh</th><th>Risk Score</th></tr></thead>
+          <tbody id="osint-table"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-wrap"><canvas id="chart-osint-firebase"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-osint-archive"></canvas></div>
+    </div>
+  </div>
+
+  <div class="page" id="page-crisis">
+    <div class="stats-grid" id="crisis-stats"></div>
+    <div class="charts-row">
+      <div class="chart-wrap"><canvas id="chart-crisis-risk"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-crisis-cvss"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="page-header">
+        <h2>Companies at Risk (ML Predictions)</h2>
+        <button class="export-btn" onclick="exportCrisisReport()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export Crisis
+        </button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company</th><th>City</th><th>Crisis Prob</th><th>Risk Level</th><th>CVSS</th><th>Breaches</th><th>Top Recommendation</th></tr></thead>
+          <tbody id="crisis-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="page-algorithms">
     <div class="card">
-      <h2>Algorithms</h2>
+      <div class="page-header">
+        <h2>Algorithms</h2>
+        <button class="export-btn" onclick="exportAlgorithms()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+          Export Algos
+        </button>
+      </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Name</th><th>Description</th><th>Category</th><th>Uses</th><th>Avg Time</th><th>Success Rate</th><th>Status</th></tr></thead>
@@ -216,6 +330,10 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
         <option value="unknown">Unknown</option>
       </select>
       <button class="tab-btn active" onclick="loadCompanies(1)">Search</button>
+      <button class="export-btn" onclick="exportCurrentFilters()">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Export Filtered
+      </button>
     </div>
     <div class="table-wrap">
       <table>
@@ -253,6 +371,255 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
       <div class="chart-wrap"><canvas id="chart-sentiment"></canvas></div>
     </div>
   </div>
+
+  <div class="page" id="page-export">
+    <div class="page-header">
+      <h2>Export Center</h2>
+    </div>
+
+    <div class="export-center">
+      <div class="quick-presets" id="export-presets">
+        <button onclick="applyPreset('all')">All Companies</button>
+        <button onclick="applyPreset('hot')">HOT Only</button>
+        <button onclick="applyPreset('warm')">WARM Only</button>
+        <button onclick="applyPreset('cold')">COLD Only</button>
+        <button onclick="applyPreset('ssl_f')">SSL = F</button>
+        <button onclick="applyPreset('ssl_d')">SSL = D</button>
+        <button onclick="applyPreset('has_email')">Has Email</button>
+        <button onclick="applyPreset('no_email')">No Email</button>
+        <button onclick="applyPreset('high_crisis')">Crisis > 50%</button>
+        <button onclick="applyPreset('vulns')">Has Vulnerabilities</button>
+      </div>
+
+      <div class="export-controls">
+        <h3>Filters</h3>
+        <div class="export-filters">
+          <div class="filter-group">
+            <label>Lead Temperature</label>
+            <select id="ex-temp">
+              <option value="">All</option>
+              <option value="HOT">HOT</option>
+              <option value="WARM">WARM</option>
+              <option value="COLD">COLD</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>City</label>
+            <select id="ex-city"><option value="">All Cities</option></select>
+          </div>
+          <div class="filter-group">
+            <label>Sector</label>
+            <select id="ex-sector"><option value="">All Sectors</option></select>
+          </div>
+          <div class="filter-group">
+            <label>SSL Grade</label>
+            <select id="ex-ssl">
+              <option value="">All</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="F">F</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Email</label>
+            <select id="ex-email">
+              <option value="">All</option>
+              <option value="yes">Has Email</option>
+              <option value="no">No Email</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Health Min</label>
+            <input type="number" id="ex-health-min" placeholder="0" min="0" max="100">
+          </div>
+          <div class="filter-group">
+            <label>Health Max</label>
+            <input type="number" id="ex-health-max" placeholder="100" min="0" max="100">
+          </div>
+          <div class="filter-group">
+            <label>Crisis Probability Min</label>
+            <input type="number" id="ex-crisis-min" placeholder="0.0" min="0" max="1" step="0.1">
+          </div>
+          <div class="filter-group">
+            <label>Search</label>
+            <input type="text" id="ex-search" placeholder="Company name...">
+          </div>
+        </div>
+      </div>
+
+      <div class="export-columns">
+        <h3>Columns to Export</h3>
+        <div class="columns-actions">
+          <button onclick="toggleAllColumns(true)">Select All</button>
+          <button onclick="toggleAllColumns(false)">Deselect All</button>
+        </div>
+        <div class="columns-grid" id="columns-grid"></div>
+      </div>
+
+      <div class="export-preview">
+        <h3>Preview</h3>
+        <div class="preview-count" id="preview-count">Click "Load Preview" to see data</div>
+        <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+          <table>
+            <thead id="preview-thead"></thead>
+            <tbody id="preview-tbody"></tbody>
+          </table>
+        </div>
+        <div class="export-actions" style="margin-top:16px">
+          <button class="big-btn" onclick="loadExportPreview()" id="preview-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6z"/><path d="M4 20h16v-2H4v2z"/></svg>
+            Load Preview
+          </button>
+          <button class="big-btn" onclick="downloadExportCSV()" id="download-btn" disabled>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download CSV
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;border-top:2px solid var(--border);padding-top:24px">
+      <div class="page-header">
+        <h2 style="color:#F59E0B">OSINT Export</h2>
+      </div>
+
+      <div class="quick-presets" id="osint-presets">
+        <button onclick="applyOSINTPreset('firebase')">Firebase Detected</button>
+        <button onclick="applyOSINTPreset('firebase_open')">Firebase OPEN</button>
+        <button onclick="applyOSINTPreset('archive_high')">Archive HIGH</button>
+        <button onclick="applyOSINTPreset('api_high')">API Keys HIGH</button>
+        <button onclick="applyOSINTPreset('api_5+')">API Keys 5+</button>
+        <button onclick="applyOSINTPreset('sherlock_high')">Sherlock HIGH</button>
+        <button onclick="applyOSINTPreset('sherlock_3+')">Profiles 3+</button>
+        <button onclick="applyOSINTPreset('crtsh_5+')">Subdomains 5+</button>
+        <button onclick="applyOSINTPreset('risk_50+')">Risk Score 50+</button>
+        <button onclick="applyOSINTPreset('risk_30+')">Risk Score 30+</button>
+        <button onclick="applyOSINTPreset('full_intel')">Full Intelligence</button>
+        <button onclick="applyOSINTPreset('breach_active')">Active Breaches</button>
+      </div>
+
+      <div class="export-controls">
+        <h3>OSINT Filters</h3>
+        <div class="export-filters">
+          <div class="filter-group">
+            <label>Firebase</label>
+            <select id="os-firebase">
+              <option value="">All</option>
+              <option value="yes">Detected</option>
+              <option value="no">None</option>
+              <option value="open">Open (CRITICAL)</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Archive Risk</label>
+            <select id="os-archive">
+              <option value="">All</option>
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="LOW">LOW</option>
+              <option value="NONE">None</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>API Key Risk</label>
+            <select id="os-api">
+              <option value="">All</option>
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="LOW">LOW</option>
+              <option value="NONE">None</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Sherlock Risk</label>
+            <select id="os-sherlock">
+              <option value="">All</option>
+              <option value="HIGH">HIGH</option>
+              <option value="MEDIUM">MEDIUM</option>
+              <option value="LOW">LOW</option>
+              <option value="NONE">None</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Min API Keys</label>
+            <input type="number" id="os-min-keys" placeholder="0" min="0">
+          </div>
+          <div class="filter-group">
+            <label>Min Profiles</label>
+            <input type="number" id="os-min-profiles" placeholder="0" min="0">
+          </div>
+          <div class="filter-group">
+            <label>Min Subdomains</label>
+            <input type="number" id="os-crtsh-min" placeholder="0" min="0">
+          </div>
+          <div class="filter-group">
+            <label>Min Risk Score</label>
+            <input type="number" id="os-min-risk" placeholder="0" min="0" max="100">
+          </div>
+          <div class="filter-group">
+            <label>Temperature</label>
+            <select id="os-temp">
+              <option value="">All</option>
+              <option value="HOT">HOT</option>
+              <option value="WARM">WARM</option>
+              <option value="COLD">COLD</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>City</label>
+            <select id="os-city"><option value="">All Cities</option></select>
+          </div>
+          <div class="filter-group">
+            <label>SSL Grade</label>
+            <select id="os-ssl">
+              <option value="">All</option>
+              <option value="F">F</option>
+              <option value="D">D</option>
+              <option value="C">C</option>
+              <option value="B">B</option>
+              <option value="A">A</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label>Search</label>
+            <input type="text" id="os-search" placeholder="Company name...">
+          </div>
+        </div>
+      </div>
+
+      <div class="export-columns">
+        <h3>OSINT Columns</h3>
+        <div class="columns-actions">
+          <button onclick="toggleOSINTColumns(true)">Select All</button>
+          <button onclick="toggleOSINTColumns(false)">Deselect All</button>
+        </div>
+        <div class="columns-grid" id="osint-columns-grid"></div>
+      </div>
+
+      <div class="export-preview">
+        <h3>OSINT Preview</h3>
+        <div class="preview-count" id="osint-preview-count">Click "Load OSINT Preview" to see data</div>
+        <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+          <table>
+            <thead id="osint-preview-thead"></thead>
+            <tbody id="osint-preview-tbody"></tbody>
+          </table>
+        </div>
+        <div class="export-actions" style="margin-top:16px">
+          <button class="big-btn" style="background:#F59E0B" onclick="loadOSINTPreview()" id="osint-preview-btn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6z"/><path d="M4 20h16v-2H4v2z"/></svg>
+            Load OSINT Preview
+          </button>
+          <button class="big-btn" style="background:#F59E0B" onclick="downloadOSINTCSV()" id="osint-download-btn" disabled>
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download OSINT CSV
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
@@ -286,6 +653,14 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     <div class="modal-section">
       <h3>Security Intelligence</h3>
       <div id="modal-security"></div>
+    </div>
+    <div class="modal-section">
+      <h3>OSINT Intelligence</h3>
+      <div id="modal-osint"></div>
+    </div>
+    <div class="modal-section">
+      <h3>Crisis Prediction (ML)</h3>
+      <div id="modal-crisis"></div>
     </div>
   </div>
 </div>
@@ -364,10 +739,15 @@ function doLogout() {
 function initDashboard() {
   loadOverview();
   loadSecurity();
+  loadOSINT();
+  loadCrisis();
   loadAlgorithms();
   loadFilters();
   loadCompanies(1);
   loadAnalytics();
+  initExportColumns();
+  initOSINTColumns();
+  loadExportFilters();
 }
 
 function initApp() {
@@ -386,6 +766,9 @@ document.querySelectorAll('.tab-btn[data-page]').forEach(function(btn) {
     document.getElementById('page-' + btn.dataset.page).classList.add('active');
     if (btn.dataset.page === 'analytics') loadAnalytics();
     if (btn.dataset.page === 'security') loadSecurity();
+    if (btn.dataset.page === 'osint') loadOSINT();
+    if (btn.dataset.page === 'crisis') loadCrisis();
+    if (btn.dataset.page === 'export') { loadExportFilters(); }
   });
 });
 
@@ -617,6 +1000,94 @@ async function openCompany(id) {
   }
   document.getElementById('modal-security').innerHTML = secHTML;
 
+  var firebase = c.firebase || {};
+  var archive = c.archive || {};
+  var apiKeys = c.api_keys || {};
+  var sherlock = c.sherlock || {};
+  var crtsh = c.crtsh || {};
+  var osintHTML = '<div class="modal-row">';
+
+  var fbColor = firebase.firebase_detected ? '#EF4444' : '#10B981';
+  var fbText = firebase.firebase_detected ? 'DETECTED' : 'None';
+  if (firebase.firebase_open) { fbColor = '#EF4444'; fbText = 'OPEN'; }
+  osintHTML += fieldHTML('Firebase', '<span style="color:' + fbColor + ';font-weight:700">' + fbText + '</span>');
+  if (firebase.firebase_project_id) osintHTML += '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">Project: ' + esc(firebase.firebase_project_id) + '</div>';
+
+  var arColor = archive.archive_risk === 'HIGH' ? '#EF4444' : archive.archive_risk === 'MEDIUM' ? '#F59E0B' : '#10B981';
+  osintHTML += fieldHTML('Archive', '<span style="color:' + arColor + ';font-weight:700">' + (archive.archive_risk || 'NONE') + '</span>');
+  if (archive.archive_total_urls) osintHTML += '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">' + archive.archive_total_urls + ' URLs, ' + (archive.archive_years_span || '-') + '</div>';
+
+  var akColor = apiKeys.api_exposure_risk === 'HIGH' ? '#EF4444' : apiKeys.api_exposure_risk === 'MEDIUM' ? '#F59E0B' : '#10B981';
+  osintHTML += fieldHTML('API Keys', '<span style="color:' + akColor + ';font-weight:700">' + (apiKeys.api_key_count || 0) + ' found</span>');
+  osintHTML += '</div><div class="modal-row">';
+
+  var shColor = sherlock.sherlock_risk === 'HIGH' ? '#EF4444' : sherlock.sherlock_risk === 'MEDIUM' ? '#F59E0B' : '#10B981';
+  osintHTML += fieldHTML('Social Profiles', '<span style="color:' + shColor + ';font-weight:700">' + (sherlock.profile_count || 0) + ' profiles</span>');
+
+  var crColor = crtsh.subdomain_risk === 'HIGH' ? '#EF4444' : crtsh.subdomain_risk === 'MEDIUM' ? '#F59E0B' : '#10B981';
+  osintHTML += fieldHTML('crt.sh Subdomains', '<span style="color:' + crColor + ';font-weight:700">' + (crtsh.subdomain_count || 0) + ' subdomains</span>');
+  osintHTML += '</div>';
+
+  if (firebase.firebase_url) {
+    osintHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Firebase URL: <a href="' + esc(firebase.firebase_url) + '" target="_blank" style="color:#EF4444">' + esc(firebase.firebase_url) + '</a></div>';
+  }
+
+  var profiles = sherlock.profiles_found || {};
+  var profileKeys = Object.keys(profiles);
+  if (profileKeys.length) {
+    osintHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Social Profiles:</div>';
+    profileKeys.forEach(function(k) {
+      osintHTML += '<a href="' + esc(profiles[k]) + '" target="_blank" class="tech-tag" style="border-color:rgba(59,130,246,.3);color:#60A5FA;display:inline-block;margin:2px;text-decoration:none">' + esc(k) + '</a>';
+    });
+  }
+
+  var subs = crtsh.subdomains_found || [];
+  if (subs.length) {
+    osintHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">Subdomains: ' + subs.slice(0, 5).map(function(s) { return esc(s); }).join(', ');
+    if (subs.length > 5) osintHTML += ' <span style="color:var(--text-dim)">+' + (subs.length - 5) + ' more</span>';
+    osintHTML += '</div>';
+  }
+
+  var apiList = apiKeys.api_keys_found || [];
+  if (apiList.length) {
+    var typeCounts = {};
+    apiList.forEach(function(k) { var t = k.type || 'Unknown'; typeCounts[t] = (typeCounts[t] || 0) + 1; });
+    osintHTML += '<div style="margin-top:8px;font-size:12px;color:var(--text-dim)">API Key Types:</div>';
+    Object.keys(typeCounts).forEach(function(t) {
+      osintHTML += '<span class="tech-tag" style="border-color:rgba(239,68,68,.3);color:#F87171">' + esc(t) + ' (' + typeCounts[t] + ')</span>';
+    });
+  }
+
+  if (!firebase.firebase_detected && !archive.archive_sensitive_files?.length && !apiKeys.api_key_count && !sherlock.profile_count && !crtsh.subdomain_count) {
+    osintHTML += '<div style="margin-top:8px;color:#10B981;font-size:13px">No OSINT issues detected</div>';
+  }
+
+  document.getElementById('modal-osint').innerHTML = osintHTML;
+
+  var crisisProb = c.crisis_probability || 0;
+  var crisisLevel = c.crisis_risk_level || 'UNKNOWN';
+  var cvssSeverity = c.cvss_severity || 'NONE';
+  var cvssMax = c.cvss_max || 0;
+  var crisisRecs = parseJSON(c.crisis_recommendations);
+  var crisisProbPct = (crisisProb * 100).toFixed(1);
+  var crisisColor = crisisProb > 0.5 ? '#EF4444' : crisisProb > 0.25 ? '#F59E0B' : '#10B981';
+  var crisisHTML = '<div class="modal-row">' +
+    fieldHTML('Crisis Probability', '<span style="color:' + crisisColor + ';font-weight:700;font-size:18px">' + crisisProbPct + '%</span>') +
+    fieldHTML('Risk Level', '<span class="badge ' + (crisisLevel === 'CRITICAL' || crisisLevel === 'HIGH' ? 'badge-hot' : crisisLevel === 'ELEVATED' ? 'badge-warm' : 'badge-cold') + '">' + esc(crisisLevel) + '</span>') +
+    fieldHTML('CVSS Severity', '<span style="font-weight:700">' + esc(cvssSeverity) + '</span> (max: ' + cvssMax + ')') +
+    '</div>';
+  if (crisisRecs.length) {
+    crisisHTML += '<div style="margin-top:12px;font-size:13px;color:var(--text-dim);font-weight:600">Recommendations:</div>';
+    crisisRecs.forEach(function(r) {
+      var priColor = r.priority === 'CRITICAL' || r.priority === 'IMMEDIATE' ? '#EF4444' : r.priority === 'HIGH' ? '#F97316' : r.priority === 'MEDIUM' ? '#F59E0B' : '#3B82F6';
+      crisisHTML += '<div style="margin-top:6px;padding:8px 12px;background:#0F172A;border-radius:6px;border-left:3px solid ' + priColor + '">' +
+        '<div style="font-size:11px;color:' + priColor + ';font-weight:700;text-transform:uppercase">' + esc(r.priority) + ' — ' + esc(r.category) + '</div>' +
+        '<div style="font-size:13px;margin-top:2px">' + esc(r.message) + '</div>' +
+        '</div>';
+    });
+  }
+  document.getElementById('modal-crisis').innerHTML = crisisHTML;
+
   document.getElementById('modal-overlay').classList.add('show');
 }
 
@@ -800,6 +1271,131 @@ async function loadSecurity() {
   });
 }
 
+async function loadOSINT() {
+  const data = await api('osint');
+  if (!data) return;
+
+  var total = data.total_companies || 0;
+  var withOsint = data.companies_with_osint || 0;
+  var fb = data.firebase || {};
+  var ar = data.archive || {};
+  var ak = data.api_keys || {};
+  var sh = data.sherlock || {};
+  var cr = data.crtsh || {};
+
+  document.getElementById('osint-stats').innerHTML =
+    '<div class="stat-card"><div class="label">Firebase Detected</div><div class="value" style="color:#EF4444">' + (fb.detected || 0) + '</div><div class="sub">' + (fb.open || 0) + ' open</div></div>' +
+    '<div class="stat-card"><div class="label">Archive High Risk</div><div class="value" style="color:#F59E0B">' + (ar.high_risk || 0) + '</div><div class="sub">' + (ar.total_sensitive_files || 0) + ' sensitive files</div></div>' +
+    '<div class="stat-card"><div class="label">API Keys Found</div><div class="value" style="color:#F87171">' + (ak.total_keys || 0) + '</div><div class="sub">' + (ak.companies_with_keys || 0) + ' companies</div></div>' +
+    '<div class="stat-card"><div class="label">Social Profiles</div><div class="value" style="color:#3B82F6">' + (sh.total_profiles || 0) + '</div><div class="sub">' + (sh.high_risk || 0) + ' high risk</div></div>' +
+    '<div class="stat-card"><div class="label">crt.sh Subdomains</div><div class="value" style="color:#8B5CF6">' + (cr.total_subdomains || 0) + '</div><div class="sub">' + (cr.total_emails || 0) + ' emails</div></div>' +
+    '<div class="stat-card"><div class="label">Companies with OSINT</div><div class="value">' + withOsint + '</div><div class="sub">of ' + total + ' total</div></div>';
+
+  var riskLabels = ['Firebase', 'Archive', 'API Keys', 'Sherlock', 'crt.sh'];
+  var riskValues = [fb.detected || 0, ar.high_risk || 0, ak.high_exposure || 0, sh.high_risk || 0, cr.companies_with_data || 0];
+  var riskColors = ['#EF4444', '#F59E0B', '#F87171', '#3B82F6', '#8B5CF6'];
+  renderChart('chart-osint-risks', 'bar', {
+    labels: riskLabels,
+    datasets: [{ label: 'High Risk Companies', data: riskValues, backgroundColor: riskColors.map(function(c) { return c + '99'; }), borderColor: riskColors, borderWidth: 1 }]
+  }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94A3B8' }, grid: { display: false } } } });
+
+  var toolLabels = ['Firebase', 'Archive', 'API Keys', 'Sherlock', 'crt.sh'];
+  var toolValues = [fb.detected || 0, ar.high_risk || 0 + (ar.distribution.MEDIUM || 0), ak.companies_with_keys || 0, sh.high_risk || 0 + (sh.distribution.MEDIUM || 0), cr.companies_with_data || 0];
+  renderChart('chart-osint-tools', 'doughnut', {
+    labels: toolLabels,
+    datasets: [{ data: toolValues, backgroundColor: riskColors, borderWidth: 0 }]
+  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
+
+  var companies = data.top_exposed || [];
+  var tbody = document.getElementById('osint-table');
+  tbody.innerHTML = '';
+  if (!companies.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-dim);padding:20px">No OSINT data found</td></tr>';
+    return;
+  }
+  companies.forEach(function(c) {
+    var riskCol = c.risk_score > 60 ? '#EF4444' : c.risk_score > 30 ? '#F59E0B' : '#10B981';
+    tbody.innerHTML += '<tr onclick="openCompany(' + (c.id || '') + ')">' +
+      '<td>' + esc(c.name || '') + '</td>' +
+      '<td>' + esc(c.city || '') + '</td>' +
+      '<td>' + tempBadgeHTML(c.lead_temperature || 'COLD') + '</td>' +
+      '<td><span style="color:' + (c.firebase_risk === 'DETECTED' ? '#EF4444' : '#10B981') + ';font-weight:700">' + esc(c.firebase_risk || 'NONE') + '</span></td>' +
+      '<td><span style="color:' + (c.archive_risk === 'HIGH' ? '#EF4444' : '#10B981') + ';font-weight:700">' + esc(c.archive_risk || 'NONE') + '</span></td>' +
+      '<td><span style="color:' + (c.api_risk === 'HIGH' ? '#EF4444' : '#10B981') + ';font-weight:700">' + (c.api_key_count || 0) + ' keys</span></td>' +
+      '<td><span style="color:' + (c.sherlock_risk === 'HIGH' ? '#EF4444' : '#10B981') + ';font-weight:700">' + (c.profile_count || 0) + ' profiles</span></td>' +
+      '<td><span style="color:' + (c.crtsh_risk === 'HIGH' ? '#EF4444' : '#10B981') + ';font-weight:700">' + (c.subdomain_count || 0) + ' subs</span></td>' +
+      '<td><span style="color:' + riskCol + ';font-weight:700;font-size:16px">' + c.risk_score + '</span></td>' +
+      '</tr>';
+  });
+
+  var arDist = ar.distribution || {};
+  renderChart('chart-osint-firebase', 'doughnut', {
+    labels: ['DETECTED', 'None'],
+    datasets: [{ data: [fb.detected || 0, fb.distribution.NONE || total], backgroundColor: ['#EF4444', '#10B981'], borderWidth: 0 }]
+  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } }, title: { display: true, text: 'Firebase Detection', color: '#94A3B8' } } });
+
+  renderChart('chart-osint-archive', 'doughnut', {
+    labels: Object.keys(arDist),
+    datasets: [{ data: Object.values(arDist), backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'], borderWidth: 0 }]
+  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } }, title: { display: true, text: 'Archive Risk Distribution', color: '#94A3B8' } } });
+}
+
+async function loadCrisis() {
+  const data = await api('crisis');
+  if (!data) return;
+
+  const totalCompanies = data.total_companies || 0;
+  const avgProb = data.avg_crisis_probability || 0;
+  const criticalCount = data.critical_count || 0;
+  const highCount = data.high_count || 0;
+  const elevatedCount = data.elevated_count || 0;
+
+  document.getElementById('crisis-stats').innerHTML =
+    '<div class="stat-card"><div class="label">Companies Analyzed</div><div class="value">' + totalCompanies + '</div></div>' +
+    '<div class="stat-card"><div class="label">Avg Crisis Probability</div><div class="value" style="color:' + (avgProb > 0.5 ? '#EF4444' : avgProb > 0.25 ? '#F59E0B' : '#10B981') + '">' + (avgProb * 100).toFixed(1) + '%</div></div>' +
+    '<div class="stat-card"><div class="label">CRITICAL Risk</div><div class="value" style="color:#EF4444">' + criticalCount + '</div><div class="sub">Requires immediate action</div></div>' +
+    '<div class="stat-card"><div class="label">HIGH + ELEVATED</div><div class="value" style="color:#F59E0B">' + (highCount + elevatedCount) + '</div><div class="sub">Monitor closely</div></div>';
+
+  const riskDist = data.risk_distribution || {};
+  const riskColors = { CRITICAL: '#EF4444', HIGH: '#F97316', ELEVATED: '#F59E0B', MODERATE: '#3B82F6', LOW: '#10B981', UNKNOWN: '#94A3B8' };
+  renderChart('chart-crisis-risk', 'doughnut', {
+    labels: Object.keys(riskDist),
+    datasets: [{ data: Object.values(riskDist), backgroundColor: Object.keys(riskDist).map(function(k) { return riskColors[k] || '#94A3B8'; }), borderWidth: 0 }]
+  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
+
+  const cvssDist = data.cvss_distribution || {};
+  const cvssColors = { CRITICAL: '#EF4444', HIGH: '#F97316', ELEVATED: '#F59E0B', MEDIUM: '#3B82F6', LOW: '#10B981', NONE: '#94A3B8' };
+  renderChart('chart-crisis-cvss', 'bar', {
+    labels: Object.keys(cvssDist),
+    datasets: [{ label: 'Companies', data: Object.values(cvssDist), backgroundColor: Object.keys(cvssDist).map(function(k) { return cvssColors[k] || '#94A3B8'; }), borderWidth: 1 }]
+  }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94A3B8' }, grid: { display: false } } } });
+
+  var companies = data.companies_at_risk || [];
+  var tbody = document.getElementById('crisis-table');
+  tbody.innerHTML = '';
+  if (!companies.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:20px">No companies at elevated risk</td></tr>';
+    return;
+  }
+  companies.forEach(function(c) {
+    var prob = (c.crisis_probability * 100).toFixed(1);
+    var riskLevel = c.crisis_risk_level || 'UNKNOWN';
+    var riskCls = riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'badge-hot' : riskLevel === 'ELEVATED' ? 'badge-warm' : 'badge-cold';
+    var cvssCol = sslGradeColor(c.cvss_severity === 'CRITICAL' ? 'F' : c.cvss_severity === 'HIGH' ? 'D' : c.cvss_severity === 'ELEVATED' ? 'C' : 'B');
+    var recText = c.top_recommendation ? (c.top_recommendation.priority + ': ' + c.top_recommendation.message) : 'No recommendations';
+    if (recText.length > 100) recText = recText.substring(0, 97) + '...';
+    tbody.innerHTML += '<tr onclick="openCompany(' + (c.id || '') + ')">' +
+      '<td>' + esc(c.name || '') + '</td>' +
+      '<td>' + esc(c.city || '') + '</td>' +
+      '<td><span style="font-weight:700;color:' + (c.crisis_probability > 0.5 ? '#EF4444' : c.crisis_probability > 0.25 ? '#F59E0B' : '#10B981') + '">' + prob + '%</span></td>' +
+      '<td><span class="badge ' + riskCls + '">' + esc(riskLevel) + '</span></td>' +
+      '<td><span style="color:' + cvssCol + ';font-weight:700">' + esc(c.cvss_severity || 'NONE') + '</span> (' + (c.cvss_max || 0) + ')</td>' +
+      '<td>' + (c.breach_count || 0) + '</td>' +
+      '<td style="font-size:12px;color:var(--text-dim)">' + esc(recText) + '</td>' +
+      '</tr>';
+  });
+}
+
 function parseJSON(val) {
   if (!val) return [];
   if (Array.isArray(val)) return val;
@@ -825,6 +1421,593 @@ setInterval(function() {
 }, 60000);
 
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeModal(); });
+
+// ════════════════════════════════════════════════════════════════
+// EXPORT CENTER
+// ════════════════════════════════════════════════════════════════
+
+const EXPORT_COLUMNS = [
+  {key:'name', label:'Name', default:true},
+  {key:'city', label:'City', default:true},
+  {key:'sector', label:'Sector', default:true},
+  {key:'website', label:'Website', default:true},
+  {key:'phone', label:'Phone', default:true},
+  {key:'email', label:'Email', default:true},
+  {key:'email_confidence', label:'Email Confidence', default:true},
+  {key:'lead_temperature', label:'Lead Temperature', default:true},
+  {key:'health_score', label:'Health Score', default:true},
+  {key:'ssl_grade', label:'SSL Grade', default:true},
+  {key:'rating', label:'Rating', default:true},
+  {key:'review_count', label:'Review Count', default:true},
+  {key:'sentiment', label:'Sentiment', default:true},
+  {key:'responds_to_reviews', label:'Responds to Reviews', default:true},
+  {key:'outreach_hook', label:'Outreach Hook', default:false},
+  {key:'tech_stack', label:'Tech Stack', default:false},
+  {key:'vulnerabilities', label:'Vulnerabilities', default:false},
+  {key:'open_ports', label:'Open Ports', default:false},
+  {key:'security_warnings', label:'Security Warnings', default:false},
+  {key:'breach_count', label:'Breach Count', default:true},
+  {key:'breach_names', label:'Breach Names', default:false},
+  {key:'cvss_severity', label:'CVSS Severity', default:false},
+  {key:'cvss_max', label:'CVSS Max', default:false},
+  {key:'crisis_probability', label:'Crisis Probability', default:true},
+  {key:'crisis_risk_level', label:'Crisis Risk Level', default:true},
+  {key:'crisis_recommendations', label:'Crisis Recommendations', default:false},
+  {key:'instagram', label:'Instagram', default:false},
+  {key:'facebook', label:'Facebook', default:false},
+  {key:'firebase', label:'Firebase', default:false},
+  {key:'archive', label:'Archive', default:false},
+  {key:'api_keys', label:'API Keys', default:false},
+  {key:'crtsh', label:'crt.sh Subdomains', default:false},
+  {key:'sherlock', label:'Sherlock Profiles', default:false},
+  {key:'created_at', label:'Created At', default:true},
+];
+
+let exportDataCache = null;
+
+function initExportColumns() {
+  const grid = document.getElementById('columns-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  EXPORT_COLUMNS.forEach(function(col) {
+    grid.innerHTML += '<label><input type="checkbox" data-col="' + col.key + '"' + (col.default ? ' checked' : '') + '> ' + col.label + '</label>';
+  });
+}
+
+function toggleAllColumns(state) {
+  document.querySelectorAll('#columns-grid input[type="checkbox"]').forEach(function(cb) { cb.checked = state; });
+}
+
+function getSelectedColumns() {
+  const cols = [];
+  document.querySelectorAll('#columns-grid input[type="checkbox"]:checked').forEach(function(cb) { cols.push(cb.dataset.col); });
+  return cols;
+}
+
+function buildExportQuery() {
+  const params = [];
+  const temp = document.getElementById('ex-temp').value;
+  const city = document.getElementById('ex-city').value;
+  const sector = document.getElementById('ex-sector').value;
+  const ssl = document.getElementById('ex-ssl').value;
+  const email = document.getElementById('ex-email').value;
+  const search = document.getElementById('ex-search').value;
+  const healthMin = document.getElementById('ex-health-min').value;
+  const healthMax = document.getElementById('ex-health-max').value;
+  const crisisMin = document.getElementById('ex-crisis-min').value;
+
+  if (temp) params.push('temp=' + encodeURIComponent(temp));
+  if (city) params.push('city=' + encodeURIComponent(city));
+  if (sector) params.push('sector=' + encodeURIComponent(sector));
+  if (ssl) params.push('ssl=' + encodeURIComponent(ssl));
+  if (email) params.push('email=' + encodeURIComponent(email));
+  if (search) params.push('search=' + encodeURIComponent(search));
+  if (healthMin) params.push('health_min=' + healthMin);
+  if (healthMax) params.push('health_max=' + healthMax);
+  if (crisisMin) params.push('min_crisis=' + crisisMin);
+
+  const cols = getSelectedColumns();
+  if (cols.length) params.push('columns=' + cols.join(','));
+
+  return params.join('&');
+}
+
+async function loadExportPreview() {
+  const btn = document.getElementById('preview-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+
+  const q = buildExportQuery();
+  const data = await api('export?' + q);
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6z"/><path d="M4 20h16v-2H4v2z"/></svg> Load Preview';
+
+  if (!data) return;
+
+  exportDataCache = data;
+  const cols = data.columns || [];
+  const rows = data.rows || [];
+
+  document.getElementById('preview-count').innerHTML = 'Showing <span>' + rows.length + '</span> companies (' + cols.length + ' columns selected)';
+
+  const thead = document.getElementById('preview-thead');
+  const tbody = document.getElementById('preview-tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  let headerRow = '<tr>';
+  cols.forEach(function(c) { headerRow += '<th>' + esc(c.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); })) + '</th>'; });
+  headerRow += '</tr>';
+  thead.innerHTML = headerRow;
+
+  const previewRows = rows.slice(0, 50);
+  previewRows.forEach(function(row) {
+    let tr = '<tr>';
+    cols.forEach(function(c) {
+      let val = row[c];
+      if (val === null || val === undefined) { val = '-'; }
+      else if (c === 'lead_temperature') { val = tempBadgeHTML(val); }
+      else if (c === 'health_score') { val = val != null ? val : '-'; }
+      else if (c === 'ssl_grade') { val = '<span style="color:' + sslGradeColor(val) + ';font-weight:700">' + esc(val || '-') + '</span>'; }
+      else if (c === 'crisis_probability') { val = ((val || 0) * 100).toFixed(1) + '%'; }
+      else if (c === 'crisis_risk_level') { val = esc(val || 'UNKNOWN'); }
+      else if (c === 'sentiment') { val = '<span class="sentiment-' + (val || 'neutral') + '">' + esc(val || '-') + '</span>'; }
+      else if (c === 'email_confidence') { val = val != null ? Number(val).toFixed(0) + '%' : '-'; }
+      else if (c === 'firebase') { var fv = (typeof val === 'object' ? val : {}); val = fv.firebase_detected ? '<span style="color:#EF4444;font-weight:700">DETECTED</span>' : '<span style="color:#10B981">None</span>'; }
+      else if (c === 'archive') { var av = (typeof val === 'object' ? val : {}); val = '<span style="color:' + (av.archive_risk === 'HIGH' ? '#EF4444' : '#10B981') + ';font-weight:700">' + (av.archive_risk || 'NONE') + '</span>' + (av.archive_total_urls ? ' (' + av.archive_total_urls + ' urls)' : ''); }
+      else if (c === 'api_keys') { var akv = (typeof val === 'object' ? val : {}); val = '<span style="color:' + ((akv.api_key_count || 0) > 0 ? '#F59E0B' : '#10B981') + ';font-weight:700">' + (akv.api_key_count || 0) + ' keys</span>'; }
+      else if (c === 'crtsh') { var cv = (typeof val === 'object' ? val : {}); val = (cv.subdomain_count || 0) + ' subs, ' + (cv.email_count || 0) + ' emails'; }
+      else if (c === 'sherlock') { var sv = (typeof val === 'object' ? val : {}); val = (sv.profile_count || 0) + ' profiles'; }
+      else { val = esc(String(val).substring(0, 60)); }
+      tr += '<td>' + val + '</td>';
+    });
+    tr += '</tr>';
+    tbody.innerHTML += tr;
+  });
+
+  document.getElementById('download-btn').disabled = false;
+}
+
+function downloadExportCSV() {
+  if (!exportDataCache || !exportDataCache.rows || !exportDataCache.rows.length) {
+    toast('No data to export. Click "Load Preview" first.', 'error');
+    return;
+  }
+
+  const cols = exportDataCache.columns;
+  const rows = exportDataCache.rows;
+
+  const BOM = '\uFEFF';
+  let csv = BOM;
+
+  csv += cols.map(function(c) { return '"' + c.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }) + '"'; }).join(',') + '\n';
+
+  rows.forEach(function(row) {
+    const line = cols.map(function(c) {
+      let val = row[c];
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'object') {
+        try { val = JSON.stringify(val); } catch(e) { val = String(val); }
+      }
+      val = String(val).replace(/"/g, '""');
+      if (val.indexOf(',') !== -1 || val.indexOf('"') !== -1 || val.indexOf('\n') !== -1) {
+        val = '"' + val + '"';
+      }
+      return val;
+    }).join(',');
+    csv += line + '\n';
+  });
+
+  const now = new Date();
+  const ts = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  const filename = 'crisora_export_' + ts + '_' + rows.length + 'rows.csv';
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  toast('Exported ' + rows.length + ' rows to ' + filename, 'success');
+}
+
+function applyPreset(preset) {
+  document.querySelectorAll('#export-presets button').forEach(function(b) { b.classList.remove('active'); });
+  event.target.classList.add('active');
+
+  document.getElementById('ex-temp').value = '';
+  document.getElementById('ex-city').value = '';
+  document.getElementById('ex-sector').value = '';
+  document.getElementById('ex-ssl').value = '';
+  document.getElementById('ex-email').value = '';
+  document.getElementById('ex-search').value = '';
+  document.getElementById('ex-health-min').value = '';
+  document.getElementById('ex-health-max').value = '';
+  document.getElementById('ex-crisis-min').value = '';
+
+  switch(preset) {
+    case 'all': break;
+    case 'hot': document.getElementById('ex-temp').value = 'HOT'; break;
+    case 'warm': document.getElementById('ex-temp').value = 'WARM'; break;
+    case 'cold': document.getElementById('ex-temp').value = 'COLD'; break;
+    case 'ssl_f': document.getElementById('ex-ssl').value = 'F'; break;
+    case 'ssl_d': document.getElementById('ex-ssl').value = 'D'; break;
+    case 'has_email': document.getElementById('ex-email').value = 'yes'; break;
+    case 'no_email': document.getElementById('ex-email').value = 'no'; break;
+    case 'high_crisis': document.getElementById('ex-crisis-min').value = '0.5'; break;
+    case 'vulns': document.getElementById('ex-health-max').value = '40'; break;
+  }
+}
+
+function quickExport(preset) {
+  applyPreset(preset);
+  loadExportPreview();
+  setTimeout(function() { downloadExportCSV(); }, 800);
+}
+
+function loadExportFilters() {
+  var citySel = document.getElementById('ex-city');
+  var sectorSel = document.getElementById('ex-sector');
+  var osCitySel = document.getElementById('os-city');
+  api('cities').then(function(data) {
+    var arr = Array.isArray(data) ? data : (data.cities || []);
+    arr.forEach(function(c) {
+      var v = typeof c === 'string' ? c : (c.city || c.name || '');
+      if (v) {
+        var o1 = document.createElement('option'); o1.value = v; o1.textContent = v; citySel.appendChild(o1);
+        var o2 = document.createElement('option'); o2.value = v; o2.textContent = v; osCitySel.appendChild(o2);
+      }
+    });
+  });
+  api('sectors').then(function(data) {
+    var arr = Array.isArray(data) ? data : (data.sectors || []);
+    arr.forEach(function(s) {
+      var v = typeof s === 'string' ? s : (s.sector || s.name || '');
+      if (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; sectorSel.appendChild(o); }
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// QUICK EXPORT BUTTONS (from each page)
+// ════════════════════════════════════════════════════════════════
+
+function exportCurrentFilters() {
+  var city = document.getElementById('f-city').value;
+  var sector = document.getElementById('f-sector').value;
+  var temp = document.getElementById('f-temp').value;
+  var email = document.getElementById('f-email').value;
+  var search = document.getElementById('f-search').value;
+
+  if (city) document.getElementById('ex-city').value = city;
+  if (sector) document.getElementById('ex-sector').value = sector;
+  if (temp) document.getElementById('ex-temp').value = temp;
+  if (email) document.getElementById('ex-email').value = email;
+  if (search) document.getElementById('ex-search').value = search;
+
+  document.querySelectorAll('.tab-btn[data-page]').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.tab-btn[data-page="export"]').classList.add('active');
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-export').classList.add('active');
+
+  loadExportPreview();
+}
+
+function exportOSINT() {
+  document.querySelectorAll('#export-presets button').forEach(function(b) { b.classList.remove('active'); });
+  switchToExportTab();
+  document.getElementById('ex-temp').value = '';
+  document.getElementById('ex-health-min').value = '';
+  document.getElementById('ex-health-max').value = '';
+  document.getElementById('ex-crisis-min').value = '';
+  loadExportPreview();
+}
+
+function exportSecurityReport() {
+  document.getElementById('ex-health-max').value = '40';
+  switchToExportTab();
+  loadExportPreview();
+}
+
+function exportCrisisReport() {
+  document.getElementById('ex-crisis-min').value = '0.25';
+  switchToExportTab();
+  loadExportPreview();
+}
+
+function exportAlgorithms() {
+  var algoData = [];
+  var rows = document.querySelectorAll('#algo-table tr');
+  rows.forEach(function(row) {
+    var cells = row.querySelectorAll('td');
+    if (cells.length >= 7) {
+      algoData.push({
+        name: cells[1].textContent,
+        description: cells[2].textContent,
+        category: cells[3].textContent,
+        uses: cells[4].textContent,
+        avg_time: cells[5].textContent,
+        success_rate: cells[6].textContent,
+        status: cells[7].textContent
+      });
+    }
+  });
+
+  if (!algoData.length) {
+    toast('No algorithm data to export', 'error');
+    return;
+  }
+
+  var cols = ['Name', 'Description', 'Category', 'Uses', 'Avg Time', 'Success Rate', 'Status'];
+  var BOM = '\uFEFF';
+  var csv = BOM + cols.map(function(c) { return '"' + c + '"'; }).join(',') + '\n';
+  algoData.forEach(function(row) {
+    csv += [row.name, row.description, row.category, row.uses, row.avg_time, row.success_rate, row.status].map(function(v) {
+      v = String(v || '').replace(/"/g, '""');
+      return (v.indexOf(',') !== -1 || v.indexOf('"') !== -1) ? '"' + v + '"' : v;
+    }).join(',') + '\n';
+  });
+
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'crisora_algorithms_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Exported ' + algoData.length + ' algorithms', 'success');
+}
+
+function switchToExportTab() {
+  document.querySelectorAll('.tab-btn[data-page]').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelector('.tab-btn[data-page="export"]').classList.add('active');
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-export').classList.add('active');
+}
+
+// ════════════════════════════════════════════════════════════════
+// OSINT EXPORT CENTER
+// ════════════════════════════════════════════════════════════════
+
+const OSINT_EXPORT_COLUMNS = [
+  {key:'name', label:'Name', default:true},
+  {key:'city', label:'City', default:true},
+  {key:'sector', label:'Sector', default:true},
+  {key:'website', label:'Website', default:true},
+  {key:'phone', label:'Phone', default:false},
+  {key:'email', label:'Email', default:false},
+  {key:'lead_temperature', label:'Temperature', default:true},
+  {key:'health_score', label:'Health', default:true},
+  {key:'ssl_grade', label:'SSL', default:true},
+  {key:'firebase_detected', label:'Firebase Detected', default:true},
+  {key:'firebase_project', label:'Firebase Project', default:false},
+  {key:'firebase_url', label:'Firebase URL', default:false},
+  {key:'firebase_risk', label:'Firebase Risk', default:false},
+  {key:'archive_risk', label:'Archive Risk', default:true},
+  {key:'archive_urls', label:'Archive URLs', default:false},
+  {key:'archive_years', label:'Archive Years', default:false},
+  {key:'archive_sensitive_count', label:'Sensitive Files', default:true},
+  {key:'archive_admin_count', label:'Admin Panels', default:false},
+  {key:'api_risk', label:'API Risk', default:true},
+  {key:'api_count', label:'API Key Count', default:true},
+  {key:'api_types', label:'API Key Types', default:false},
+  {key:'sherlock_risk', label:'Sherlock Risk', default:true},
+  {key:'sherlock_count', label:'Profile Count', default:true},
+  {key:'sherlock_platforms', label:'Platforms', default:false},
+  {key:'crtsh_risk', label:'crt.sh Risk', default:false},
+  {key:'crtsh_subs', label:'Subdomains', default:true},
+  {key:'crtsh_emails', label:'Emails Found', default:false},
+  {key:'risk_score', label:'Risk Score', default:true},
+  {key:'breach_count', label:'Breaches', default:true},
+  {key:'crisis_probability', label:'Crisis Prob', default:true},
+  {key:'outreach_hook', label:'Outreach Hook', default:false},
+];
+
+let osintExportCache = null;
+
+function initOSINTColumns() {
+  var grid = document.getElementById('osint-columns-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  OSINT_EXPORT_COLUMNS.forEach(function(col) {
+    grid.innerHTML += '<label><input type="checkbox" data-col="' + col.key + '"' + (col.default ? ' checked' : '') + '> ' + col.label + '</label>';
+  });
+}
+
+function toggleOSINTColumns(state) {
+  document.querySelectorAll('#osint-columns-grid input[type="checkbox"]').forEach(function(cb) { cb.checked = state; });
+}
+
+function getOSINTSelectedColumns() {
+  var cols = [];
+  document.querySelectorAll('#osint-columns-grid input[type="checkbox"]:checked').forEach(function(cb) { cols.push(cb.dataset.col); });
+  return cols;
+}
+
+function buildOSINTQuery() {
+  var params = [];
+  var firebase = document.getElementById('os-firebase').value;
+  var archive = document.getElementById('os-archive').value;
+  var api = document.getElementById('os-api').value;
+  var sherlock = document.getElementById('os-sherlock').value;
+  var minKeys = document.getElementById('os-min-keys').value;
+  var minProfiles = document.getElementById('os-min-profiles').value;
+  var crtshMin = document.getElementById('os-crtsh-min').value;
+  var minRisk = document.getElementById('os-min-risk').value;
+  var temp = document.getElementById('os-temp').value;
+  var city = document.getElementById('os-city').value;
+  var ssl = document.getElementById('os-ssl').value;
+  var search = document.getElementById('os-search').value;
+
+  if (firebase) params.push('firebase=' + encodeURIComponent(firebase));
+  if (archive) params.push('archive_risk=' + encodeURIComponent(archive));
+  if (api) params.push('api_risk=' + encodeURIComponent(api));
+  if (sherlock) params.push('sherlock_risk=' + encodeURIComponent(sherlock));
+  if (minKeys) params.push('min_keys=' + minKeys);
+  if (minProfiles) params.push('min_profiles=' + minProfiles);
+  if (crtshMin) params.push('crtsh_min=' + crtshMin);
+  if (minRisk) params.push('min_risk_score=' + minRisk);
+  if (temp) params.push('temp=' + encodeURIComponent(temp));
+  if (city) params.push('city=' + encodeURIComponent(city));
+  if (ssl) params.push('ssl=' + encodeURIComponent(ssl));
+  if (search) params.push('search=' + encodeURIComponent(search));
+
+  var cols = getOSINTSelectedColumns();
+  if (cols.length) params.push('columns=' + cols.join(','));
+
+  return params.join('&');
+}
+
+async function loadOSINTPreview() {
+  var btn = document.getElementById('osint-preview-btn');
+  btn.disabled = true;
+  btn.textContent = 'Loading...';
+
+  var q = buildOSINTQuery();
+  var data = await api('osint-export?' + q);
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 16l-6-6h4V4h4v6h4l-6 6z"/><path d="M4 20h16v-2H4v2z"/></svg> Load OSINT Preview';
+
+  if (!data) return;
+
+  osintExportCache = data;
+  var cols = data.columns || [];
+  var rows = data.rows || [];
+
+  document.getElementById('osint-preview-count').innerHTML = 'Showing <span>' + rows.length + '</span> companies (' + cols.length + ' columns selected)';
+
+  var thead = document.getElementById('osint-preview-thead');
+  var tbody = document.getElementById('osint-preview-tbody');
+  thead.innerHTML = '';
+  tbody.innerHTML = '';
+
+  var headerRow = '<tr>';
+  cols.forEach(function(c) { headerRow += '<th>' + esc(c.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); })) + '</th>'; });
+  headerRow += '</tr>';
+  thead.innerHTML = headerRow;
+
+  var previewRows = rows.slice(0, 50);
+  previewRows.forEach(function(row) {
+    var tr = '<tr>';
+    cols.forEach(function(c) {
+      var val = row[c];
+      if (val === null || val === undefined) { val = '-'; }
+      else if (c === 'lead_temperature') { val = tempBadgeHTML(val); }
+      else if (c === 'health_score') { val = val != null ? val : '-'; }
+      else if (c === 'ssl_grade') { val = '<span style="color:' + sslGradeColor(val) + ';font-weight:700">' + esc(val || '-') + '</span>'; }
+      else if (c === 'firebase_detected') { val = val ? '<span style="color:#EF4444;font-weight:700">YES</span>' : '<span style="color:#10B981">NO</span>'; }
+      else if (c === 'firebase_risk') { val = '<span style="color:' + (val === 'DETECTED' ? '#EF4444' : '#10B981') + ';font-weight:700">' + esc(val) + '</span>'; }
+      else if (c === 'archive_risk') { val = '<span style="color:' + (val === 'HIGH' ? '#EF4444' : val === 'MEDIUM' ? '#F59E0B' : '#10B981') + ';font-weight:700">' + esc(val) + '</span>'; }
+      else if (c === 'api_risk') { val = '<span style="color:' + (val === 'HIGH' ? '#EF4444' : val === 'MEDIUM' ? '#F59E0B' : '#10B981') + ';font-weight:700">' + esc(val) + '</span>'; }
+      else if (c === 'sherlock_risk') { val = '<span style="color:' + (val === 'HIGH' ? '#EF4444' : val === 'MEDIUM' ? '#F59E0B' : '#10B981') + ';font-weight:700">' + esc(val) + '</span>'; }
+      else if (c === 'crtsh_risk') { val = '<span style="color:' + (val === 'HIGH' ? '#EF4444' : val === 'MEDIUM' ? '#F59E0B' : '#10B981') + ';font-weight:700">' + esc(val) + '</span>'; }
+      else if (c === 'risk_score') { var rc = val >= 50 ? '#EF4444' : val >= 30 ? '#F59E0B' : '#10B981'; val = '<span style="color:' + rc + ';font-weight:700;font-size:15px">' + val + '</span>'; }
+      else if (c === 'crisis_probability') { val = ((val || 0) * 100).toFixed(1) + '%'; }
+      else if (c === 'api_types' || c === 'sherlock_platforms' || c === 'crtsh_sub_list') {
+        if (Array.isArray(val)) { val = val.length ? val.slice(0, 3).join(', ') + (val.length > 3 ? ' +' + (val.length - 3) : '') : '-'; }
+      }
+      else if (c === 'api_count' || c === 'sherlock_count' || c === 'archive_sensitive_count' || c === 'archive_admin_count' || c === 'archive_urls') { val = val || 0; }
+      else if (c === 'outreach_hook') { val = esc(String(val).substring(0, 80)); }
+      else { val = esc(String(val).substring(0, 50)); }
+      tr += '<td>' + val + '</td>';
+    });
+    tr += '</tr>';
+    tbody.innerHTML += tr;
+  });
+
+  document.getElementById('osint-download-btn').disabled = false;
+}
+
+function downloadOSINTCSV() {
+  if (!osintExportCache || !osintExportCache.rows || !osintExportCache.rows.length) {
+    toast('No data to export. Click "Load OSINT Preview" first.', 'error');
+    return;
+  }
+
+  var cols = osintExportCache.columns;
+  var rows = osintExportCache.rows;
+
+  var BOM = '\uFEFF';
+  var csv = BOM;
+
+  csv += cols.map(function(c) { return '"' + c.replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); }) + '"'; }).join(',') + '\n';
+
+  rows.forEach(function(row) {
+    var line = cols.map(function(c) {
+      var val = row[c];
+      if (val === null || val === undefined) return '';
+      if (typeof val === 'object') {
+        try { val = JSON.stringify(val); } catch(e) { val = String(val); }
+      }
+      val = String(val).replace(/"/g, '""');
+      if (val.indexOf(',') !== -1 || val.indexOf('"') !== -1 || val.indexOf('\n') !== -1) {
+        val = '"' + val + '"';
+      }
+      return val;
+    }).join(',');
+    csv += line + '\n';
+  });
+
+  var now = new Date();
+  var ts = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+  var filename = 'crisora_osint_' + ts + '_' + rows.length + 'rows.csv';
+
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+
+  toast('Exported ' + rows.length + ' OSINT rows to ' + filename, 'success');
+}
+
+function clearOSINTFilters() {
+  document.getElementById('os-firebase').value = '';
+  document.getElementById('os-archive').value = '';
+  document.getElementById('os-api').value = '';
+  document.getElementById('os-sherlock').value = '';
+  document.getElementById('os-min-keys').value = '';
+  document.getElementById('os-min-profiles').value = '';
+  document.getElementById('os-crtsh-min').value = '';
+  document.getElementById('os-min-risk').value = '';
+  document.getElementById('os-temp').value = '';
+  document.getElementById('os-ssl').value = '';
+  document.getElementById('os-search').value = '';
+}
+
+function applyOSINTPreset(preset) {
+  document.querySelectorAll('#osint-presets button').forEach(function(b) { b.classList.remove('active'); });
+  event.target.classList.add('active');
+  clearOSINTFilters();
+
+  switch(preset) {
+    case 'firebase': document.getElementById('os-firebase').value = 'yes'; break;
+    case 'firebase_open': document.getElementById('os-firebase').value = 'open'; break;
+    case 'archive_high': document.getElementById('os-archive').value = 'HIGH'; break;
+    case 'api_high': document.getElementById('os-api').value = 'HIGH'; break;
+    case 'api_5+': document.getElementById('os-min-keys').value = '5'; break;
+    case 'sherlock_high': document.getElementById('os-sherlock').value = 'HIGH'; break;
+    case 'sherlock_3+': document.getElementById('os-min-profiles').value = '3'; break;
+    case 'crtsh_5+': document.getElementById('os-crtsh-min').value = '5'; break;
+    case 'risk_50+': document.getElementById('os-min-risk').value = '50'; break;
+    case 'risk_30+': document.getElementById('os-min-risk').value = '30'; break;
+    case 'full_intel':
+      document.getElementById('os-min-risk').value = '30';
+      document.getElementById('os-temp').value = 'HOT';
+      break;
+    case 'breach_active':
+      document.getElementById('os-min-risk').value = '50';
+      break;
+  }
+
+  loadOSINTPreview();
+}
 
 initApp();
 </script>

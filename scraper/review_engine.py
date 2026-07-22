@@ -1,46 +1,39 @@
 """
-FindLeads — Review Intelligence Engine
-Searches DDG for business reviews, extracts sentiment, star ratings, response status.
-Inspired by gmaps-review-scraper + VADER sentiment.
+Crisora — Review Intelligence Engine v4
+Uses ddgs (multi-engine: DDG+Bing+Brave+Google) for review search.
+Falls back gracefully when one engine is blocked.
 """
 
 import json
 import re
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 from urllib.parse import quote_plus
-
-from curl_cffi import requests as cffi_requests
 
 logger = logging.getLogger("review_engine")
 
+POSITIVE_WORDS = [
+    "great", "excellent", "amazing", "best", "love", "perfect", "fantastic",
+    "wonderful", "awesome", "outstanding", "friendly", "professional", "clean",
+    "recommend", "helpful", "caring", "thorough", "gentle", "satisfied",
+    "happy", "pleased", "impressed", "comfortable", "trust", "top-notch",
+]
 
-def _create_session():
-    return cffi_requests.Session(impersonate="chrome120")
+NEGATIVE_WORDS = [
+    "bad", "worst", "terrible", "awful", "poor", "rude", "dirty", "slow",
+    "expensive", "disappointing", "horrible", "never", "waste", "avoid",
+    "complaint", "problem", "unprofessional", "rushed", "wait", "overpriced",
+    "painful", "negligent", "unethical", "fraud", "scam", "liar",
+]
 
+COMPLAINT_KEYWORDS = [
+    "complaint", "problem", "issue", "never again", "worst", "terrible",
+    "avoid", "scam", "fraud", "unprofessional", "rude", "negligent",
+    "malpractice", "botched", "lawsuit",
+]
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    "Accept-Language": "en-US,en;q=0.9",
-}
-
-
-# ════════════════════════════════════════════════════════════════
-# MAIN REVIEW ANALYSIS
-# ════════════════════════════════════════════════════════════════
 
 def analyze_reviews(business_name: str, city: str, website: str = "") -> Dict:
-    """
-    Analyze business reviews via DDG search.
-    Returns: {
-        "rating": float,
-        "review_count": int,
-        "sentiment": str (positive/neutral/negative),
-        "responds_to_reviews": bool,
-        "recent_complaints": list,
-        "has_recent_reviews": bool,
-    }
-    """
     result = {
         "rating": 0,
         "review_count": 0,
@@ -49,206 +42,173 @@ def analyze_reviews(business_name: str, city: str, website: str = "") -> Dict:
         "recent_complaints": [],
         "has_recent_reviews": False,
         "review_snippets": [],
+        "review_sources": [],
     }
 
-    session = _create_session()
+    all_snippets = []
 
-    # Search 1: Google Maps reviews via DDG
+    # ── Search 1: General reviews ──
     try:
-        maps_data = _search_google_maps_reviews(session, business_name, city)
-        if maps_data.get("rating"):
-            result["rating"] = maps_data["rating"]
-        if maps_data.get("review_count"):
-            result["review_count"] = maps_data["review_count"]
-        if maps_data.get("response_status"):
-            result["responds_to_reviews"] = maps_data["response_status"]
-        logger.info(f"  Maps: rating={result['rating']}, reviews={result['review_count']}")
+        data1 = _ddgs_search(f'"{business_name}" {city} reviews rating')
+        all_snippets.extend(data1.get("snippets", []))
+        if data1.get("review_count", 0) > result["review_count"]:
+            result["review_count"] = data1["review_count"]
+        if data1.get("rating", 0) > result["rating"]:
+            result["rating"] = data1["rating"]
+        if data1.get("source"):
+            result["review_sources"].append(data1["source"])
+        logger.info(f"  ddgs-1: rating={data1.get('rating',0)}, reviews={data1.get('review_count',0)}, source={data1.get('source','')}")
     except Exception as e:
-        logger.debug(f"  Maps search error: {e}")
+        logger.debug(f"  ddgs-1 error: {e}")
 
-    # Search 2: Review snippets from DDG
+    # ── Search 2: Yelp-specific ──
     try:
-        review_data = _search_review_snippets(session, business_name, city)
-        if review_data.get("sentiment"):
-            result["sentiment"] = review_data["sentiment"]
-        if review_data.get("recent_complaints"):
-            result["recent_complaints"] = review_data["recent_complaints"]
-        if review_data.get("has_recent_reviews"):
-            result["has_recent_reviews"] = review_data["has_recent_reviews"]
-        if review_data.get("snippets"):
-            result["review_snippets"] = review_data["snippets"]
-        logger.info(f"  Reviews: sentiment={result['sentiment']}, complaints={len(result['recent_complaints'])}")
+        data2 = _ddgs_search(f'"{business_name}" {city} yelp reviews')
+        all_snippets.extend(data2.get("snippets", []))
+        if data2.get("review_count", 0) > result["review_count"]:
+            result["review_count"] = data2["review_count"]
+        if data2.get("rating", 0) > result["rating"]:
+            result["rating"] = data2["rating"]
+        logger.info(f"  ddgs-yelp: rating={data2.get('rating',0)}, reviews={data2.get('review_count',0)}")
     except Exception as e:
-        logger.debug(f"  Review search error: {e}")
+        logger.debug(f"  ddgs-yelp error: {e}")
 
-    # Search 3: Owner response check
+    # ── Search 3: Owner response check ──
     try:
-        response_data = _check_owner_response(session, business_name, city)
-        if response_data.get("responds"):
+        data3 = _ddgs_search(f'"{business_name}" {city} owner response review reply')
+        if any("owner" in s.lower() and "response" in s.lower() for s in data3.get("snippets", [])):
             result["responds_to_reviews"] = True
-        logger.info(f"  Response: {result['responds_to_reviews']}")
+        all_snippets.extend(data3.get("snippets", []))
     except Exception as e:
-        logger.debug(f"  Response check error: {e}")
+        logger.debug(f"  ddgs-response error: {e}")
 
+    # ── Analyze sentiment ──
+    if all_snippets:
+        result["review_snippets"] = all_snippets[:15]
+        result["sentiment"] = _analyze_sentiment(all_snippets)
+        result["recent_complaints"] = _find_complaints(all_snippets)
+        result["has_recent_reviews"] = _has_recent_dates(all_snippets)
+
+    logger.info(f"  Final: rating={result['rating']}, reviews={result['review_count']}, sentiment={result['sentiment']}, responds={result['responds_to_reviews']}, snippets={len(result['review_snippets'])}")
     return result
 
 
-# ════════════════════════════════════════════════════════════════
-# GOOGLE MAPS REVIEW SEARCH
-# ════════════════════════════════════════════════════════════════
+def _ddgs_search(query: str) -> Dict:
+    """Search using ddgs multi-engine (DDG → Bing → Brave → Google)."""
+    result = {"rating": 0, "review_count": 0, "source": "", "snippets": []}
 
-def _search_google_maps_reviews(session, business_name: str, city: str) -> Dict:
-    """Search DDG for Google Maps review data."""
-    result = {"rating": 0, "review_count": 0, "response_status": False}
-
-    query = f'"{business_name}" {city} site:google.com/maps reviews'
-    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-
-    resp = session.get(url, headers=HEADERS, timeout=4)
-    if resp.status_code != 200:
+    try:
+        from ddgs import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=5))
+    except ImportError:
+        logger.debug("ddgs not installed")
+        return result
+    except Exception as e:
+        logger.debug(f"ddgs error: {e}")
         return result
 
-    html = resp.text
+    if not results:
+        return result
 
-    # Extract rating from Google Maps snippet
-    # Pattern: "4.5 (123)" or "4.5/5 (123 reviews)"
-    rating_patterns = [
-        r'(\d+\.?\d*)\s*\((\d+)\)',  # "4.5 (123)"
-        r'(\d+\.?\d*)\s*/\s*5.*?(\d+)\s*(?:Google\s+)?reviews?',  # "4.5/5 ... 123 reviews"
-        r'Rated\s+(\d+\.?\d*).*?(\d+)\s*reviews?',  # "Rated 4.5 ... 123 reviews"
-        r'(\d+\.?\d*)-star.*?(\d+)\s*(?:Google\s+)?reviews?',  # "4.8-star ... 123 reviews"
-        r'(\d+\.?\d*)-star\s+(?:patient\s+)?rating',  # "4.8-star patient rating"
+    # Combine all text
+    all_text = " ".join([r.get("title", "") + " " + r.get("body", "") for r in results])
+
+    # Extract snippets
+    for r in results:
+        body = r.get("body", "")
+        title = r.get("title", "")
+        if len(body) > 30:
+            result["snippets"].append(body[:200])
+        if len(title) > 10:
+            result["snippets"].append(title[:200])
+
+    # Extract review count
+    count_patterns = [
+        r'(\d[\d,]*)\s*(?:Google\s+)?reviews?',
+        r'(\d[\d,]*)\s*customer\s+reviews?',
+        r'(\d[\d,]*)\s*reviews?\s+on\s+',
     ]
+    for pat in count_patterns:
+        for m in re.findall(pat, all_text, re.IGNORECASE):
+            try:
+                n = int(m.replace(",", ""))
+                if n > result["review_count"]:
+                    result["review_count"] = n
+                    result["source"] = _detect_source(all_text)
+            except ValueError:
+                continue
 
-    for pattern in rating_patterns:
-        match = re.search(pattern, html, re.IGNORECASE)
+    # Extract rating
+    rating_patterns = [
+        r'(\d+\.?\d*)\s*\(\s*(\d[\d,]*)\s*\)',  # "4.5 (236)"
+        r'(\d+\.?\d*)\s*star\s*rating',  # "4.9 star rating"
+        r'(\d+\.?\d*)\s*/\s*5',  # "4.5/5"
+        r'Rated\s+(\d+\.?\d*)',  # "Rated 4.5"
+        r'(\d+\.?\d*)-star',  # "4.5-star"
+        r'rating[:\s]+(\d+\.?\d*)',  # "rating: 4.5"
+    ]
+    for pat in rating_patterns:
+        match = re.search(pat, all_text, re.IGNORECASE)
         if match:
             try:
                 r = float(match.group(1))
                 if 1 <= r <= 5:
                     result["rating"] = r
-                result["review_count"] = int(match.group(2))
-                break
-            except (ValueError, IndexError):
+                    break
+            except ValueError:
                 continue
-
-    # Check if owner responds to reviews
-    if "owner" in html.lower() and "response" in html.lower():
-        result["response_status"] = True
-    if "回复" in html or "رد" in html:  # Chinese/Arabic for "reply"
-        result["response_status"] = True
 
     return result
 
 
-# ════════════════════════════════════════════════════════════════
-# REVIEW SNIPPET SEARCH
-# ════════════════════════════════════════════════════════════════
+def _detect_source(text: str) -> str:
+    text_lower = text.lower()
+    if "birdeye" in text_lower:
+        return "Birdeye"
+    elif "yelp" in text_lower:
+        return "Yelp"
+    elif "google" in text_lower:
+        return "Google"
+    return "Search"
 
-def _search_review_snippets(session, business_name: str, city: str) -> Dict:
-    """Search DDG for review text snippets."""
-    result = {
-        "sentiment": "neutral",
-        "recent_complaints": [],
-        "has_recent_reviews": False,
-        "snippets": [],
-    }
 
-    query = f'"{business_name}" {city} reviews opinions complaints'
-    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-
-    resp = session.get(url, headers=HEADERS, timeout=4)
-    if resp.status_code != 200:
-        return result
-
-    html = resp.text
-
-    # Extract snippets
-    snippets_raw = re.findall(r'class="result__snippet"[^>]*>(.*?)</a>', html, re.DOTALL)
-    snippets = []
-    for s in snippets_raw[:10]:
-        clean = re.sub(r'<[^>]+>', '', s).strip()
-        if len(clean) > 30:
-            snippets.append(clean)
-
-    result["snippets"] = snippets
-
-    if not snippets:
-        return result
-
-    # Simple sentiment analysis (VADER-lite)
+def _analyze_sentiment(snippets: List[str]) -> str:
     all_text = " ".join(snippets).lower()
-    positive_words = ["great", "excellent", "amazing", "best", "love", "perfect", "fantastic", "wonderful", "awesome", "outstanding", "friendly", "professional", "clean", "recommend"]
-    negative_words = ["bad", "worst", "terrible", "awful", "poor", "rude", "dirty", "slow", "expensive", "disappointing", "horrible", "never", "waste", "avoid", "complaint", "problem"]
+    pos = sum(1 for w in POSITIVE_WORDS if w in all_text)
+    neg = sum(1 for w in NEGATIVE_WORDS if w in all_text)
+    if pos > neg * 1.5:
+        return "positive"
+    elif neg > pos * 1.5:
+        return "negative"
+    return "neutral"
 
-    pos_count = sum(1 for w in positive_words if w in all_text)
-    neg_count = sum(1 for w in negative_words if w in all_text)
 
-    if pos_count > neg_count * 2:
-        result["sentiment"] = "positive"
-    elif neg_count > pos_count * 2:
-        result["sentiment"] = "negative"
-    else:
-        result["sentiment"] = "neutral"
-
-    # Check for recent complaints
-    complaint_keywords = ["complaint", "problem", "issue", "never again", "worst", "terrible", "avoid"]
+def _find_complaints(snippets: List[str]) -> List[str]:
+    complaints = []
     for snippet in snippets:
-        snippet_lower = snippet.lower()
-        if any(kw in snippet_lower for kw in complaint_keywords):
-            result["recent_complaints"].append(snippet[:100])
+        lower = snippet.lower()
+        if any(kw in lower for kw in COMPLAINT_KEYWORDS):
+            complaints.append(snippet[:120])
+    return complaints
 
-    # Check for recent reviews (date patterns)
+
+def _has_recent_dates(snippets: List[str]) -> bool:
     date_patterns = [
-        r'(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}',
+        r'(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s*\d{4}',
         r'\d{1,2}/\d{1,2}/\d{4}',
         r'\d{4}-\d{2}-\d{2}',
+        r'\d{1,2}\s+(?:hours?|days?|weeks?|months?)\s+ago',
+        r'Updated\s+\w+\s+\d{4}',
     ]
     for snippet in snippets:
         for pattern in date_patterns:
-            if re.search(pattern, snippet):
-                result["has_recent_reviews"] = True
-                break
-
-    return result
-
-
-# ════════════════════════════════════════════════════════════════
-# OWNER RESPONSE CHECK
-# ════════════════════════════════════════════════════════════════
-
-def _check_owner_response(session, business_name: str, city: str) -> Dict:
-    """Check if business owner responds to reviews."""
-    result = {"responds": False}
-
-    query = f'"{business_name}" {city} owner response review reply'
-    url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-
-    resp = session.get(url, headers=HEADERS, timeout=4)
-    if resp.status_code != 200:
-        return result
-
-    html = resp.text.lower()
-
-    response_indicators = [
-        "owner response",
-        "owner reply",
-        "responded to reviews",
-        "回复了",
-        "رد على",
-        "management response",
-        "business owner",
-    ]
-
-    for indicator in response_indicators:
-        if indicator in html:
-            result["responds"] = True
-            break
-
-    return result
+            if re.search(pattern, snippet, re.IGNORECASE):
+                return True
+    return False
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    result = analyze_reviews("Dental Nation", "Dubai", "https://www.dentalnation.com")
+    result = analyze_reviews("Bella Family Dental", "Dallas")
     print(json.dumps(result, indent=2, default=str))

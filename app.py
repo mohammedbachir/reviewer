@@ -1,6 +1,6 @@
 """
-FindLeads — Vercel Entry Point (v4)
-Dashboard + API + Scraper + Kimi AI.
+FindLeads — Vercel Entry Point (v9)
+Dashboard + API + Scraper + Kimi AI + Crisis Predictor AI.
 """
 
 import os
@@ -58,6 +58,154 @@ def _get_target():
     return target
 
 
+def _load_model_state():
+    try:
+        from curl_cffi import requests as cffi_requests
+        resp = cffi_requests.get(
+            f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=5,
+        )
+        rows = resp.json()
+        if rows:
+            return rows[0].get("model_state", "")
+    except Exception:
+        pass
+    return ""
+
+
+def _save_model_state(model_b64):
+    if not model_b64:
+        return
+    try:
+        from curl_cffi import requests as cffi_requests
+        cffi_requests.patch(
+            f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
+            json={"model_state": model_b64},
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+def _save_snapshot(biz_id, biz):
+    try:
+        from curl_cffi import requests as cffi_requests
+        cffi_requests.post(
+            f"{SUPABASE_URL}/rest/v1/snapshots",
+            json={
+                "business_id": biz_id,
+                "rating": biz.get("rating"),
+                "review_count": biz.get("review_count"),
+                "health_score": biz.get("health_score"),
+                "sentiment_score": 1.0 if biz.get("sentiment") == "positive" else -1.0 if biz.get("sentiment") == "negative" else 0.0,
+            },
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+def _get_snapshots(biz_id):
+    try:
+        from curl_cffi import requests as cffi_requests
+        resp = cffi_requests.get(
+            f"{SUPABASE_URL}/rest/v1/snapshots?business_id=eq.{biz_id}&order=scan_date.desc&limit=10",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=5,
+        )
+        return resp.json()
+    except Exception:
+        return []
+
+
+def _get_all_businesses_for_graph():
+    try:
+        from curl_cffi import requests as cffi_requests
+        resp = cffi_requests.get(
+            f"{SUPABASE_URL}/rest/v1/businesses?select=id,name,city,sector,tech_stack,health_score,ssl_grade,breach_count,vulnerabilities,open_ports,breach_names,security_warnings",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=10,
+        )
+        data = resp.json()
+        for biz in data:
+            for field in ["vulnerabilities", "open_ports", "security_warnings", "breach_names", "tech_stack"]:
+                val = biz.get(field)
+                if isinstance(val, str):
+                    try:
+                        biz[field] = json.loads(val)
+                    except Exception:
+                        biz[field] = []
+        return data
+    except Exception:
+        return []
+
+
+def _save_crisis_prediction(biz_id, prediction):
+    try:
+        from curl_cffi import requests as cffi_requests
+        cffi_requests.patch(
+            f"{SUPABASE_URL}/rest/v1/businesses?id=eq.{biz_id}",
+            json={
+                "crisis_probability": prediction.get("crisis_probability", 0),
+                "crisis_risk_level": prediction.get("risk_level", "UNKNOWN"),
+                "crisis_recommendations": json.dumps(prediction.get("recommendations", [])),
+                "cvss_severity": prediction.get("cvss", {}).get("severity", "NONE"),
+                "cvss_max": prediction.get("cvss", {}).get("cvss_max", 0),
+            },
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
+            timeout=5,
+        )
+    except Exception:
+        pass
+
+
+def _validate_phone(phone):
+    """Validate US/Canada phone: must be exactly 10 digits. Returns formatted or None."""
+    import re as _re
+    if not phone:
+        return None
+    digits = _re.sub(r'[^0-9]', '', str(phone))
+    if len(digits) == 11 and digits.startswith("1"):
+        digits = digits[1:]
+    if len(digits) == 10 and digits[0] in "23456789":
+        return digits
+    return None
+
+
+def _is_duplicate(biz, city, sector):
+    """Check if business already exists in DB by website or phone."""
+    import re as _re
+    website = (biz.get("website") or "").strip().rstrip("/").replace("www.", "").lower()
+    phone = biz.get("phone") or ""
+    phone_digits = _re.sub(r'[^0-9]', '', str(phone))
+    if len(phone_digits) == 11 and phone_digits.startswith("1"):
+        phone_digits = phone_digits[1:]
+
+    checks = []
+    if website:
+        checks.append(f"website=eq.{website}")
+    if len(phone_digits) == 10:
+        checks.append(f"phone=eq.{phone_digits}")
+    if not checks:
+        return False
+
+    try:
+        from curl_cffi import requests as cffi_requests
+        query = "|".join(checks)
+        resp = cffi_requests.get(
+            f"{SUPABASE_URL}/rest/v1/businesses?select=id&{query}&limit=1",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=5,
+        )
+        rows = resp.json()
+        return isinstance(rows, list) and len(rows) > 0
+    except Exception:
+        return False
+
+
 def _upsert_business(biz, target):
     try:
         from curl_cffi import requests as cffi_requests
@@ -78,7 +226,7 @@ def _upsert_business(biz, target):
             "city": target["city"],
             "sector": target["sector"],
             "website": biz.get("website", ""),
-            "phone": biz.get("phone", ""),
+            "phone": _validate_phone(biz.get("phone", "")),
             "rating": biz.get("rating"),
             "review_count": biz.get("review_count"),
             "health_score": biz.get("health_score"),
@@ -90,12 +238,17 @@ def _upsert_business(biz, target):
             "email_confidence": biz.get("email_confidence", 0),
             "email_source": biz.get("email_source", ""),
             "sentiment": biz.get("sentiment", "neutral"),
+            "responds_to_reviews": biz.get("responds_to_reviews", False),
             "vulnerabilities": vulns,
             "open_ports": open_ports,
-            "breaches": biz.get("breaches", 0),
             "security_warnings": security_warnings,
             "breach_count": biz.get("breach_count", 0),
             "breach_names": json.dumps(biz.get("breach_names", [])),
+            "crisis_probability": biz.get("crisis_probability", 0),
+            "crisis_risk_level": biz.get("crisis_risk_level", "UNKNOWN"),
+            "crisis_recommendations": json.dumps(biz.get("crisis_recommendations", [])),
+            "cvss_severity": biz.get("cvss_severity", "NONE"),
+            "cvss_max": biz.get("cvss_max", 0),
         }
         resp = cffi_requests.post(
             f"{SUPABASE_URL}/rest/v1/businesses",
@@ -233,11 +386,20 @@ def _enrich_business(biz):
         except Exception:
             return {}
 
-    with ThreadPoolExecutor(max_workers=2) as ex:
+    def _do_reviews():
+        from scraper.review_engine import analyze_reviews
+        try:
+            return analyze_reviews(biz.get("name", ""), biz.get("city", ""), website)
+        except Exception:
+            return {}
+
+    with ThreadPoolExecutor(max_workers=3) as ex:
         f_email = ex.submit(_do_email) if website else None
         f_osint = ex.submit(_do_osint) if domain else None
+        f_reviews = ex.submit(_do_reviews) if biz.get("name") else None
         email_result = f_email.result(timeout=8) if f_email else {}
         osint = f_osint.result(timeout=8) if f_osint else {}
+        reviews = f_reviews.result(timeout=8) if f_reviews else {}
 
     if email_result.get("email"):
         biz["email"] = email_result["email"]
@@ -253,10 +415,42 @@ def _enrich_business(biz):
         biz["vulnerabilities"] = osint.get("vulnerabilities", [])
         biz["open_ports"] = osint.get("open_ports", [])
         biz["security_warnings"] = osint.get("security_warnings", [])
+        biz["ssl_deep"] = osint.get("ssl_deep", {})
+        biz["security_headers"] = osint.get("security_headers", {})
+        biz["abuseipdb"] = osint.get("abuseipdb", {})
+
+    if reviews:
+        biz["sentiment"] = reviews.get("sentiment", "neutral")
+        biz["responds_to_reviews"] = reviews.get("responds_to_reviews", False)
+        if reviews.get("rating"):
+            biz["rating"] = reviews["rating"]
+        if reviews.get("review_count"):
+            biz["review_count"] = reviews["review_count"]
 
     temperature = _score_lead(biz)
     biz["lead_temperature"] = temperature
     biz["outreach_hook"] = _generate_outreach_hook(biz, temperature)
+
+    try:
+        from scraper.crisis_predictor import predict_crisis
+        model_b64 = _load_model_state()
+        snapshots = []
+        biz_id = biz.get("id")
+        if biz_id:
+            snapshots = _get_snapshots(biz_id)
+        all_biz = _get_all_businesses_for_graph()
+        crisis = predict_crisis(biz, all_businesses=all_biz, snapshots=snapshots, model_state_b64=model_b64)
+        biz["crisis_probability"] = crisis.get("crisis_probability", 0)
+        biz["crisis_risk_level"] = crisis.get("risk_level", "UNKNOWN")
+        biz["crisis_recommendations"] = crisis.get("recommendations", [])
+        biz["cvss_severity"] = crisis.get("cvss", {}).get("severity", "NONE")
+        biz["cvss_max"] = crisis.get("cvss", {}).get("cvss_max", 0)
+        new_model_b64 = crisis.get("model_state_b64")
+        if new_model_b64:
+            _save_model_state(new_model_b64)
+    except Exception as e:
+        logger.debug(f"Crisis prediction skipped: {e}")
+
     return biz
 
 
@@ -284,11 +478,25 @@ def run_scrape():
         _log_scan_run(city, sector, 0, 0, 0, time.time() - t0, "no_results")
         return {"status": "no_results", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
     biz = businesses[0]
+    if _is_duplicate(biz, city, sector):
+        return {"status": "duplicate", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
     if time.time() - t0 > HARD_DEADLINE:
         _log_scan_run(city, sector, 0, 0, 0, time.time() - t0, "timeout")
         return {"status": "timeout", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
     enriched = _enrich_business(biz)
     _upsert_business(enriched, target)
+    try:
+        from curl_cffi import requests as cffi_requests
+        resp = cffi_requests.get(
+            f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{enriched['name']}&city=eq.{city}&sector=eq.{sector}&limit=1",
+            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+            timeout=5,
+        )
+        rows = resp.json()
+        if rows:
+            _save_snapshot(rows[0]["id"], enriched)
+    except Exception:
+        pass
     has_email = 1 if enriched.get("email") else 0
     _log_scan_run(city, sector, 1, has_email, 1, time.time() - t0, "completed")
     return {
@@ -298,6 +506,8 @@ def run_scrape():
         "email": enriched.get("email", ""),
         "lead_temperature": enriched.get("lead_temperature", ""),
         "health_score": enriched.get("health_score", 0),
+        "crisis_risk_level": enriched.get("crisis_risk_level", "UNKNOWN"),
+        "crisis_probability": enriched.get("crisis_probability", 0),
         "elapsed_seconds": round(time.time() - t0, 1),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -354,7 +564,7 @@ class handler(BaseHTTPRequestHandler):
             self._respond(401, {"error": "Invalid password"})
 
     def _handle_dashboard_api(self, path, query):
-        from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security
+        from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security, get_crisis, get_osint_stats, get_osint_export, get_export_data
         token = query.get("token", [""])[0]
         if not verify_token(token):
             self._respond(401, {"error": "Unauthorized"})
@@ -388,6 +598,39 @@ class handler(BaseHTTPRequestHandler):
                 self._respond(200, get_sectors())
             elif path == "/api/dashboard/security":
                 self._respond(200, get_security())
+            elif path == "/api/dashboard/crisis":
+                self._respond(200, get_crisis())
+            elif path == "/api/dashboard/osint":
+                self._respond(200, get_osint_stats())
+            elif path == "/api/dashboard/osint-export":
+                firebase = query.get("firebase", [""])[0]
+                archive_risk = query.get("archive_risk", [""])[0]
+                api_risk = query.get("api_risk", [""])[0]
+                sherlock_risk = query.get("sherlock_risk", [""])[0]
+                crtsh_min = query.get("crtsh_min", [""])[0]
+                min_keys = query.get("min_keys", [""])[0]
+                min_profiles = query.get("min_profiles", [""])[0]
+                min_subs = query.get("min_subs", [""])[0]
+                temp = query.get("temp", [""])[0]
+                city = query.get("city", [""])[0]
+                sector = query.get("sector", [""])[0]
+                ssl = query.get("ssl", [""])[0]
+                search = query.get("search", [""])[0]
+                min_risk_score = query.get("min_risk_score", [""])[0]
+                columns = query.get("columns", [""])[0]
+                self._respond(200, get_osint_export(firebase, archive_risk, api_risk, sherlock_risk, crtsh_min, min_keys, min_profiles, min_subs, temp, city, sector, ssl, search, min_risk_score, columns))
+            elif path == "/api/dashboard/export":
+                temp = query.get("temp", [""])[0]
+                city = query.get("city", [""])[0]
+                sector = query.get("sector", [""])[0]
+                ssl = query.get("ssl", [""])[0]
+                email = query.get("email", [""])[0]
+                search = query.get("search", [""])[0]
+                health_min = query.get("health_min", [""])[0]
+                health_max = query.get("health_max", [""])[0]
+                min_crisis = query.get("min_crisis", [""])[0]
+                columns = query.get("columns", [""])[0]
+                self._respond(200, get_export_data(temp, city, sector, ssl, email, search, health_min, health_max, min_crisis, columns))
             else:
                 self._respond(404, {"error": "Not found"})
         except Exception as e:
@@ -398,7 +641,7 @@ class handler(BaseHTTPRequestHandler):
         import importlib
         import dashboard_api as _da
         importlib.reload(_da)
-        from dashboard_api import verify_token, ask_kimi, send_digest_email
+        from dashboard_api import verify_token, ask_ai, send_digest_email
         token = query.get("token", [""])[0]
         if not verify_token(token):
             self._respond(401, {"error": "Unauthorized"})
@@ -409,7 +652,7 @@ class handler(BaseHTTPRequestHandler):
                 if not question:
                     self._respond(400, {"error": "No question provided"})
                 else:
-                    self._respond(200, ask_kimi(question, os.environ.get("OPENROUTER_API_KEY", ""), os.environ.get("KIMI_API_KEY", "")))
+                    self._respond(200, ask_ai(question, os.environ.get("OPENROUTER_API_KEY", ""), os.environ.get("KIMI_API_KEY", "")))
             elif path == "/api/dashboard/digest":
                 self._respond(200, send_digest_email())
             else:
