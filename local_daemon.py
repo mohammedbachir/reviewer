@@ -61,6 +61,38 @@ WATCHDOG_INTERVAL = 10 # check every 10 seconds
 BACKFILL_FIRST = True  # always backfill before adding new
 
 
+class CircuitBreaker:
+    def __init__(self, name, failure_threshold=2, cooldown=600):
+        self.name = name
+        self.failures = 0
+        self.threshold = failure_threshold
+        self.cooldown = cooldown
+        self.disabled_until = 0
+
+    def is_available(self):
+        if self.disabled_until and time.time() < self.disabled_until:
+            remaining = int(self.disabled_until - time.time())
+            log.debug(f"  CircuitBreaker [{self.name}] OPEN — {remaining}s remaining")
+            return False
+        return True
+
+    def record_success(self):
+        self.failures = 0
+        self.disabled_until = 0
+
+    def record_failure(self):
+        self.failures += 1
+        if self.failures >= self.threshold:
+            self.disabled_until = time.time() + self.cooldown
+            log.warning(f"  CircuitBreaker [{self.name}] OPENED — {self.failures} failures, cooling down {self.cooldown}s")
+            self.failures = 0
+
+    def get_state(self):
+        if self.disabled_until and time.time() < self.disabled_until:
+            return "OPEN"
+        return "CLOSED"
+
+
 def load_state():
     try:
         with open(STATE_FILE) as f:
@@ -230,6 +262,11 @@ class CrisoraDaemon:
         self._tools_health_time = 0
         self._backfill_queue = []
         self._total_backfilled = 0
+        self._circuit_breakers = {
+            "certspotter": CircuitBreaker("certspotter", failure_threshold=2, cooldown=600),
+            "crtsh": CircuitBreaker("crtsh", failure_threshold=2, cooldown=600),
+            "internetdb": CircuitBreaker("internetdb", failure_threshold=3, cooldown=300),
+        }
 
     def get_status(self):
         with self._lock:
@@ -249,42 +286,67 @@ class CrisoraDaemon:
                 "last_diag": self._diagnostics[-5:] if self._diagnostics else [],
             }
 
-    # ── Tool Health Checker ──────────────────────────────────────
+    # ── Tool Health Checker (once per batch) ─────────────────────
     def check_tools_health(self):
-        now = time.time()
-        if self._tools_health and (now - self._tools_health_time) < 120:
-            return self._tools_health
-
         session = cffi_requests.Session(impersonate="chrome120")
         health = {}
 
-        # CertSpotter
-        try:
-            r = session.get(
-                "https://api.certspotter.com/v1/issuances?domain=google.com&include_subdomains=true&expand=dns_names&limit=1",
-                timeout=8
-            )
-            health["certspotter"] = r.status_code == 200
-            health["certspotter_code"] = r.status_code
-        except Exception:
+        # CertSpotter — respect circuit breaker
+        cb_cs = self._circuit_breakers["certspotter"]
+        if not cb_cs.is_available():
             health["certspotter"] = False
-            health["certspotter_code"] = 0
+            health["certspotter_code"] = "CIRCUIT_OPEN"
+        else:
+            try:
+                r = session.get(
+                    "https://api.certspotter.com/v1/issuances?domain=google.com&include_subdomains=true&expand=dns_names&limit=1",
+                    timeout=8
+                )
+                health["certspotter"] = r.status_code == 200
+                health["certspotter_code"] = r.status_code
+                if r.status_code == 200:
+                    cb_cs.record_success()
+                else:
+                    cb_cs.record_failure()
+            except Exception:
+                health["certspotter"] = False
+                health["certspotter_code"] = 0
+                cb_cs.record_failure()
 
-        # crt.sh
-        try:
-            r = session.get("https://crt.sh/?q=%.google.com&output=json", timeout=8)
-            health["crtsh"] = r.status_code == 200
-            health["crtsh_code"] = r.status_code
-        except Exception:
+        # crt.sh — respect circuit breaker
+        cb_ct = self._circuit_breakers["crtsh"]
+        if not cb_ct.is_available():
             health["crtsh"] = False
-            health["crtsh_code"] = 0
+            health["crtsh_code"] = "CIRCUIT_OPEN"
+        else:
+            try:
+                r = session.get("https://crt.sh/?q=%.google.com&output=json", timeout=8)
+                health["crtsh"] = r.status_code == 200
+                health["crtsh_code"] = r.status_code
+                if r.status_code == 200:
+                    cb_ct.record_success()
+                else:
+                    cb_ct.record_failure()
+            except Exception:
+                health["crtsh"] = False
+                health["crtsh_code"] = 0
+                cb_ct.record_failure()
 
-        # InternetDB (for OSINT)
-        try:
-            r = session.get("https://internetdb.shodan.io/1.1.1.1", timeout=5)
-            health["internetdb"] = r.status_code == 200
-        except Exception:
+        # InternetDB
+        cb_idb = self._circuit_breakers["internetdb"]
+        if not cb_idb.is_available():
             health["internetdb"] = False
+        else:
+            try:
+                r = session.get("https://internetdb.shodan.io/1.1.1.1", timeout=5)
+                health["internetdb"] = r.status_code == 200
+                if r.status_code == 200:
+                    cb_idb.record_success()
+                else:
+                    cb_idb.record_failure()
+            except Exception:
+                health["internetdb"] = False
+                cb_idb.record_failure()
 
         # Supabase
         try:
@@ -305,11 +367,12 @@ class CrisoraDaemon:
             health["dns"] = False
 
         self._tools_health = health
-        self._tools_health_time = now
+        self._tools_health_time = time.time()
 
         ok = sum(1 for k, v in health.items() if isinstance(v, bool) and v)
         total = sum(1 for k, v in health.items() if isinstance(v, bool))
-        log.info(f"Tools health: {ok}/{total} OK | certspotter={health.get('certspotter')} crtsh={health.get('crtsh')} dns={health.get('dns')}")
+        cb_states = {k: v.get_state() for k, v in self._circuit_breakers.items()}
+        log.info(f"Tools health: {ok}/{total} OK | certspotter={health.get('certspotter')} crtsh={health.get('crtsh')} dns={health.get('dns')} | circuits={cb_states}")
         return health
 
     # ── Backfill Incomplete Businesses ───────────────────────────
@@ -342,7 +405,7 @@ class CrisoraDaemon:
                     if isinstance(crtsh, str):
                         try: crtsh = json.loads(crtsh)
                         except: crtsh = {}
-                    if crtsh.get("subdomain_count", 0) == 0 and "certspotter" in available_tools:
+                    if not crtsh.get("checked") and "certspotter" in available_tools:
                         needs_backfill = True
 
                     firebase = b.get("firebase") or {}
@@ -400,12 +463,11 @@ class CrisoraDaemon:
             if isinstance(crtsh, str):
                 try: crtsh = json.loads(crtsh)
                 except: crtsh = {}
-            if crtsh.get("subdomain_count", 0) == 0 and "certspotter" in available_tools:
+            if not crtsh.get("checked") and "certspotter" in available_tools:
                 try:
                     from scraper.osint_engine import check_subdomains_emails
                     crtsh_data = check_subdomains_emails(domain)
-                    if crtsh_data.get("subdomain_count", 0) > 0:
-                        patch["crtsh"] = crtsh_data
+                    patch["crtsh"] = crtsh_data
                 except Exception as e:
                     log.debug(f"  Backfill crtsh error for {name}: {e}")
 

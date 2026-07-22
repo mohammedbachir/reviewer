@@ -132,6 +132,15 @@ ARCHIVE_FALSE_POSITIVES = [
     'feed/', 'comments/feed/', 'trackback/',
 ]
 
+ARCHIVE_DANGEROUS_PATTERNS = [
+    r'\.env$', r'\.git/HEAD', r'wp-config\.php', r'/admin\.php',
+    r'id_rsa', r'\.ssh/', r'\.aws/', r'\.htpasswd',
+    r'backup\.sql', r'dump\.sql', r'database\.sql', r'db\.sql',
+    r'config\.php\.bak', r'wp-config\.php\.bak',
+    r'\.htaccess', r'\.DS_Store', r'web\.config',
+    r'\.svn/', r'credentials\.json', r'service-account\.json',
+]
+
 
 def check_archive_wraith(domain: str) -> Dict:
     result = {
@@ -191,6 +200,11 @@ def check_archive_wraith(domain: str) -> Dict:
             if skip:
                 continue
 
+            for pat in ARCHIVE_DANGEROUS_PATTERNS:
+                if re.search(pat, url_lower):
+                    sensitive.append({"url": url, "pattern": f"DANGEROUS:{pat}", "ts": ts})
+                    break
+
             for pat in SENSITIVE_PATTERNS:
                 if re.search(pat, url_lower):
                     sensitive.append({"url": url, "pattern": pat, "ts": ts})
@@ -246,7 +260,7 @@ API_KEY_PATTERNS = {
 }
 
 API_KEY_CONTEXT_PATTERNS = {
-    "Heroku_API": r'(?i)heroku[_\s]*(?:api[_\s]*(?:key|token)|key[_\s]*(?:id|secret))?[_\s:=]*["\']?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
+    "Heroku_API": r'(?i)heroku.{0,40}([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
     "Twitter_Bearer": r'(?i)(?:twitter|bearer|api\.twitter)[^"\']{0,20}(AAAA[A-Za-z0-9]{20,})',
     "Password_in_URL": r'://([a-zA-Z0-9._-]+):([a-zA-Z0-9._/-]+)@[a-zA-Z]',
 }
@@ -483,6 +497,7 @@ def check_subdomains_emails(domain: str) -> Dict:
         "emails_found": [],
         "email_count": 0,
         "subdomain_risk": "NONE",
+        "checked": True,
     }
     subdomains = set()
     emails = set()
