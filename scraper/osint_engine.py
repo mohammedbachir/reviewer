@@ -124,6 +124,14 @@ SENSITIVE_PATTERNS = [
     r'/admin\.php', r'/admin/login', r'/administrator/',
 ]
 
+ARCHIVE_FALSE_POSITIVES = [
+    'sitemap.xml', 'sitemap_index.xml', 'sitemap-news.xml',
+    'wp-content/uploads/', 'wp-content/themes/', 'wp-content/plugins/',
+    'wp-includes/', 'wp-json/', 'xmlrpc.php',
+    'robots.txt', 'favicon.ico', 'readme.html', 'license.txt',
+    'feed/', 'comments/feed/', 'trackback/',
+]
+
 
 def check_archive_wraith(domain: str) -> Dict:
     result = {
@@ -174,6 +182,15 @@ def check_archive_wraith(domain: str) -> Dict:
             timestamps.add(ts[:4] if ts else "")
 
             url_lower = url.lower()
+
+            skip = False
+            for fp in ARCHIVE_FALSE_POSITIVES:
+                if fp in url_lower:
+                    skip = True
+                    break
+            if skip:
+                continue
+
             for pat in SENSITIVE_PATTERNS:
                 if re.search(pat, url_lower):
                     sensitive.append({"url": url, "pattern": pat, "ts": ts})
@@ -229,7 +246,7 @@ API_KEY_PATTERNS = {
 }
 
 API_KEY_CONTEXT_PATTERNS = {
-    "Heroku_API": r'(?i)(?:heroku)[^"\']{0,30}([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
+    "Heroku_API": r'(?i)heroku[_\s]*(?:api[_\s]*(?:key|token)|key[_\s]*(?:id|secret))?[_\s:=]*["\']?([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})',
     "Twitter_Bearer": r'(?i)(?:twitter|bearer|api\.twitter)[^"\']{0,20}(AAAA[A-Za-z0-9]{20,})',
     "Password_in_URL": r'://([a-zA-Z0-9._-]+):([a-zA-Z0-9._/-]+)@[a-zA-Z]',
 }
@@ -271,11 +288,15 @@ def extract_api_keys(html: str = "", domain: str = "") -> Dict:
 
         seen = set()
         unique = []
+        type_counts = {}
         for f in found:
             sig = f"{f['type']}:{f['value'][:30]}"
             if sig not in seen:
-                seen.add(sig)
-                unique.append(f)
+                tc = type_counts.get(f["type"], 0)
+                if tc < 5:
+                    seen.add(sig)
+                    unique.append(f)
+                    type_counts[f["type"]] = tc + 1
 
         result["api_keys_found"] = unique[:15]
         result["api_key_count"] = len(unique)
