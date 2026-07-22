@@ -98,6 +98,30 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
 .modal-row .field .fl{font-size:11px;color:var(--text-dim);margin-bottom:2px}
 .modal-row .field .fv{font-size:14px}
 .tech-tag{display:inline-block;padding:3px 10px;margin:2px;border-radius:20px;font-size:11px;background:rgba(255,255,255,.08);color:var(--text-dim);border:1px solid var(--border)}
+
+/* Engine Diagram */
+.engine-header{text-align:center;margin-bottom:32px}
+.engine-title{font-size:28px;font-weight:800;letter-spacing:2px;background:linear-gradient(135deg,#DC2626,#F59E0B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+.engine-subtitle{color:var(--text-dim);font-size:14px}
+.engine-pipeline{max-width:900px;margin:0 auto}
+.engine-layer{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:0;position:relative}
+.layer-label{font-size:12px;font-weight:700;color:var(--accent);letter-spacing:1px;margin-bottom:4px}
+.layer-desc{font-size:13px;color:var(--text-dim);margin-bottom:16px}
+.engine-components{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:center}
+.engine-node{flex:1;min-width:280px;background:#0F172A;border:1px solid var(--border);border-radius:var(--radius);padding:16px;transition:all .3s}
+.engine-node:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 8px 25px rgba(220,38,38,.15)}
+.node-icon{font-size:24px;margin-bottom:8px}
+.node-name{font-size:16px;font-weight:700;margin-bottom:2px}
+.node-file{font-size:11px;color:var(--text-dim);font-family:monospace;margin-bottom:8px}
+.node-desc{font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:8px}
+.node-stats{font-size:11px}
+.engine-arrow{font-size:24px;color:var(--accent);font-weight:700;flex-shrink:0}
+.engine-connector{display:flex;align-items:center;justify-content:center;padding:8px 0}
+.connector-line{flex:1;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.connector-dot{width:12px;height:12px;background:var(--accent);border-radius:50%;flex-shrink:0;margin:0 8px}
+.engine-footer{display:flex;justify-content:center;gap:24px;margin-top:32px;flex-wrap:wrap}
+.engine-stat{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px 20px;text-align:center}
+.engine-stat{font-size:14px;font-weight:700;color:var(--accent)}
 .copy-btn{padding:4px 10px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--info);font-size:12px;cursor:pointer;margin-left:8px;transition:all .15s}
 .copy-btn:hover{background:var(--info);color:#fff;border-color:var(--info)}
 .health-bar{width:100%;height:8px;background:#0F172A;border-radius:4px;overflow:hidden;margin-top:4px}
@@ -194,7 +218,6 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     <button class="tab-btn" data-page="algorithms">Algorithms</button>
     <button class="tab-btn" data-page="companies">Companies</button>
     <button class="tab-btn" data-page="ai">AI Advisor</button>
-    <button class="tab-btn" data-page="analytics">Analytics</button>
     <button class="tab-btn" data-page="export">Export</button>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
@@ -295,20 +318,158 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
   </div>
 
   <div class="page" id="page-algorithms">
-    <div class="card">
-      <div class="page-header">
-        <h2>Algorithms</h2>
-        <button class="export-btn" onclick="exportAlgorithms()">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-          Export Algos
-        </button>
+    <div class="engine-header">
+      <div class="engine-title">CRISORA ENGINE</div>
+      <div class="engine-subtitle">75 algorithms across 6 layers — zero-cost intelligence pipeline</div>
+    </div>
+
+    <div class="engine-pipeline">
+      <!-- Layer 1: Discovery -->
+      <div class="engine-layer">
+        <div class="layer-label">LAYER 1 — DISCOVERY</div>
+        <div class="layer-desc">Finding businesses across 35 cities × 34 sectors</div>
+        <div class="engine-components">
+          <div class="engine-node scout">
+            <div class="node-icon">🔍</div>
+            <div class="node-name">The Scout</div>
+            <div class="node-file">finder.py</div>
+            <div class="node-desc">Multi-source discovery via Overpass API + BizData + DuckDuckGo</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 336 targets rotating</div>
+          </div>
+          <div class="engine-arrow">→</div>
+          <div class="engine-node sniper">
+            <div class="node-icon">🎯</div>
+            <div class="node-name">The Sniper</div>
+            <div class="node-file">email_finder.py</div>
+            <div class="node-desc">Email Permutation + DNSMX + Gravatar + crt.sh + website crawl</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 7 permutation methods</div>
+          </div>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>#</th><th>Name</th><th>Description</th><th>Category</th><th>Uses</th><th>Avg Time</th><th>Success Rate</th><th>Status</th></tr></thead>
-          <tbody id="algo-table"></tbody>
-        </table>
+
+      <div class="engine-connector">
+        <div class="connector-line"></div>
+        <div class="connector-dot"></div>
+        <div class="connector-line"></div>
       </div>
+
+      <!-- Layer 2: Intelligence -->
+      <div class="engine-layer">
+        <div class="layer-label">LAYER 2 — INTELLIGENCE</div>
+        <div class="layer-desc">Deep reconnaissance on every target</div>
+        <div class="engine-components">
+          <div class="engine-node xray">
+            <div class="node-icon">📡</div>
+            <div class="node-name">X-Ray</div>
+            <div class="node-file">osint_engine.py</div>
+            <div class="node-desc">TechDetect (100+ tech) + SSL + DNS + PageSpeed + Security Headers + AbuseIPDB + NVD + CertSpotter + crt.sh + Firebase + Archive + API Keys + Sherlock</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 12 tools, 5 parallel workers</div>
+          </div>
+          <div class="engine-arrow">→</div>
+          <div class="engine-node oracle">
+            <div class="node-icon">👁️</div>
+            <div class="node-name">The Oracle</div>
+            <div class="node-file">review_engine.py</div>
+            <div class="node-desc">Review search via ddgs (multi-engine) + sentiment analysis + response detection</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 1.5:1 sentiment threshold</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="engine-connector">
+        <div class="connector-line"></div>
+        <div class="connector-dot"></div>
+        <div class="connector-line"></div>
+      </div>
+
+      <!-- Layer 3: Analysis -->
+      <div class="engine-layer">
+        <div class="layer-label">LAYER 3 — ANALYSIS</div>
+        <div class="layer-desc">Scoring, prediction, and risk assessment</div>
+        <div class="engine-components">
+          <div class="engine-node sentinel">
+            <div class="node-icon">🧠</div>
+            <div class="node-name">Sentinel</div>
+            <div class="node-file">crisis_predictor.py</div>
+            <div class="node-desc">Online ML (Hoeffding Tree) + Graph Risk Contagion + CVSS scoring + OSINT rules + 35 features</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> Hybrid: Rules 80% + ML 20%</div>
+          </div>
+          <div class="engine-arrow">→</div>
+          <div class="engine-node thermometer">
+            <div class="node-icon">🌡️</div>
+            <div class="node-name">The Thermometer</div>
+            <div class="node-file">lead_scorer</div>
+            <div class="node-desc">HOT/WARM/COLD classification from SSL + rating + health + tech + sentiment + crisis</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> Force-HOT rules active</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="engine-connector">
+        <div class="connector-line"></div>
+        <div class="connector-dot"></div>
+        <div class="connector-line"></div>
+      </div>
+
+      <!-- Layer 4: Action -->
+      <div class="engine-layer">
+        <div class="layer-label">LAYER 4 — ACTION</div>
+        <div class="layer-desc">Outreach and data persistence</div>
+        <div class="engine-components">
+          <div class="engine-node beacon">
+            <div class="node-icon">📡</div>
+            <div class="node-name">The Beacon</div>
+            <div class="node-file">outreach_hook</div>
+            <div class="node-desc">Pain-point-driven personalized outreach messages (breach → SSL → health → vulns → generic)</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 8 priority hooks</div>
+          </div>
+          <div class="engine-arrow">→</div>
+          <div class="engine-node vault">
+            <div class="node-icon">🗄️</div>
+            <div class="node-name">The Vault</div>
+            <div class="node-file">supabase_upsert</div>
+            <div class="node-desc">PostgreSQL storage with UPSERT (merge duplicates) + temporal snapshots + model persistence</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> ~1600 records</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="engine-connector">
+        <div class="connector-line"></div>
+        <div class="connector-dot"></div>
+        <div class="connector-line"></div>
+      </div>
+
+      <!-- Layer 5: Orchestration -->
+      <div class="engine-layer">
+        <div class="layer-label">LAYER 5 — ORCHESTRATION</div>
+        <div class="layer-desc">Self-healing daemon with parallel execution</div>
+        <div class="engine-components">
+          <div class="engine-node conductor">
+            <div class="node-icon">⚡</div>
+            <div class="node-name">The Conductor</div>
+            <div class="node-file">local_daemon.py</div>
+            <div class="node-desc">Zero-sleep loop + watchdog (60s stall detection) + parallel enrichment (5 workers) + graph cache + ToolHealthChecker + backfill mechanism</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 24/7 on GCP e2-micro</div>
+          </div>
+          <div class="engine-arrow">→</div>
+          <div class="engine-node gatekeeper">
+            <div class="node-icon">🛡️</div>
+            <div class="node-name">The Gatekeeper</div>
+            <div class="node-file">tool_health_checker</div>
+            <div class="node-desc">Tests CertSpotter + crt.sh + InternetDB + Supabase + DNS before each run — backfills when tools recover</div>
+            <div class="node-stats"><span class="badge badge-success">ACTIVE</span> 120s health cache</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="engine-footer">
+      <div class="engine-stat">75 Algorithms</div>
+      <div class="engine-stat">12 OSINT Tools</div>
+      <div class="engine-stat">35 Cities × 34 Sectors</div>
+      <div class="engine-stat">5 Parallel Workers</div>
+      <div class="engine-stat">$0/month</div>
     </div>
   </div>
 
@@ -357,18 +518,6 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
         <input type="text" id="chat-input" placeholder="Ask a question about your leads..." onkeydown="if(event.key==='Enter')sendChat()">
         <button onclick="sendChat()">Send</button>
       </div>
-    </div>
-  </div>
-
-  <div class="page" id="page-analytics">
-    <div class="stats-grid" id="analytics-stats"></div>
-    <div class="charts-row">
-      <div class="chart-wrap"><canvas id="chart-temp-dist"></canvas></div>
-      <div class="chart-wrap"><canvas id="chart-health-city"></canvas></div>
-    </div>
-    <div class="charts-row">
-      <div class="chart-wrap"><canvas id="chart-ssl"></canvas></div>
-      <div class="chart-wrap"><canvas id="chart-sentiment"></canvas></div>
     </div>
   </div>
 
@@ -741,10 +890,8 @@ function initDashboard() {
   loadSecurity();
   loadOSINT();
   loadCrisis();
-  loadAlgorithms();
   loadFilters();
   loadCompanies(1);
-  loadAnalytics();
   initExportColumns();
   initOSINTColumns();
   loadExportFilters();
@@ -764,7 +911,6 @@ document.querySelectorAll('.tab-btn[data-page]').forEach(function(btn) {
     btn.classList.add('active');
     document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
     document.getElementById('page-' + btn.dataset.page).classList.add('active');
-    if (btn.dataset.page === 'analytics') loadAnalytics();
     if (btn.dataset.page === 'security') loadSecurity();
     if (btn.dataset.page === 'osint') loadOSINT();
     if (btn.dataset.page === 'crisis') loadCrisis();
@@ -821,33 +967,6 @@ async function loadOverview() {
       borderWidth: 0
     }]
   }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
-}
-
-async function loadAlgorithms() {
-  const data = await api('algorithms');
-  if (!data) return;
-  const algos = Array.isArray(data) ? data : (data.algorithms || []);
-  const tbody = document.getElementById('algo-table');
-  tbody.innerHTML = '';
-  if (!algos.length) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:20px">No algorithms found</td></tr>';
-    return;
-  }
-  const catColors = { Wash: '#3B82F6', Fold: '#F59E0B', Closet: '#10B981' };
-  algos.forEach(function(a, i) {
-    const cat = a.category || 'Wash';
-    const col = catColors[cat] || '#94A3B8';
-    tbody.innerHTML += '<tr>' +
-      '<td>' + (i + 1) + '</td>' +
-      '<td>' + esc(a.name || '') + '</td>' +
-      '<td>' + esc(a.description || '') + '</td>' +
-      '<td><span style="color:' + col + ';font-weight:600">' + esc(cat) + '</span></td>' +
-      '<td>' + (a.uses || a.use_count || 0) + '</td>' +
-      '<td>' + (a.avg_time || a.avg_time_ms || '-') + '</td>' +
-      '<td>' + (a.success_rate || '-') + '</td>' +
-      '<td><span class="badge ' + (a.status === 'active' || a.status === 'running' ? 'badge-success' : 'badge-cold') + '">' + esc(a.status || 'idle') + '</span></td>' +
-      '</tr>';
-  });
 }
 
 async function loadFilters() {
@@ -1152,50 +1271,6 @@ async function sendChat() {
     messages.innerHTML += '<div class="chat-bubble ai" style="color:#F87171">No response received.</div>';
   }
   messages.scrollTop = messages.scrollHeight;
-}
-
-async function loadAnalytics() {
-  const data = await api('analytics');
-  if (!data) return;
-
-  const tempDist = data.temperature_distribution || data.temp_distribution || { HOT: 0, WARM: 0, COLD: 0 };
-  const healthByCity = data.health_by_city || data.city_health || {};
-  const sslDist = data.ssl_distribution || data.ssl_grades || {};
-  const sentDist = data.sentiment_distribution || data.sentiment || {};
-
-  const statsHtml = '<div class="stat-card"><div class="label">Total Companies</div><div class="value">' + (data.total || 0) + '</div></div>' +
-    '<div class="stat-card"><div class="label">HOT Leads</div><div class="value" style="color:#F87171">' + (tempDist.HOT || 0) + '</div></div>' +
-    '<div class="stat-card"><div class="label">WARM Leads</div><div class="value" style="color:#FBBF24">' + (tempDist.WARM || 0) + '</div></div>' +
-    '<div class="stat-card"><div class="label">COLD Leads</div><div class="value" style="color:#60A5FA">' + (tempDist.COLD || 0) + '</div></div>';
-  document.getElementById('analytics-stats').innerHTML = statsHtml;
-
-  renderChart('chart-temp-dist', 'doughnut', {
-    labels: ['HOT', 'WARM', 'COLD'],
-    datasets: [{ data: [tempDist.HOT || 0, tempDist.WARM || 0, tempDist.COLD || 0], backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6'], borderWidth: 0 }]
-  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
-
-  const cityLabels = Object.keys(healthByCity);
-  const cityValues = cityLabels.map(function(k) { const v = healthByCity[k]; return typeof v === 'object' ? (v.avg_health || v.avg || 0) : v; });
-  renderChart('chart-health-city', 'bar', {
-    labels: cityLabels,
-    datasets: [{ label: 'Avg Health', data: cityValues, backgroundColor: 'rgba(16,185,129,0.6)', borderColor: '#10B981', borderWidth: 1 }]
-  }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94A3B8' }, grid: { display: false } } } });
-
-  const sslLabels = Object.keys(sslDist);
-  const sslValues = sslLabels.map(function(k) { return typeof sslDist[k] === 'object' ? sslDist[k].count || sslDist[k] : sslDist[k]; });
-  const sslColors = sslLabels.map(function(l) { return sslGradeColor(l); });
-  renderChart('chart-ssl', 'bar', {
-    labels: sslLabels,
-    datasets: [{ label: 'Count', data: sslValues, backgroundColor: sslColors.map(function(c) { return c + '99'; }), borderColor: sslColors, borderWidth: 1 }]
-  }, { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { ticks: { color: '#94A3B8' }, grid: { display: false } } } });
-
-  const sentLabels = Object.keys(sentDist);
-  const sentValues = sentLabels.map(function(k) { return typeof sentDist[k] === 'object' ? sentDist[k].count || sentDist[k] : sentDist[k]; });
-  const sentColors = sentLabels.map(function(l) { const ll = l.toLowerCase(); if (ll === 'positive') return '#10B981'; if (ll === 'negative') return '#EF4444'; return '#94A3B8'; });
-  renderChart('chart-sentiment', 'doughnut', {
-    labels: sentLabels,
-    datasets: [{ data: sentValues, backgroundColor: sentColors, borderWidth: 0 }]
-  }, { plugins: { legend: { position: 'bottom', labels: { color: '#94A3B8' } } } });
 }
 
 async function loadSecurity() {
@@ -1716,49 +1791,6 @@ function exportCrisisReport() {
   document.getElementById('ex-crisis-min').value = '0.25';
   switchToExportTab();
   loadExportPreview();
-}
-
-function exportAlgorithms() {
-  var algoData = [];
-  var rows = document.querySelectorAll('#algo-table tr');
-  rows.forEach(function(row) {
-    var cells = row.querySelectorAll('td');
-    if (cells.length >= 7) {
-      algoData.push({
-        name: cells[1].textContent,
-        description: cells[2].textContent,
-        category: cells[3].textContent,
-        uses: cells[4].textContent,
-        avg_time: cells[5].textContent,
-        success_rate: cells[6].textContent,
-        status: cells[7].textContent
-      });
-    }
-  });
-
-  if (!algoData.length) {
-    toast('No algorithm data to export', 'error');
-    return;
-  }
-
-  var cols = ['Name', 'Description', 'Category', 'Uses', 'Avg Time', 'Success Rate', 'Status'];
-  var BOM = '\uFEFF';
-  var csv = BOM + cols.map(function(c) { return '"' + c + '"'; }).join(',') + '\n';
-  algoData.forEach(function(row) {
-    csv += [row.name, row.description, row.category, row.uses, row.avg_time, row.success_rate, row.status].map(function(v) {
-      v = String(v || '').replace(/"/g, '""');
-      return (v.indexOf(',') !== -1 || v.indexOf('"') !== -1) ? '"' + v + '"' : v;
-    }).join(',') + '\n';
-  });
-
-  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url;
-  a.download = 'crisora_algorithms_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('Exported ' + algoData.length + ' algorithms', 'success');
 }
 
 function switchToExportTab() {
