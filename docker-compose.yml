@@ -1,0 +1,16 @@
+services:
+  crisora:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

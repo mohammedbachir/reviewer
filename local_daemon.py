@@ -53,10 +53,12 @@ HEADERS = {
 }
 
 STATE_FILE = os.path.join(ROOT_DIR, ".daemon_state.json")
+TOOLS_HEALTH_FILE = os.path.join(ROOT_DIR, ".tools_health.json")
 MAX_WORKERS = 5
 GRAPH_CACHE_TTL = 300  # 5 minutes
 STALL_TIMEOUT = 60     # 60 seconds = stall
 WATCHDOG_INTERVAL = 10 # check every 10 seconds
+BACKFILL_FIRST = True  # always backfill before adding new
 
 
 def load_state():
@@ -224,6 +226,10 @@ class CrisoraDaemon:
         self._last_db_count = 0
         self._started_at = datetime.now(timezone.utc).isoformat()
         self._diagnostics = []
+        self._tools_health = {}
+        self._tools_health_time = 0
+        self._backfill_queue = []
+        self._total_backfilled = 0
 
     def get_status(self):
         with self._lock:
@@ -235,13 +241,224 @@ class CrisoraDaemon:
                 "total_runs": self._total_runs,
                 "total_businesses": self._total_businesses,
                 "total_emails": self._total_emails,
+                "total_backfilled": self._total_backfilled,
                 "errors": self._errors,
                 "stall_count": self._stall_count,
                 "last_db_write": self._last_db_write,
+                "tools_health": self._tools_health,
                 "last_diag": self._diagnostics[-5:] if self._diagnostics else [],
             }
 
-    # ── Graph Cache ──────────────────────────────────────────────
+    # ── Tool Health Checker ──────────────────────────────────────
+    def check_tools_health(self):
+        now = time.time()
+        if self._tools_health and (now - self._tools_health_time) < 120:
+            return self._tools_health
+
+        session = cffi_requests.Session(impersonate="chrome120")
+        health = {}
+
+        # CertSpotter
+        try:
+            r = session.get(
+                "https://api.certspotter.com/v1/issuances?domain=google.com&include_subdomains=true&expand=dns_names&limit=1",
+                timeout=8
+            )
+            health["certspotter"] = r.status_code == 200
+            health["certspotter_code"] = r.status_code
+        except Exception:
+            health["certspotter"] = False
+            health["certspotter_code"] = 0
+
+        # crt.sh
+        try:
+            r = session.get("https://crt.sh/?q=%.google.com&output=json", timeout=8)
+            health["crtsh"] = r.status_code == 200
+            health["crtsh_code"] = r.status_code
+        except Exception:
+            health["crtsh"] = False
+            health["crtsh_code"] = 0
+
+        # InternetDB (for OSINT)
+        try:
+            r = session.get("https://internetdb.shodan.io/1.1.1.1", timeout=5)
+            health["internetdb"] = r.status_code == 200
+        except Exception:
+            health["internetdb"] = False
+
+        # Supabase
+        try:
+            r = cffi_requests.get(
+                f"{SUPABASE_URL}/rest/v1/businesses?select=id&limit=1",
+                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                timeout=5,
+            )
+            health["supabase"] = r.status_code == 200
+        except Exception:
+            health["supabase"] = False
+
+        # DNS
+        try:
+            dns.resolver.resolve("supabase.co", "A")
+            health["dns"] = True
+        except Exception:
+            health["dns"] = False
+
+        self._tools_health = health
+        self._tools_health_time = now
+
+        ok = sum(1 for k, v in health.items() if isinstance(v, bool) and v)
+        total = sum(1 for k, v in health.items() if isinstance(v, bool))
+        log.info(f"Tools health: {ok}/{total} OK | certspotter={health.get('certspotter')} crtsh={health.get('crtsh')} dns={health.get('dns')}")
+        return health
+
+    # ── Backfill Incomplete Businesses ───────────────────────────
+    def backfill_incomplete(self):
+        health = self.check_tools_health()
+        available_tools = [k for k, v in health.items() if isinstance(v, bool) and v]
+
+        if not available_tools:
+            log.warning("No tools available. Skipping backfill.")
+            return 0
+
+        incomplete = []
+
+        # Fetch businesses with potentially incomplete data
+        offset = 0
+        while True:
+            try:
+                r = cffi_requests.get(
+                    f"{SUPABASE_URL}/rest/v1/businesses?select=id,name,website,firebase,crtsh,api_keys,archive,sherlock&website=not.is.null&order=id.desc&limit=100&offset={offset}",
+                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                    timeout=30
+                )
+                batch = r.json()
+                if not batch:
+                    break
+                for b in batch:
+                    needs_backfill = False
+
+                    crtsh = b.get("crtsh") or {}
+                    if isinstance(crtsh, str):
+                        try: crtsh = json.loads(crtsh)
+                        except: crtsh = {}
+                    if crtsh.get("subdomain_count", 0) == 0 and "certspotter" in available_tools:
+                        needs_backfill = True
+
+                    firebase = b.get("firebase") or {}
+                    if isinstance(firebase, str):
+                        try: firebase = json.loads(firebase)
+                        except: firebase = {}
+                    if not firebase and "firebase" not in str(b.get("id", "")):
+                        needs_backfill = True
+
+                    api_keys = b.get("api_keys") or {}
+                    if isinstance(api_keys, str):
+                        try: api_keys = json.loads(api_keys)
+                        except: api_keys = {}
+                    if not api_keys:
+                        needs_backfill = True
+
+                    if needs_backfill:
+                        incomplete.append(b)
+
+                if len(batch) < 100:
+                    break
+                offset += 100
+            except Exception as e:
+                log.error(f"Backfill fetch error: {e}")
+                break
+
+        if not incomplete:
+            log.info("No incomplete businesses found. All data is complete.")
+            return 0
+
+        log.info(f"Backfill: {len(incomplete)} businesses need data update")
+        backfilled = 0
+
+        for b in incomplete[:20]:
+            biz_id = b["id"]
+            name = (b.get("name") or "")[:30]
+            website = b.get("website", "")
+
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(website)
+                domain = parsed.netloc or parsed.path
+                if domain.startswith("www."):
+                    domain = domain[4:]
+                domain = domain.split("/")[0].split(":")[0]
+            except Exception:
+                continue
+
+            if not domain or "." not in domain:
+                continue
+
+            patch = {}
+
+            crtsh = b.get("crtsh") or {}
+            if isinstance(crtsh, str):
+                try: crtsh = json.loads(crtsh)
+                except: crtsh = {}
+            if crtsh.get("subdomain_count", 0) == 0 and "certspotter" in available_tools:
+                try:
+                    from scraper.osint_engine import check_subdomains_emails
+                    crtsh_data = check_subdomains_emails(domain)
+                    if crtsh_data.get("subdomain_count", 0) > 0:
+                        patch["crtsh"] = crtsh_data
+                except Exception as e:
+                    log.debug(f"  Backfill crtsh error for {name}: {e}")
+
+            firebase = b.get("firebase") or {}
+            if isinstance(firebase, str):
+                try: firebase = json.loads(firebase)
+                except: firebase = {}
+            if not firebase:
+                try:
+                    from scraper.osint_engine import check_firebase_exposure
+                    session = cffi_requests.Session(impersonate="chrome120")
+                    resp = session.get(f"https://{domain}", timeout=5, allow_redirects=True)
+                    html = resp.text if resp.status_code == 200 else ""
+                    firebase_data = check_firebase_exposure(domain, html)
+                    if firebase_data.get("firebase_detected") or firebase_data.get("firebase_open"):
+                        patch["firebase"] = firebase_data
+                except Exception:
+                    pass
+
+            api_keys = b.get("api_keys") or {}
+            if isinstance(api_keys, str):
+                try: api_keys = json.loads(api_keys)
+                except: api_keys = {}
+            if not api_keys:
+                try:
+                    from scraper.osint_engine import extract_api_keys
+                    session = cffi_requests.Session(impersonate="chrome120")
+                    resp = session.get(f"https://{domain}", timeout=5, allow_redirects=True)
+                    html = resp.text if resp.status_code == 200 else ""
+                    api_data = extract_api_keys(html, domain)
+                    if api_data.get("key_count", 0) > 0:
+                        patch["api_keys"] = api_data
+                except Exception:
+                    pass
+
+            if patch:
+                try:
+                    r = cffi_requests.patch(
+                        f"{SUPABASE_URL}/rest/v1/businesses?id=eq.{biz_id}",
+                        json=patch,
+                        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
+                        timeout=15
+                    )
+                    if r.status_code in (200, 204):
+                        backfilled += 1
+                        log.info(f"  [BACKFILL] {name} | updated {list(patch.keys())}")
+                    time.sleep(1)
+                except Exception as e:
+                    log.debug(f"  Backfill patch error for {name}: {e}")
+
+        log.info(f"Backfill complete: {backfilled}/{len(incomplete)} updated")
+        self._total_backfilled += backfilled
+        return backfilled
     def get_graph_data(self):
         now = time.time()
         with self._graph_cache_lock:
@@ -508,6 +725,11 @@ class CrisoraDaemon:
     # ── Run Once (Parallel) ─────────────────────────────────────
     def run_once(self):
         from scraper.finder import search_businesses
+
+        self.check_tools_health()
+
+        # Step 1: Backfill incomplete data first
+        backfilled = self.backfill_incomplete()
 
         t0 = time.time()
         targets = get_targets()

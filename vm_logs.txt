@@ -1,0 +1,274 @@
+﻿Jul 20 23:08:31 crisora python[10222]: 23:08:31 [INFO]   Website: 0 emails
+Jul 20 23:10:04 crisora systemd[1]: Stopping crisora.service - Crisora Engine...
+Jul 20 23:10:04 crisora systemd[1]: crisora.service: Deactivated successfully.
+Jul 20 23:10:04 crisora systemd[1]: Stopped crisora.service - Crisora Engine.
+Jul 20 23:10:04 crisora systemd[1]: crisora.service: Consumed 6min 2.245s CPU time.
+Jul 20 23:10:04 crisora systemd[1]: Started crisora.service - Crisora Engine.
+Jul 20 23:10:05 crisora python[10516]: 23:10:05 [INFO] Starting Crisora server on port 8080...
+Jul 20 23:10:06 crisora python[10516]:  * Serving Flask app 'server'
+Jul 20 23:10:06 crisora python[10516]:  * Debug mode: off
+Jul 20 23:10:06 crisora python[10516]: 23:10:06 [INFO] WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+Jul 20 23:10:06 crisora python[10516]:  * Running on all addresses (0.0.0.0)
+Jul 20 23:10:06 crisora python[10516]:  * Running on http://127.0.0.1:8080
+Jul 20 23:10:06 crisora python[10516]:  * Running on http://10.138.0.2:8080
+Jul 20 23:10:06 crisora python[10516]: 23:10:06 [INFO] Press CTRL+C to quit
+Jul 20 23:10:06 crisora python[10516]: 23:10:06 [INFO] Daemon thread starting...
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] Searching: 'Plastic Surgeon' in 'Los Angeles' (limit=5)
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] No OSM tag for 'Plastic Surgeon', skipping Overpass
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] Overpass: found 0 results
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] No BizData category for 'Plastic Surgeon', skipping
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] BizData: found 0 results
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] DDG: found 0 results
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] After dedup: 0 unique businesses
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] Final: 0 businesses (0 with website, 0 with email)
+Jul 20 23:10:07 crisora python[10516]: 23:10:07 [INFO] Next run in 30s
+Jul 20 23:10:37 crisora python[10516]: 23:10:37 [INFO] Searching: 'Cosmetic Dentist' in 'Austin' (limit=5)
+Jul 20 23:10:37 crisora python[10516]: 23:10:37 [INFO] Overpass geocode (cache): Austin -> (30.099,-97.868,30.517,-97.56)
+Jul 20 23:10:37 crisora python[10516]: 23:10:37 [INFO] Overpass geocode: Austin -> (30.099,-97.868,30.517,-97.56)
+Jul 20 23:10:44 crisora python[10516]: 23:10:44 [ERROR] Overpass HTTP 504
+Jul 20 23:10:44 crisora python[10516]: 23:10:44 [INFO] Overpass: found 0 results
+Jul 20 23:10:46 crisora python[10516]: 23:10:46 [INFO] BizData found: 5 raw results
+Jul 20 23:10:46 crisora python[10516]: 23:10:46 [INFO] BizData parsed: 5 businesses
+Jul 20 23:10:46 crisora python[10516]: 23:10:46 [INFO] BizData: found 5 results
+Jul 20 23:10:49 crisora python[10516]: 23:10:49 [INFO] DDG: found 5 results
+Jul 20 23:10:49 crisora python[10516]: 23:10:49 [INFO] After dedup: 9 unique businesses
+Jul 20 23:10:50 crisora python[10516]: 23:10:50 [INFO]   Found website for Access Dental of E 7th: https://smyleee.com/clinics/access-dental-of-e-7th
+Jul 20 23:10:53 crisora python[10516]: 23:10:53 [INFO] Final: 5 businesses (5 with website, 4 with email)
+Jul 20 23:10:55 crisora python[10516]: 23:10:55 [INFO]   Website: 1 emails
+Jul 20 23:10:55 crisora python[10516]: 23:10:55 [INFO]   Paths: 0 emails
+Jul 20 23:10:59 crisora python[10516]: 23:10:59 [INFO]   crt.sh: 0 emails
+Jul 20 23:10:59 crisora python[10516]: 23:10:59 [INFO]   Permutation: 4 verified emails
+Jul 20 23:10:59 crisora python[10516]: 23:10:59 [INFO]   Best: admin@smyleee.com (confidence: 75%)
+Jul 20 23:10:59 crisora python[10516]: 23:10:59 [INFO] OSINT analyzing: smyleee.com
+Jul 20 23:11:01 crisora python[10516]: 23:11:01 [INFO]   Health: 93/100 | SSL: C | Tech: 5 | Vulns: 0 | Ports: 0
+Jul 20 23:11:01 crisora python[10516]: 23:11:01 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:11:01 crisora python[10516]: 23:11:01 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:11:01 crisora python[10516]: 23:11:01 [INFO]   Response: False
+Jul 20 23:11:03 crisora python[10516]: 23:11:03 [INFO] Loaded model from state (150 samples)
+Jul 20 23:11:04 crisora python[10516]: 23:11:04 [INFO]   Website: 0 emails
+Jul 20 23:11:06 crisora python[10516]: 23:11:06 [INFO]   Paths: 2 emails
+Jul 20 23:11:06 crisora python[10516]: 23:11:06 [INFO]   crt.sh: 0 emails
+Jul 20 23:11:06 crisora python[10516]: 23:11:06 [INFO]   Permutation: 9 verified emails
+Jul 20 23:11:06 crisora python[10516]: 23:11:06 [INFO]   Best: triverside@aloha-dental.com (confidence: 85%)
+Jul 20 23:11:06 crisora python[10516]: 23:11:06 [INFO] OSINT analyzing: aloha-dental.com
+Jul 20 23:11:08 crisora python[10516]: 23:11:08 [INFO]   Health: 90/100 | SSL: C | Tech: 9 | Vulns: 0 | Ports: 0
+Jul 20 23:11:08 crisora python[10516]: 23:11:08 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:11:08 crisora python[10516]: 23:11:08 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:11:08 crisora python[10516]: 23:11:08 [INFO]   Response: False
+Jul 20 23:11:09 crisora python[10516]: 23:11:09 [INFO] Loaded model from state (150 samples)
+Jul 20 23:11:10 crisora python[10516]: 23:11:10 [INFO]   Website: 1 emails
+Jul 20 23:11:12 crisora python[10516]: 23:11:12 [INFO]   Paths: 1 emails
+Jul 20 23:11:16 crisora python[10516]: 23:11:16 [INFO]   crt.sh: 0 emails
+Jul 20 23:11:17 crisora python[10516]: 23:11:17 [INFO]   Permutation: 10 verified emails
+Jul 20 23:11:17 crisora python[10516]: 23:11:17 [INFO]   Best: downtown@austincosmetic.com (confidence: 90%)
+Jul 20 23:11:17 crisora python[10516]: 23:11:17 [INFO] OSINT analyzing: austincosmetic.com
+Jul 20 23:11:18 crisora python[10516]: 23:11:18 [INFO]   Health: 78/100 | SSL: C | Tech: 0 | Vulns: 0 | Ports: 0
+Jul 20 23:11:18 crisora python[10516]: 23:11:18 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:11:18 crisora python[10516]: 23:11:18 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:11:18 crisora python[10516]: 23:11:18 [INFO]   Response: False
+Jul 20 23:11:19 crisora python[10516]: 23:11:19 [INFO] Loaded model from state (150 samples)
+Jul 20 23:11:20 crisora python[10516]: 23:11:20 [INFO]   Website: 1 emails
+Jul 20 23:11:22 crisora python[10516]: 23:11:22 [INFO]   Paths: 0 emails
+Jul 20 23:11:26 crisora python[10516]: 23:11:26 [INFO]   crt.sh: 0 emails
+Jul 20 23:11:26 crisora python[10516]: 23:11:26 [INFO]   Permutation: 10 verified emails
+Jul 20 23:11:26 crisora python[10516]: 23:11:26 [INFO]   Best: contact@smilecreationsatx.com (confidence: 75%)
+Jul 20 23:11:26 crisora python[10516]: 23:11:26 [INFO] OSINT analyzing: smilecreationsatx.com
+Jul 20 23:11:28 crisora python[10516]: 23:11:28 [INFO]   Health: 93/100 | SSL: C | Tech: 5 | Vulns: 0 | Ports: 0
+Jul 20 23:11:28 crisora python[10516]: 23:11:28 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:11:28 crisora python[10516]: 23:11:28 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:11:28 crisora python[10516]: 23:11:28 [INFO]   Response: False
+Jul 20 23:11:29 crisora python[10516]: 23:11:29 [INFO] Loaded model from state (150 samples)
+Jul 20 23:11:30 crisora python[10516]: 23:11:30 [INFO]   Website: 0 emails
+Jul 20 23:11:32 crisora python[10516]: 23:11:32 [INFO]   Paths: 0 emails
+Jul 20 23:11:36 crisora python[10516]: 23:11:36 [INFO]   crt.sh: 0 emails
+Jul 20 23:11:36 crisora python[10516]: 23:11:36 [INFO]   Permutation: 10 verified emails
+Jul 20 23:11:36 crisora python[10516]: 23:11:36 [INFO]   Best: taustin@thecosmeticdentistsofaustin.com (confidence: 75%)
+Jul 20 23:11:36 crisora python[10516]: 23:11:36 [INFO] OSINT analyzing: thecosmeticdentistsofaustin.com
+Jul 20 23:11:38 crisora python[10516]: 23:11:38 [INFO]   Health: 93/100 | SSL: C | Tech: 12 | Vulns: 0 | Ports: 0
+Jul 20 23:11:38 crisora python[10516]: 23:11:38 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:11:38 crisora python[10516]: 23:11:38 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:11:38 crisora python[10516]: 23:11:38 [INFO]   Response: False
+Jul 20 23:11:39 crisora python[10516]: 23:11:39 [INFO] Loaded model from state (150 samples)
+Jul 20 23:11:40 crisora python[10516]: 23:11:40 [INFO] Next run in 30s
+Jul 20 23:12:10 crisora python[10516]: 23:12:10 [INFO] Searching: 'Dental Implants' in 'Toronto' (limit=5)
+Jul 20 23:12:10 crisora python[10516]: 23:12:10 [INFO] Overpass geocode (cache): Toronto -> (43.581,-79.639,43.855,-79.116)
+Jul 20 23:12:10 crisora python[10516]: 23:12:10 [INFO] Overpass geocode: Toronto -> (43.581,-79.639,43.855,-79.116)
+Jul 20 23:12:12 crisora python[10516]: 23:12:12 [INFO] Overpass found: 10 raw results
+Jul 20 23:12:12 crisora python[10516]: 23:12:12 [INFO] Overpass parsed: 8 businesses
+Jul 20 23:12:12 crisora python[10516]: 23:12:12 [INFO] Overpass: found 8 results
+Jul 20 23:12:13 crisora python[10516]: 23:12:13 [INFO] BizData found: 5 raw results
+Jul 20 23:12:13 crisora python[10516]: 23:12:13 [INFO] BizData parsed: 5 businesses
+Jul 20 23:12:13 crisora python[10516]: 23:12:13 [INFO] BizData: found 5 results
+Jul 20 23:12:13 crisora python[10516]: 23:12:13 [INFO] DDG: found 0 results
+Jul 20 23:12:13 crisora python[10516]: 23:12:13 [INFO] After dedup: 12 unique businesses
+Jul 20 23:12:14 crisora python[10516]: 23:12:14 [INFO]   Found website for Dr. Monica Katyal: https://drkatyal.com
+Jul 20 23:12:14 crisora python[10516]: 23:12:14 [INFO]   Found website for Dr. Norman Mack: https://mapcarta.com/N372488710
+Jul 20 23:12:17 crisora python[10516]: 23:12:17 [INFO] Final: 5 businesses (5 with website, 3 with email)
+Jul 20 23:12:17 crisora python[10516]: 23:12:17 [INFO]   Website: 0 emails
+Jul 20 23:12:17 crisora python[10516]: 23:12:17 [INFO]   Paths: 0 emails
+Jul 20 23:12:21 crisora python[10516]: 23:12:21 [INFO]   crt.sh: 0 emails
+Jul 20 23:12:21 crisora python[10516]: 23:12:21 [INFO]   Permutation: 10 verified emails
+Jul 20 23:12:21 crisora python[10516]: 23:12:21 [INFO]   Best: dr.dentistry@drkatyal.com (confidence: 50%)
+Jul 20 23:12:21 crisora python[10516]: 23:12:21 [INFO] OSINT analyzing: drkatyal.com
+Jul 20 23:12:22 crisora python[10516]: 23:12:22 [INFO]   Health: 70/100 | SSL: C | Tech: 0 | Vulns: 0 | Ports: 0
+Jul 20 23:12:23 crisora python[10516]: 23:12:23 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:12:23 crisora python[10516]: 23:12:23 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:12:23 crisora python[10516]: 23:12:23 [INFO]   Response: False
+Jul 20 23:12:24 crisora python[10516]: 23:12:24 [INFO] Loaded model from state (150 samples)
+Jul 20 23:12:25 crisora python[10516]: 23:12:25 [INFO]   Website: 1 emails
+Jul 20 23:12:31 crisora python[10516]: 23:12:31 [INFO]   Paths: 1 emails
+Jul 20 23:12:32 crisora python[10516]: 23:12:32 [INFO]   crt.sh: 0 emails
+Jul 20 23:12:32 crisora python[10516]: 23:12:32 [INFO]   Permutation: 9 verified emails
+Jul 20 23:12:32 crisora python[10516]: 23:12:32 [INFO]   Best: Sdentistry@smyldentistry.ca (confidence: 75%)
+Jul 20 23:12:32 crisora python[10516]: 23:12:32 [INFO] OSINT analyzing: smyldentistry.ca
+Jul 20 23:12:34 crisora python[10516]: 23:12:34 [INFO]   Health: 93/100 | SSL: C | Tech: 7 | Vulns: 0 | Ports: 0
+Jul 20 23:12:34 crisora python[10516]: 23:12:34 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:12:34 crisora python[10516]: 23:12:34 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:12:34 crisora python[10516]: 23:12:34 [INFO]   Response: False
+Jul 20 23:12:35 crisora python[10516]: 23:12:35 [INFO] Loaded model from state (150 samples)
+Jul 20 23:12:38 crisora python[10516]: 23:12:38 [INFO]   Website: 1 emails
+Jul 20 23:12:41 crisora python[10516]: 23:12:41 [INFO]   Paths: 1 emails
+Jul 20 23:12:41 crisora python[10516]: 23:12:41 [INFO]   crt.sh: 0 emails
+Jul 20 23:12:41 crisora python[10516]: 23:12:41 [INFO]   Permutation: 10 verified emails
+Jul 20 23:12:42 crisora python[10516]: 23:12:42 [INFO]   Best: soho.dentist@sohodental.ca (confidence: 75%)
+Jul 20 23:12:42 crisora python[10516]: 23:12:42 [INFO] OSINT analyzing: sohodental.ca
+Jul 20 23:12:44 crisora python[10516]: 23:12:44 [INFO]   Health: 93/100 | SSL: C | Tech: 13 | Vulns: 0 | Ports: 0
+Jul 20 23:12:44 crisora python[10516]: 23:12:44 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:12:44 crisora python[10516]: 23:12:44 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:12:44 crisora python[10516]: 23:12:44 [INFO]   Response: False
+Jul 20 23:12:45 crisora python[10516]: 23:12:45 [INFO] Loaded model from state (150 samples)
+Jul 20 23:12:48 crisora python[10516]: 23:12:48 [INFO]   Website: 0 emails
+Jul 20 23:12:54 crisora python[10516]: 23:12:54 [INFO]   Paths: 0 emails
+Jul 20 23:12:54 crisora python[10516]: 23:12:54 [INFO]   crt.sh: 0 emails
+Jul 20 23:12:54 crisora python[10516]: 23:12:54 [INFO]   Permutation: 9 verified emails
+Jul 20 23:12:54 crisora python[10516]: 23:12:54 [INFO]   Best: adental@altimadental.com (confidence: 75%)
+Jul 20 23:12:54 crisora python[10516]: 23:12:54 [INFO] OSINT analyzing: altimadental.com
+Jul 20 23:12:59 crisora python[10516]: 23:12:59 [INFO]   Health: 88/100 | SSL: C | Tech: 14 | Vulns: 0 | Ports: 0
+Jul 20 23:12:59 crisora python[10516]: 23:12:59 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:12:59 crisora python[10516]: 23:12:59 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:12:59 crisora python[10516]: 23:12:59 [INFO]   Response: False
+Jul 20 23:13:00 crisora python[10516]: 23:13:00 [INFO] Loaded model from state (150 samples)
+Jul 20 23:13:01 crisora python[10516]: 23:13:01 [INFO]   Website: 0 emails
+Jul 20 23:13:01 crisora python[10516]: 23:13:01 [INFO]   Paths: 0 emails
+Jul 20 23:13:01 crisora python[10516]: 23:13:01 [INFO]   crt.sh: 0 emails
+Jul 20 23:13:01 crisora python[10516]: 23:13:01 [INFO]   Permutation: 10 verified emails
+Jul 20 23:13:01 crisora python[10516]: 23:13:01 [INFO]   Best: dr.m@mapcarta.com (confidence: 75%)
+Jul 20 23:13:01 crisora python[10516]: 23:13:01 [INFO] OSINT analyzing: mapcarta.com
+Jul 20 23:13:02 crisora python[10516]: 23:13:02 [INFO]   Health: 83/100 | SSL: C | Tech: 2 | Vulns: 0 | Ports: 0
+Jul 20 23:13:02 crisora python[10516]: 23:13:02 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:13:02 crisora python[10516]: 23:13:02 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:13:03 crisora python[10516]: 23:13:03 [INFO]   Response: False
+Jul 20 23:13:03 crisora python[10516]: 23:13:03 [INFO] Loaded model from state (150 samples)
+Jul 20 23:13:04 crisora python[10516]: 23:13:04 [INFO] Next run in 30s
+Jul 20 23:13:34 crisora python[10516]: 23:13:34 [INFO] Searching: 'Solar Panel Installer' in 'Phoenix' (limit=5)
+Jul 20 23:13:34 crisora python[10516]: 23:13:34 [INFO] Overpass geocode (cache): Phoenix -> (33.29,-112.178,33.678,-111.934)
+Jul 20 23:13:34 crisora python[10516]: 23:13:34 [INFO] Overpass geocode: Phoenix -> (33.29,-112.178,33.678,-111.934)
+Jul 20 23:13:36 crisora python[10516]: 23:13:36 [INFO] Overpass found: 0 raw results
+Jul 20 23:13:36 crisora python[10516]: 23:13:36 [INFO] Overpass parsed: 0 businesses
+Jul 20 23:13:36 crisora python[10516]: 23:13:36 [INFO] Overpass: found 0 results
+Jul 20 23:13:39 crisora python[10516]: 23:13:39 [INFO] BizData found: 5 raw results
+Jul 20 23:13:39 crisora python[10516]: 23:13:39 [INFO] BizData parsed: 5 businesses
+Jul 20 23:13:39 crisora python[10516]: 23:13:39 [INFO] BizData: found 5 results
+Jul 20 23:13:39 crisora python[10516]: 23:13:39 [INFO] DDG: found 0 results
+Jul 20 23:13:39 crisora python[10516]: 23:13:39 [INFO] After dedup: 5 unique businesses
+Jul 20 23:13:40 crisora python[10516]: 23:13:40 [INFO] Final: 5 businesses (1 with website, 0 with email)
+Jul 20 23:13:41 crisora python[10516]: 23:13:41 [INFO]   Website: 0 emails
+Jul 20 23:13:42 crisora python[10516]: 23:13:42 [INFO]   Paths: 0 emails
+Jul 20 23:13:42 crisora python[10516]: 23:13:42 [INFO]   crt.sh: 0 emails
+Jul 20 23:13:43 crisora python[10516]: 23:13:43 [INFO]   Permutation: 10 verified emails
+Jul 20 23:13:43 crisora python[10516]: 23:13:43 [INFO]   Best: contact@aamcophoenixcentral.com (confidence: 75%)
+Jul 20 23:13:43 crisora python[10516]: 23:13:43 [INFO] OSINT analyzing: aamcophoenixcentral.com
+Jul 20 23:13:45 crisora python[10516]: 23:13:45 [INFO]   Health: 90/100 | SSL: C | Tech: 10 | Vulns: 0 | Ports: 0
+Jul 20 23:13:45 crisora python[10516]: 23:13:45 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:13:45 crisora python[10516]: 23:13:45 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:13:45 crisora python[10516]: 23:13:45 [INFO]   Response: False
+Jul 20 23:13:46 crisora python[10516]: 23:13:46 [INFO] Loaded model from state (150 samples)
+Jul 20 23:13:47 crisora python[10516]: 23:13:47 [INFO] Next run in 30s
+Jul 20 23:14:17 crisora python[10516]: 23:14:17 [INFO] Searching: 'Solar Panel Installer' in 'San Antonio' (limit=5)
+Jul 20 23:14:17 crisora python[10516]: 23:14:17 [INFO] Overpass geocode (cache): San Antonio -> (29.301,-98.696,29.602,-98.336)
+Jul 20 23:14:17 crisora python[10516]: 23:14:17 [INFO] Overpass geocode: San Antonio -> (29.301,-98.696,29.602,-98.336)
+Jul 20 23:14:20 crisora python[10516]: 23:14:20 [INFO] Overpass found: 0 raw results
+Jul 20 23:14:20 crisora python[10516]: 23:14:20 [INFO] Overpass parsed: 0 businesses
+Jul 20 23:14:20 crisora python[10516]: 23:14:20 [INFO] Overpass: found 0 results
+Jul 20 23:14:30 crisora python[10516]: 23:14:30 [INFO] BizData found: 5 raw results
+Jul 20 23:14:30 crisora python[10516]: 23:14:30 [INFO] BizData parsed: 5 businesses
+Jul 20 23:14:30 crisora python[10516]: 23:14:30 [INFO] BizData: found 5 results
+Jul 20 23:14:30 crisora python[10516]: 23:14:30 [INFO] DDG: found 0 results
+Jul 20 23:14:30 crisora python[10516]: 23:14:30 [INFO] After dedup: 5 unique businesses
+Jul 20 23:14:30 crisora python[10516]: 23:14:30 [INFO]   Found website for Alamo Classic Ponies: https://local.us-info.com/USTX100257484-2106478264
+Jul 20 23:14:31 crisora python[10516]: 23:14:31 [INFO]   Found website for Alanis Body Repair: https://www.sanantonio.com/places/alanis-body-repa
+Jul 20 23:14:31 crisora python[10516]: 23:14:31 [INFO] Final: 5 businesses (2 with website, 0 with email)
+Jul 20 23:14:32 crisora python[10516]: 23:14:32 [INFO]   Website: 0 emails
+Jul 20 23:14:33 crisora python[10516]: 23:14:33 [INFO]   Paths: 0 emails
+Jul 20 23:14:37 crisora python[10516]: 23:14:37 [INFO]   crt.sh: 0 emails
+Jul 20 23:14:37 crisora python[10516]: 23:14:37 [INFO]   Permutation: 10 verified emails
+Jul 20 23:14:37 crisora python[10516]: 23:14:37 [INFO]   Best: alamoponies@local.us-info.com (confidence: 50%)
+Jul 20 23:14:37 crisora python[10516]: 23:14:37 [INFO] OSINT analyzing: local.us-info.com
+Jul 20 23:14:39 crisora python[10516]: 23:14:39 [INFO]   Health: 75/100 | SSL: C | Tech: 2 | Vulns: 0 | Ports: 0
+Jul 20 23:14:39 crisora python[10516]: 23:14:39 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:14:39 crisora python[10516]: 23:14:39 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:14:39 crisora python[10516]: 23:14:39 [INFO]   Response: False
+Jul 20 23:14:40 crisora python[10516]: 23:14:40 [INFO] Loaded model from state (150 samples)
+Jul 20 23:14:41 crisora python[10516]: 23:14:41 [INFO]   Website: 0 emails
+Jul 20 23:14:42 crisora python[10516]: 23:14:42 [INFO]   Paths: 0 emails
+Jul 20 23:14:46 crisora python[10516]: 23:14:46 [INFO]   crt.sh: 0 emails
+Jul 20 23:14:46 crisora python[10516]: 23:14:46 [INFO]   Permutation: 10 verified emails
+Jul 20 23:14:46 crisora python[10516]: 23:14:46 [INFO]   Best: contact@sanantonio.com (confidence: 75%)
+Jul 20 23:14:46 crisora python[10516]: 23:14:46 [INFO] OSINT analyzing: sanantonio.com
+Jul 20 23:14:48 crisora python[10516]: 23:14:48 [INFO]   Health: 75/100 | SSL: C | Tech: 0 | Vulns: 0 | Ports: 0
+Jul 20 23:14:48 crisora python[10516]: 23:14:48 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:14:48 crisora python[10516]: 23:14:48 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:14:48 crisora python[10516]: 23:14:48 [INFO]   Response: False
+Jul 20 23:14:49 crisora python[10516]: 23:14:49 [INFO] Loaded model from state (150 samples)
+Jul 20 23:14:50 crisora python[10516]: 23:14:50 [INFO] Next run in 30s
+Jul 20 23:15:20 crisora python[10516]: 23:15:20 [INFO] Searching: 'HVAC Contractor' in 'Houston' (limit=5)
+Jul 20 23:15:20 crisora python[10516]: 23:15:20 [INFO] Overpass geocode (cache): Houston -> (29.524,-95.648,29.958,-95.01)
+Jul 20 23:15:20 crisora python[10516]: 23:15:20 [INFO] Overpass geocode: Houston -> (29.524,-95.648,29.958,-95.01)
+Jul 20 23:15:21 crisora python[10516]: 23:15:21 [INFO] Overpass found: 0 raw results
+Jul 20 23:15:21 crisora python[10516]: 23:15:21 [INFO] Overpass parsed: 0 businesses
+Jul 20 23:15:21 crisora python[10516]: 23:15:21 [INFO] Overpass: found 0 results
+Jul 20 23:15:24 crisora python[10516]: 23:15:24 [INFO] BizData found: 5 raw results
+Jul 20 23:15:24 crisora python[10516]: 23:15:24 [INFO] BizData parsed: 5 businesses
+Jul 20 23:15:24 crisora python[10516]: 23:15:24 [INFO] BizData: found 5 results
+Jul 20 23:15:24 crisora python[10516]: 23:15:24 [INFO] DDG: found 0 results
+Jul 20 23:15:24 crisora python[10516]: 23:15:24 [INFO] After dedup: 4 unique businesses
+Jul 20 23:15:25 crisora python[10516]: 23:15:25 [INFO] Final: 4 businesses (1 with website, 1 with email)
+Jul 20 23:15:26 crisora python[10516]: 23:15:26 [INFO]   Website: 1 emails
+Jul 20 23:15:26 crisora python[10516]: 23:15:26 [INFO]   Paths: 1 emails
+Jul 20 23:15:30 crisora python[10516]: 23:15:30 [INFO]   crt.sh: 0 emails
+Jul 20 23:15:31 crisora python[10516]: 23:15:31 [INFO]   Permutation: 10 verified emails
+Jul 20 23:15:31 crisora python[10516]: 23:15:31 [INFO]   Best: mgmt@atlasautoglass.com (confidence: 90%)
+Jul 20 23:15:31 crisora python[10516]: 23:15:31 [INFO] OSINT analyzing: atlasautoglass.com
+Jul 20 23:15:32 crisora python[10516]: 23:15:32 [INFO]   Health: 90/100 | SSL: C | Tech: 6 | Vulns: 0 | Ports: 0
+Jul 20 23:15:32 crisora python[10516]: 23:15:32 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:15:33 crisora python[10516]: 23:15:33 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:15:33 crisora python[10516]: 23:15:33 [INFO]   Response: False
+Jul 20 23:15:34 crisora python[10516]: 23:15:34 [INFO] Loaded model from state (150 samples)
+Jul 20 23:15:34 crisora python[10516]: 23:15:34 [INFO] Next run in 30s
+Jul 20 23:16:04 crisora python[10516]: 23:16:04 [INFO] Searching: 'HVAC Contractor' in 'Dallas' (limit=5)
+Jul 20 23:16:04 crisora python[10516]: 23:16:04 [INFO] Overpass geocode (cache): Dallas -> (32.62,-96.937,32.989,-96.645)
+Jul 20 23:16:04 crisora python[10516]: 23:16:04 [INFO] Overpass geocode: Dallas -> (32.62,-96.937,32.989,-96.645)
+Jul 20 23:16:05 crisora python[10516]: 23:16:05 [INFO] Overpass found: 0 raw results
+Jul 20 23:16:05 crisora python[10516]: 23:16:05 [INFO] Overpass parsed: 0 businesses
+Jul 20 23:16:05 crisora python[10516]: 23:16:05 [INFO] Overpass: found 0 results
+Jul 20 23:16:07 crisora python[10516]: 23:16:07 [INFO] BizData found: 5 raw results
+Jul 20 23:16:07 crisora python[10516]: 23:16:07 [INFO] BizData parsed: 5 businesses
+Jul 20 23:16:07 crisora python[10516]: 23:16:07 [INFO] BizData: found 5 results
+Jul 20 23:16:07 crisora python[10516]: 23:16:07 [INFO] DDG: found 0 results
+Jul 20 23:16:07 crisora python[10516]: 23:16:07 [INFO] After dedup: 5 unique businesses
+Jul 20 23:16:08 crisora python[10516]: 23:16:08 [INFO]   Found website for Brazilian Auto Center: https://411.info/business/Brazilian-Auto-Center-Da
+Jul 20 23:16:08 crisora python[10516]: 23:16:08 [INFO]   Found website for Columbia Auto Repair: https://www.columbiaautorepairstl.com/about-us
+Jul 20 23:16:09 crisora python[10516]: 23:16:09 [INFO] Final: 5 businesses (4 with website, 2 with email)
+Jul 20 23:16:09 crisora python[10516]: 23:16:09 [INFO]   Website: 1 emails
+Jul 20 23:16:14 crisora python[10516]: 23:16:14 [INFO]   Paths: 1 emails
+Jul 20 23:16:18 crisora python[10516]: 23:16:18 [INFO]   crt.sh: 0 emails
+Jul 20 23:16:18 crisora python[10516]: 23:16:18 [INFO]   Permutation: 9 verified emails
+Jul 20 23:16:18 crisora python[10516]: 23:16:18 [INFO]   Best: admin@collisionmatrix.com (confidence: 75%)
+Jul 20 23:16:18 crisora python[10516]: 23:16:18 [INFO] OSINT analyzing: collisionmatrix.com
+Jul 20 23:16:19 crisora python[10516]: 23:16:19 [INFO]   Health: 93/100 | SSL: C | Tech: 12 | Vulns: 0 | Ports: 0
+Jul 20 23:16:19 crisora python[10516]: 23:16:19 [INFO]   Maps: rating=0, reviews=0
+Jul 20 23:16:19 crisora python[10516]: 23:16:19 [INFO]   Reviews: sentiment=neutral, complaints=0
+Jul 20 23:16:19 crisora python[10516]: 23:16:19 [INFO]   Response: False
+Jul 20 23:16:20 crisora python[10516]: 23:16:20 [INFO] Loaded model from state (150 samples)
+Jul 20 23:16:21 crisora python[10516]: 23:16:21 [INFO]   Website: 0 emails
+Jul 20 23:16:23 crisora python[10516]: 23:16:23 [INFO] 127.0.0.1 - - [20/Jul/2026 23:16:23] "GET /status HTTP/1.1" 200 -
