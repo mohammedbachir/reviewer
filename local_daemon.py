@@ -674,7 +674,7 @@ class CrisoraDaemon:
                         "business_id": biz_id,
                         "rating": biz.get("rating"),
                         "review_count": biz.get("review_count"),
-                        "health_score": biz.get("health_score"),
+            "health_score": int(biz.get("health_score", 50)),
                         "sentiment_score": 1.0 if biz.get("sentiment") == "positive" else -1.0 if biz.get("sentiment") == "negative" else 0.0,
                     },
                     headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},

@@ -1691,6 +1691,16 @@ class CrisisConsistency(BaseModel):
     requires_review: bool = False
     review_flags: list = []
 
+    @field_validator("crisis_probability", "health_score")
+    @classmethod
+    def ensure_float(cls, v):
+        if v is None:
+            return 50.0
+        try:
+            return float(v)
+        except (ValueError, TypeError):
+            return 50.0
+
     @field_validator("crisis_probability")
     @classmethod
     def clamp_crisis(cls, v):
@@ -1777,9 +1787,9 @@ def validate_consistency(biz: dict) -> dict:
                 archive = {}
 
         validator = CrisisConsistency(
-            crisis_probability=biz.get("crisis_probability", 0),
-            health_score=biz.get("health_score", 50),
-            ssl_grade=biz.get("ssl_grade", "F"),
+            crisis_probability=biz.get("crisis_probability") or 0,
+            health_score=biz.get("health_score") or 50,
+            ssl_grade=biz.get("ssl_grade") or "F",
             firebase_open=firebase.get("firebase_open", False),
             firebase_detected=firebase.get("firebase_detected", False),
             api_key_count=api_keys.get("api_key_count", 0),
