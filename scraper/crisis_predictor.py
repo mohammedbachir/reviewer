@@ -531,13 +531,13 @@ class CrisisModel:
 
         api_keys = features.get("api_keys_leaked", 0)
         if api_keys > 50:
-            score += 0.40
+            score += 0.35
         elif api_keys > 20:
-            score += 0.30
-        elif api_keys > 5:
-            score += 0.20
+            score += 0.25
+        elif api_keys > 10:
+            score += 0.15
         elif api_keys > 0:
-            score += 0.10
+            score += 0.05
 
         archive_sensitive = features.get("archive_sensitive", 0)
         archive_admin = features.get("archive_admin_panels", 0)
@@ -575,8 +575,8 @@ class CrisisModel:
             score = max(score, 0.70)
         elif api_keys > 20:
             score = max(score, 0.55)
-        elif api_keys > 5:
-            score = max(score, 0.45)
+        elif api_keys > 10:
+            score = max(score, 0.40)
         if archive_sensitive > 10 or archive_admin > 5:
             score = max(score, 0.50)
 
@@ -813,7 +813,7 @@ def generate_recommendations(features: Dict, prediction: Dict, cvss: Dict, neigh
             "message": f"{api_keys} API keys exposed. Rotate credentials and move secrets to environment variables.",
             "impact": "Prevents unauthorized API access and service abuse",
         })
-    elif api_keys > 5:
+    elif api_keys > 10:
         recs.append({
             "priority": "MEDIUM",
             "category": "API Key Exposure",
@@ -894,8 +894,8 @@ def _enforce_crisis_floors(biz, prob):
         prob = max(prob, 0.70)
     elif ak_count > 20:
         prob = max(prob, 0.55)
-    elif ak_count > 5:
-        prob = max(prob, 0.45)
+    elif ak_count > 10:
+        prob = max(prob, 0.40)
 
     archive = biz.get("archive") or {}
     if isinstance(archive, str):

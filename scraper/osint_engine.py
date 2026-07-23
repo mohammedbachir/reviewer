@@ -1725,9 +1725,9 @@ class CrisisConsistency(BaseModel):
         elif self.api_key_count > 20 and crisis < 0.55:
             crisis = max(crisis, 0.55)
             flags.append("API_KEYS>20: crisis raised to 55%")
-        elif self.api_key_count > 5 and crisis < 0.45:
-            crisis = max(crisis, 0.45)
-            flags.append("API_KEYS>5: crisis raised to 45%")
+        elif self.api_key_count > 10 and crisis < 0.40:
+            crisis = max(crisis, 0.40)
+            flags.append("API_KEYS>10: crisis raised to 40%")
 
         if self.breach_count > 0 and crisis < 0.70:
             crisis = max(crisis, 0.70)
@@ -1749,9 +1749,16 @@ class CrisisConsistency(BaseModel):
             self.requires_review = True
             flags.append(f"CRTSH>{self.crtsh_subdomain_count}: suspicious subdomain count")
 
-        if self.crisis_probability > 0.25 and self.health_score > 80:
+        OLD_THRESHOLD = 0.25
+        NEW_THRESHOLD = 0.52
+        requires_review_old = crisis > OLD_THRESHOLD and self.health_score > 80
+        requires_review_new = crisis > NEW_THRESHOLD and self.health_score > 80
+
+        if requires_review_new:
             self.requires_review = True
-            flags.append("CRISIS>25% + HEALTH>80: possible contradiction")
+            flags.append(f"CRISIS>{NEW_THRESHOLD*100:.0f}% + HEALTH>80: contradiction")
+        elif requires_review_old and not requires_review_new:
+            flags.append(f"A/B_WOULD_DROP: crisis={crisis*100:.0f}% below {NEW_THRESHOLD*100:.0f}%")
 
         self.crisis_probability = crisis
         self.review_flags = flags
