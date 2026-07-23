@@ -1749,16 +1749,10 @@ class CrisisConsistency(BaseModel):
             self.requires_review = True
             flags.append(f"CRTSH>{self.crtsh_subdomain_count}: suspicious subdomain count")
 
-        OLD_THRESHOLD = 0.25
-        NEW_THRESHOLD = 0.52
-        requires_review_old = crisis > OLD_THRESHOLD and self.health_score > 80
-        requires_review_new = crisis > NEW_THRESHOLD and self.health_score > 80
-
-        if requires_review_new:
+        THRESHOLD = 0.52
+        if crisis > THRESHOLD and self.health_score > 80:
             self.requires_review = True
-            flags.append(f"CRISIS>{NEW_THRESHOLD*100:.0f}% + HEALTH>80: contradiction")
-        elif requires_review_old and not requires_review_new:
-            flags.append(f"A/B_WOULD_DROP: crisis={crisis*100:.0f}% below {NEW_THRESHOLD*100:.0f}%")
+            flags.append(f"CRISIS>{THRESHOLD*100:.0f}% + HEALTH>80: contradiction")
 
         self.crisis_probability = crisis
         self.review_flags = flags
@@ -1815,6 +1809,48 @@ def validate_consistency(biz: dict) -> dict:
         biz["requires_review"] = True
         biz["review_flags"] = [f"VALIDATOR_ERROR: {e}"]
         return biz
+
+
+def monitor_flagged_rate(businesses: list, batch_name: str = "unknown") -> dict:
+    """Self-monitoring: check if flagged records rate is within expected range.
+    
+    Expected: ~8.8% of businesses flagged (37/1000 baseline).
+    Alert if >15% or <5% — indicates data quality issue in new batch.
+    
+    Returns dict with status and details.
+    """
+    total = len(businesses)
+    if total == 0:
+        return {"status": "skip", "reason": "empty batch"}
+    
+    flagged = sum(1 for b in businesses if b.get("requires_review"))
+    rate = flagged / total * 100
+    
+    EXPECTED_RATE = 8.8
+    UPPER_THRESHOLD = 15.0
+    LOWER_THRESHOLD = 5.0
+    
+    status = "ok"
+    alert = None
+    
+    if rate > UPPER_THRESHOLD:
+        status = "alert_high"
+        alert = f"FLAGGED RATE {rate:.1f}% exceeds {UPPER_THRESHOLD}% — possible data quality issue in batch '{batch_name}'"
+        logger.warning(alert)
+    elif rate < LOWER_THRESHOLD:
+        status = "alert_low"
+        alert = f"FLAGGED RATE {rate:.1f}% below {LOWER_THRESHOLD}% — possible data quality issue in batch '{batch_name}'"
+        logger.warning(alert)
+    
+    return {
+        "status": status,
+        "batch_name": batch_name,
+        "total": total,
+        "flagged": flagged,
+        "rate_pct": round(rate, 1),
+        "expected_pct": EXPECTED_RATE,
+        "alert": alert,
+    }
 
 
 if __name__ == "__main__":

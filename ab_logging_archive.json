@@ -1,0 +1,529 @@
+{
+  "archived_at": "2026-07-23",
+  "reason": "A/B logging complete, activating final threshold 52%",
+  "total_flagged": 246,
+  "crisis_52_count": 37,
+  "ab_would_drop_count": 52,
+  "ab_would_drop_records": [
+    {
+      "id": 4088,
+      "name": "Adriaauto",
+      "city": "Vancouver",
+      "crisis_probability": 0.5,
+      "health_score": 90,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 4
+    },
+    {
+      "id": 4117,
+      "name": "Hard Knox Gym",
+      "city": "Montreal",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 3800,
+      "name": "Theroofdoctorlv",
+      "city": "Las Vegas",
+      "crisis_probability": 0.4,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 11
+    },
+    {
+      "id": 628,
+      "name": "Adams Air Conditioning",
+      "city": "Houston",
+      "crisis_probability": 0.5,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 13
+    },
+    {
+      "id": 2826,
+      "name": "Locksmith Houston Heights",
+      "city": "Houston",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 12
+    },
+    {
+      "id": 2591,
+      "name": "Allveesplumbing",
+      "city": "Phoenix",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 3
+    },
+    {
+      "id": 2595,
+      "name": "Integrity Repipe",
+      "city": "San Diego",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 3076,
+      "name": "Biteabitnashville",
+      "city": "Nashville",
+      "crisis_probability": 0.35,
+      "health_score": 90,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 6
+    },
+    {
+      "id": 3977,
+      "name": "The Nashville Photographer",
+      "city": "Nashville",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 5
+    },
+    {
+      "id": 2934,
+      "name": "Phoenix Dog/Cat/Bird Hospital",
+      "city": "Phoenix",
+      "crisis_probability": 0.5,
+      "health_score": 83,
+      "ssl_grade": "B",
+      "breach_count": 0,
+      "api_key_count": 7
+    },
+    {
+      "id": 3996,
+      "name": "'s Best Wedding, Engagement, Portrait, Headshot, Fitness & Lifestyle Photographer",
+      "city": "San Diego",
+      "crisis_probability": 0.4,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 15
+    },
+    {
+      "id": 2642,
+      "name": "Pro-Tech Transmissions - 3-Years or 36,000 Miles - Best Transmission Repair Warranty in Phoenix,",
+      "city": "Phoenix",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 742,
+      "name": "KC Dental",
+      "city": "Austin",
+      "crisis_probability": 0.4,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 17
+    },
+    {
+      "id": 997,
+      "name": "Mericasolarpanelssanantoniotx",
+      "city": "San Antonio",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 1125,
+      "name": "CGS Law Hub",
+      "city": "Chicago",
+      "crisis_probability": 0.35,
+      "health_score": 83,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 1
+    },
+    {
+      "id": 2720,
+      "name": "Mel's Drive-in",
+      "city": "San Francisco",
+      "crisis_probability": 0.4,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 19
+    },
+    {
+      "id": 3935,
+      "name": "Mannplumbingsandiego",
+      "city": "San Diego",
+      "crisis_probability": 0.5,
+      "health_score": 83,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 3476,
+      "name": "Bella Family Dental",
+      "city": "Dallas",
+      "crisis_probability": 0.5,
+      "health_score": 85,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 4034,
+      "name": "Make Brake Repairs a Priority",
+      "city": "Dallas",
+      "crisis_probability": 0.5,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 2685,
+      "name": "Coast Cycle",
+      "city": "Dallas",
+      "crisis_probability": 0.5,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 13
+    },
+    {
+      "id": 2707,
+      "name": "Twin Anchors Restaurant & Tavern",
+      "city": "Chicago",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 4
+    },
+    {
+      "id": 2729,
+      "name": "Rifkin Raanan Beverly Hills Cosmetic Dentistry",
+      "city": "Los Angeles",
+      "crisis_probability": 0.4,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 12
+    },
+    {
+      "id": 4503,
+      "name": "Blowoutsandcompany",
+      "city": "Dallas",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 2600,
+      "name": "Beckettelectrical",
+      "city": "Austin",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 2
+    },
+    {
+      "id": 2702,
+      "name": "505Lafogata",
+      "city": "Los Angeles",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 5
+    },
+    {
+      "id": 3219,
+      "name": "Thunderbird Pools - Luxury Pool Builders in Phoenix,",
+      "city": "Phoenix",
+      "crisis_probability": 0.4,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 20
+    },
+    {
+      "id": 3748,
+      "name": "Absolute Dental",
+      "city": "Las Vegas",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 1
+    },
+    {
+      "id": 3782,
+      "name": "Gutterempirellc",
+      "city": "Portland",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 2608,
+      "name": "JM Electric",
+      "city": "Denver",
+      "crisis_probability": 0.4,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 15
+    },
+    {
+      "id": 3143,
+      "name": "Maternity, Newborn, and Brand Photographer - San Diego Newborn, family and Brand Photography",
+      "city": "San Diego",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 4054,
+      "name": "Adriaauto",
+      "city": "Vancouver",
+      "crisis_probability": 0.5,
+      "health_score": 90,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 4
+    },
+    {
+      "id": 394,
+      "name": "Westerncanadianfurnace",
+      "city": "Calgary",
+      "crisis_probability": 0.45,
+      "health_score": 85,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 6
+    },
+    {
+      "id": 3985,
+      "name": "Christian Purdie Photography",
+      "city": "Las Vegas",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 2861,
+      "name": "Brandlin And Associates",
+      "city": "Los Angeles",
+      "crisis_probability": 0.5,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 3121,
+      "name": "Nevada Spine and Disc",
+      "city": "Las Vegas",
+      "crisis_probability": 0.5,
+      "health_score": 85,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 3168,
+      "name": "Ross Morrison Electrical",
+      "city": "Vancouver",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 4411,
+      "name": "Topvet",
+      "city": "Miami",
+      "crisis_probability": 0.5,
+      "health_score": 83,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 2953,
+      "name": "Advanced Dental Arts NW",
+      "city": "Portland",
+      "crisis_probability": 0.5,
+      "health_score": 83,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 5
+    },
+    {
+      "id": 2577,
+      "name": "Nulegal",
+      "city": "Los Angeles",
+      "crisis_probability": 0.5,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 4
+    },
+    {
+      "id": 2959,
+      "name": "Nations Dental Studio",
+      "city": "Nashville",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 2682,
+      "name": "TITLE Boxing Club",
+      "city": "Chicago",
+      "crisis_probability": 0.5,
+      "health_score": 83,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 2
+    },
+    {
+      "id": 2688,
+      "name": "Bodyrok",
+      "city": "Atlanta",
+      "crisis_probability": 0.4,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 13
+    },
+    {
+      "id": 4258,
+      "name": "Victory Houston",
+      "city": "Houston",
+      "crisis_probability": 0.45,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 10
+    },
+    {
+      "id": 4450,
+      "name": "Brasserie 701",
+      "city": "Montreal",
+      "crisis_probability": 0.45,
+      "health_score": 95,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 8
+    },
+    {
+      "id": 4508,
+      "name": "Salonred",
+      "city": "Atlanta",
+      "crisis_probability": 0.35,
+      "health_score": 83,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 725,
+      "name": "ARAC - Roof It Forward",
+      "city": "Tampa",
+      "crisis_probability": 0.4,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 11
+    },
+    {
+      "id": 2611,
+      "name": "Extremehandyman",
+      "city": "Seattle",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    },
+    {
+      "id": 1562,
+      "name": "Connexy",
+      "city": "Scottsdale",
+      "crisis_probability": 0.35,
+      "health_score": 88,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 5
+    },
+    {
+      "id": 2740,
+      "name": "Arizona Biltmore Dentistry",
+      "city": "Phoenix",
+      "crisis_probability": 0.4,
+      "health_score": 90,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 13
+    },
+    {
+      "id": 2749,
+      "name": "Comfort Dental",
+      "city": "Atlanta",
+      "crisis_probability": 0.5,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 3
+    },
+    {
+      "id": 4188,
+      "name": "Atlas Auto Glass",
+      "city": "Houston",
+      "crisis_probability": 0.45,
+      "health_score": 90,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 6
+    },
+    {
+      "id": 3385,
+      "name": "Auto Repair San Antonio",
+      "city": "San Antonio",
+      "crisis_probability": 0.35,
+      "health_score": 93,
+      "ssl_grade": "C",
+      "breach_count": 0,
+      "api_key_count": 0
+    }
+  ]
+}

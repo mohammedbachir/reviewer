@@ -995,4 +995,14 @@ def predict_batch(
         result["business_name"] = biz.get("name", "")
         result["city"] = biz.get("city", "")
         results.append(result)
+    
+    # Self-monitoring: check flagged rate
+    try:
+        from scraper.osint_engine import monitor_flagged_rate
+        flagged_check = monitor_flagged_rate(results, batch_name="predict_batch")
+        if flagged_check["status"] != "ok":
+            logger.warning(f"Flagged rate alert: {flagged_check['alert']}")
+    except Exception as e:
+        logger.debug(f"Monitor check failed: {e}")
+    
     return results
