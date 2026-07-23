@@ -29,6 +29,10 @@ def _patched_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
 socket.getaddrinfo = _patched_getaddrinfo
 
 from curl_cffi import requests as cffi_requests
+from steindamm import SyncSemaphore as _SyncSemaphoreBase
+
+def _make_semaphore(name, capacity):
+    return _SyncSemaphoreBase.create(name=name, capacity=capacity)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -267,6 +271,12 @@ class CrisoraDaemon:
             "crtsh": CircuitBreaker("crtsh", failure_threshold=2, cooldown=600),
             "internetdb": CircuitBreaker("internetdb", failure_threshold=3, cooldown=300),
         }
+        self._rate_limiters = {
+            "certspotter": _make_semaphore("certspotter", capacity=2),
+            "crtsh": _make_semaphore("crtsh", capacity=1),
+            "internetdb": _make_semaphore("internetdb", capacity=3),
+            "supabase": _make_semaphore("supabase", capacity=5),
+        }
 
     def get_status(self):
         with self._lock:
@@ -286,22 +296,27 @@ class CrisoraDaemon:
                 "last_diag": self._diagnostics[-5:] if self._diagnostics else [],
             }
 
+    def _sb_req(self, method, url, **kwargs):
+        with self._rate_limiters["supabase"]:
+            return getattr(cffi_requests, method)(url, headers=HEADERS, timeout=kwargs.get("timeout", 15), **{k: v for k, v in kwargs.items() if k != "timeout"})
+
     # ── Tool Health Checker (once per batch) ─────────────────────
     def check_tools_health(self):
         session = cffi_requests.Session(impersonate="chrome120")
         health = {}
 
-        # CertSpotter — respect circuit breaker
+        # CertSpotter — respect circuit breaker + rate limiter
         cb_cs = self._circuit_breakers["certspotter"]
         if not cb_cs.is_available():
             health["certspotter"] = False
             health["certspotter_code"] = "CIRCUIT_OPEN"
         else:
             try:
-                r = session.get(
-                    "https://api.certspotter.com/v1/issuances?domain=google.com&include_subdomains=true&expand=dns_names&limit=1",
-                    timeout=8
-                )
+                with self._rate_limiters["certspotter"]:
+                    r = session.get(
+                        "https://api.certspotter.com/v1/issuances?domain=google.com&include_subdomains=true&expand=dns_names&limit=1",
+                        timeout=8
+                    )
                 health["certspotter"] = r.status_code == 200
                 health["certspotter_code"] = r.status_code
                 if r.status_code == 200:
@@ -313,14 +328,15 @@ class CrisoraDaemon:
                 health["certspotter_code"] = 0
                 cb_cs.record_failure()
 
-        # crt.sh — respect circuit breaker
+        # crt.sh — respect circuit breaker + rate limiter
         cb_ct = self._circuit_breakers["crtsh"]
         if not cb_ct.is_available():
             health["crtsh"] = False
             health["crtsh_code"] = "CIRCUIT_OPEN"
         else:
             try:
-                r = session.get("https://crt.sh/?q=%.google.com&output=json", timeout=8)
+                with self._rate_limiters["crtsh"]:
+                    r = session.get("https://crt.sh/?q=%.google.com&output=json", timeout=8)
                 health["crtsh"] = r.status_code == 200
                 health["crtsh_code"] = r.status_code
                 if r.status_code == 200:
@@ -332,13 +348,14 @@ class CrisoraDaemon:
                 health["crtsh_code"] = 0
                 cb_ct.record_failure()
 
-        # InternetDB
+        # InternetDB — respect circuit breaker + rate limiter
         cb_idb = self._circuit_breakers["internetdb"]
         if not cb_idb.is_available():
             health["internetdb"] = False
         else:
             try:
-                r = session.get("https://internetdb.shodan.io/1.1.1.1", timeout=5)
+                with self._rate_limiters["internetdb"]:
+                    r = session.get("https://internetdb.shodan.io/1.1.1.1", timeout=5)
                 health["internetdb"] = r.status_code == 200
                 if r.status_code == 200:
                     cb_idb.record_success()
@@ -348,13 +365,14 @@ class CrisoraDaemon:
                 health["internetdb"] = False
                 cb_idb.record_failure()
 
-        # Supabase
+        # Supabase — rate limited
         try:
-            r = cffi_requests.get(
-                f"{SUPABASE_URL}/rest/v1/businesses?select=id&limit=1",
-                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-                timeout=5,
-            )
+            with self._rate_limiters["supabase"]:
+                r = cffi_requests.get(
+                    f"{SUPABASE_URL}/rest/v1/businesses?select=id&limit=1",
+                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                    timeout=5,
+                )
             health["supabase"] = r.status_code == 200
         except Exception:
             health["supabase"] = False
@@ -591,6 +609,9 @@ class CrisoraDaemon:
 
     # ── Upsert ──────────────────────────────────────────────────
     def upsert_business(self, biz, target):
+        from scraper.osint_engine import validate_consistency
+        biz = validate_consistency(biz)
+
         tech = biz.get("tech_stack", [])
         if isinstance(tech, list):
             tech = json.dumps(tech)
@@ -632,39 +653,44 @@ class CrisoraDaemon:
             "crisis_recommendations": json.dumps(biz.get("crisis_recommendations", [])),
             "cvss_severity": biz.get("cvss_severity", "NONE"),
             "cvss_max": biz.get("cvss_max", 0),
+            "requires_review": biz.get("requires_review", False),
+            "review_flags": json.dumps(biz.get("review_flags", [])),
         }
-        resp = cffi_requests.post(
-            f"{SUPABASE_URL}/rest/v1/businesses",
-            json=data,
-            headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
-            timeout=10,
-        )
+        with self._rate_limiters["supabase"]:
+            resp = cffi_requests.post(
+                f"{SUPABASE_URL}/rest/v1/businesses",
+                json=data,
+                headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
+                timeout=10,
+            )
         return resp.status_code < 400
 
     def _save_snapshot(self, biz_id, biz):
         try:
-            cffi_requests.post(
-                f"{SUPABASE_URL}/rest/v1/snapshots",
-                json={
-                    "business_id": biz_id,
-                    "rating": biz.get("rating"),
-                    "review_count": biz.get("review_count"),
-                    "health_score": biz.get("health_score"),
-                    "sentiment_score": 1.0 if biz.get("sentiment") == "positive" else -1.0 if biz.get("sentiment") == "negative" else 0.0,
-                },
-                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
-                timeout=5,
-            )
+            with self._rate_limiters["supabase"]:
+                cffi_requests.post(
+                    f"{SUPABASE_URL}/rest/v1/snapshots",
+                    json={
+                        "business_id": biz_id,
+                        "rating": biz.get("rating"),
+                        "review_count": biz.get("review_count"),
+                        "health_score": biz.get("health_score"),
+                        "sentiment_score": 1.0 if biz.get("sentiment") == "positive" else -1.0 if biz.get("sentiment") == "negative" else 0.0,
+                    },
+                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
+                    timeout=5,
+                )
         except Exception:
             pass
 
     def _get_snapshots(self, biz_id):
         try:
-            resp = cffi_requests.get(
-                f"{SUPABASE_URL}/rest/v1/snapshots?business_id=eq.{biz_id}&order=scan_date.desc&limit=10",
-                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-                timeout=5,
-            )
+            with self._rate_limiters["supabase"]:
+                resp = cffi_requests.get(
+                    f"{SUPABASE_URL}/rest/v1/snapshots?business_id=eq.{biz_id}&order=scan_date.desc&limit=10",
+                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                    timeout=5,
+                )
             return resp.json()
         except Exception:
             return []
@@ -697,7 +723,8 @@ class CrisoraDaemon:
 
         if domain:
             try:
-                osint = analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
+                with self._rate_limiters["internetdb"]:
+                    osint = analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
                 biz["health_score"] = osint["health_score"]
                 biz["ssl_grade"] = osint["ssl_grade"]
                 biz["tech_stack"] = osint["tech_stack"]
@@ -762,11 +789,12 @@ class CrisoraDaemon:
             elapsed = time.time() - t0
 
             try:
-                resp = cffi_requests.get(
-                    f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{result['name']}&city=eq.{target['city']}&sector=eq.{target['sector']}&limit=1",
-                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-                    timeout=5,
-                )
+                with self._rate_limiters["supabase"]:
+                    resp = cffi_requests.get(
+                        f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{result['name']}&city=eq.{target['city']}&sector=eq.{target['sector']}&limit=1",
+                        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                        timeout=5,
+                    )
                 rows = resp.json()
                 if rows:
                     self._save_snapshot(rows[0]["id"], result)

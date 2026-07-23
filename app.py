@@ -564,7 +564,7 @@ class handler(BaseHTTPRequestHandler):
             self._respond(401, {"error": "Invalid password"})
 
     def _handle_dashboard_api(self, path, query):
-        from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security, get_crisis, get_osint_stats, get_osint_export, get_export_data
+            from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security, get_crisis, get_osint_stats, get_osint_export, get_export_data, get_review_queue, approve_review, dismiss_review
         token = query.get("token", [""])[0]
         if not verify_token(token):
             self._respond(401, {"error": "Unauthorized"})
@@ -602,6 +602,14 @@ class handler(BaseHTTPRequestHandler):
                 self._respond(200, get_crisis())
             elif path == "/api/dashboard/osint":
                 self._respond(200, get_osint_stats())
+            elif path == "/api/dashboard/review-queue":
+                self._respond(200, get_review_queue())
+            elif path == "/api/dashboard/review-approve":
+                biz_id = query.get("id", [""])[0]
+                self._respond(200, approve_review(biz_id))
+            elif path == "/api/dashboard/review-dismiss":
+                biz_id = query.get("id", [""])[0]
+                self._respond(200, dismiss_review(biz_id))
             elif path == "/api/dashboard/osint-export":
                 firebase = query.get("firebase", [""])[0]
                 archive_risk = query.get("archive_risk", [""])[0]

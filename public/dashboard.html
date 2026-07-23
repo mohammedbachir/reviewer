@@ -226,6 +226,7 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     <button class="tab-btn" data-page="security">Security</button>
     <button class="tab-btn" data-page="osint">OSINT</button>
     <button class="tab-btn" data-page="crisis">Crisis AI</button>
+    <button class="tab-btn" data-page="review">Review Queue</button>
     <button class="tab-btn" data-page="algorithms">Algorithms</button>
     <button class="tab-btn" data-page="companies">Companies</button>
     <button class="tab-btn" data-page="ai">AI Advisor</button>
@@ -324,6 +325,24 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
           <thead><tr><th>Company</th><th>City</th><th>Crisis Prob</th><th>Risk Level</th><th>CVSS</th><th>Breaches</th><th>Top Recommendation</th></tr></thead>
           <tbody id="crisis-table"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-review">
+    <div class="card">
+      <div class="page-header">
+        <h2>Human Review Queue</h2>
+        <span class="subtitle" id="review-count">0 companies flagged</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Company</th><th>City</th><th>Crisis Prob</th><th>Risk Level</th><th>Health</th><th>SSL</th><th>Flags</th><th>Action</th></tr></thead>
+          <tbody id="review-table"></tbody>
+        </table>
+      </div>
+      <div id="review-empty" style="display:none;text-align:center;padding:40px;color:var(--text-dim)">
+        No companies require review. All data is consistent.
       </div>
     </div>
   </div>
@@ -933,6 +952,7 @@ document.querySelectorAll('.tab-btn[data-page]').forEach(function(btn) {
     if (btn.dataset.page === 'security') loadSecurity();
     if (btn.dataset.page === 'osint') loadOSINT();
     if (btn.dataset.page === 'crisis') loadCrisis();
+    if (btn.dataset.page === 'review') loadReviewQueue();
     if (btn.dataset.page === 'export') { loadExportFilters(); }
   });
 });
@@ -1488,6 +1508,44 @@ async function loadCrisis() {
       '<td style="font-size:12px;color:var(--text-dim)">' + esc(recText) + '</td>' +
       '</tr>';
   });
+}
+
+async function loadReviewQueue() {
+  const data = await api('review-queue');
+  if (!data) return;
+  var businesses = data.businesses || [];
+  var total = data.total || 0;
+  document.getElementById('review-count').textContent = total + ' companies flagged';
+  var tbody = document.getElementById('review-table');
+  var empty = document.getElementById('review-empty');
+  tbody.innerHTML = '';
+  if (!businesses.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  businesses.forEach(function(b) {
+    var prob = ((b.crisis_probability || 0) * 100).toFixed(1);
+    var riskLevel = b.crisis_risk_level || 'UNKNOWN';
+    var riskCls = riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'badge-hot' : riskLevel === 'ELEVATED' ? 'badge-warm' : 'badge-cold';
+    var flags = parseJSON(b.review_flags);
+    var flagHtml = flags.map(function(f) { return '<span style="display:inline-block;background:rgba(239,68,68,0.15);color:#EF4444;padding:2px 6px;border-radius:4px;font-size:11px;margin:1px">' + esc(f.substring(0, 60)) + '</span>'; }).join(' ');
+    tbody.innerHTML += '<tr>' +
+      '<td style="font-weight:600">' + esc(b.name || '') + '</td>' +
+      '<td>' + esc(b.city || '') + '</td>' +
+      '<td><span style="font-weight:700;color:' + (b.crisis_probability > 0.5 ? '#EF4444' : '#F59E0B') + '">' + prob + '%</span></td>' +
+      '<td><span class="badge ' + riskCls + '">' + esc(riskLevel) + '</span></td>' +
+      '<td>' + (b.health_score || 0) + '</td>' +
+      '<td><span style="color:' + sslGradeColor(b.ssl_grade || 'F') + ';font-weight:700">' + esc(b.ssl_grade || 'F') + '</span></td>' +
+      '<td style="max-width:300px">' + flagHtml + '</td>' +
+      '<td><button class="export-btn" onclick="approveReview(' + b.id + ')" style="margin-right:4px">Approve</button></td>' +
+      '</tr>';
+  });
+}
+
+async function approveReview(id) {
+  await api('review-approve?id=' + id);
+  loadReviewQueue();
 }
 
 function parseJSON(val) {

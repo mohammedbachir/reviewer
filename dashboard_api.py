@@ -1124,3 +1124,35 @@ def get_osint_export(firebase="", archive_risk="", api_risk="", sherlock_risk=""
         "columns": selected_cols,
         "rows": rows,
     }
+
+
+# ════════════════════════════════════════════════════════════════
+# QUALITY GATE QG-02: Human Review Queue
+# ════════════════════════════════════════════════════════════════
+
+def get_review_queue():
+    try:
+        r = _sb_get("businesses", "select=id,name,city,sector,website,crisis_probability,crisis_risk_level,requires_review,review_flags,health_score,ssl_grade,lead_temperature&requires_review=eq.true&order=crisis_probability.desc&limit=100")
+        businesses = r.json() if r.status_code == 200 else []
+        total = _sb_get("businesses", "select=id&requires_review=eq.true", count=True)
+        count = int(total.headers.get("content-range", "0").split("/")[1]) if total.status_code == 200 else 0
+        return {"businesses": businesses, "total": count}
+    except Exception as e:
+        logger.error(f"Review queue error: {e}")
+        return {"businesses": [], "total": 0}
+
+
+def approve_review(biz_id):
+    try:
+        r = _sb_patch("businesses", f"id=eq.{biz_id}", {"requires_review": False, "review_flags": None})
+        return {"ok": r.status_code in (200, 204)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def dismiss_review(biz_id):
+    try:
+        r = _sb_patch("businesses", f"id=eq.{biz_id}", {"requires_review": False, "review_flags": None})
+        return {"ok": r.status_code in (200, 204)}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}

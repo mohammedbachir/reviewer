@@ -1671,6 +1671,135 @@ def _calculate_health(osint: Dict, rating: float, review_count: int) -> int:
     return max(0, min(100, score))
 
 
+# ════════════════════════════════════════════════════════════════
+# QUALITY GATE QG-01: Consistency Validator (pydantic)
+# ════════════════════════════════════════════════════════════════
+
+from pydantic import BaseModel, field_validator, model_validator
+
+
+class CrisisConsistency(BaseModel):
+    crisis_probability: float = 0
+    health_score: float = 50
+    ssl_grade: str = "F"
+    firebase_open: bool = False
+    firebase_detected: bool = False
+    api_key_count: int = 0
+    breach_count: int = 0
+    archive_sensitive_count: int = 0
+    crtsh_subdomain_count: int = 0
+    requires_review: bool = False
+    review_flags: list = []
+
+    @field_validator("crisis_probability")
+    @classmethod
+    def clamp_crisis(cls, v):
+        return max(0.0, min(1.0, v))
+
+    @model_validator(mode="after")
+    def check_contradictions(self):
+        flags = list(self.review_flags)
+        crisis = self.crisis_probability
+
+        if self.firebase_open and crisis < 0.90:
+            crisis = max(crisis, 0.90)
+            flags.append("FIREBASE_OPEN: crisis raised to 90%")
+
+        if self.firebase_detected and crisis < 0.60:
+            crisis = max(crisis, 0.60)
+            flags.append("FIREBASE_DETECTED: crisis raised to 60%")
+
+        if self.api_key_count > 50 and crisis < 0.70:
+            crisis = max(crisis, 0.70)
+            flags.append("API_KEYS>50: crisis raised to 70%")
+        elif self.api_key_count > 20 and crisis < 0.55:
+            crisis = max(crisis, 0.55)
+            flags.append("API_KEYS>20: crisis raised to 55%")
+        elif self.api_key_count > 5 and crisis < 0.45:
+            crisis = max(crisis, 0.45)
+            flags.append("API_KEYS>5: crisis raised to 45%")
+
+        if self.breach_count > 0 and crisis < 0.70:
+            crisis = max(crisis, 0.70)
+            flags.append("BREACHES>0: crisis raised to 70%")
+
+        if self.archive_sensitive_count > 10 and crisis < 0.50:
+            crisis = max(crisis, 0.50)
+            flags.append("ARCHIVE_SENSITIVE>10: crisis raised to 50%")
+
+        if self.ssl_grade in ("F", "D") and self.health_score > 50:
+            self.health_score = min(self.health_score, 40)
+            flags.append(f"SSL_{self.ssl_grade}: health capped at 40")
+
+        if self.ssl_grade == "F" and self.crisis_probability < 0.50:
+            crisis = max(crisis, 0.50)
+            flags.append("SSL_F: crisis raised to 50%")
+
+        if self.crtsh_subdomain_count > 30:
+            self.requires_review = True
+            flags.append(f"CRTSH>{self.crtsh_subdomain_count}: suspicious subdomain count")
+
+        if self.crisis_probability > 0.25 and self.health_score > 80:
+            self.requires_review = True
+            flags.append("CRISIS>25% + HEALTH>80: possible contradiction")
+
+        self.crisis_probability = crisis
+        self.review_flags = flags
+        self.requires_review = self.requires_review or len(flags) > 0
+        return self
+
+
+def validate_consistency(biz: dict) -> dict:
+    try:
+        firebase = biz.get("firebase") or {}
+        if isinstance(firebase, str):
+            try:
+                firebase = json.loads(firebase)
+            except Exception:
+                firebase = {}
+        api_keys = biz.get("api_keys") or {}
+        if isinstance(api_keys, str):
+            try:
+                api_keys = json.loads(api_keys)
+            except Exception:
+                api_keys = {}
+        crtsh = biz.get("crtsh") or {}
+        if isinstance(crtsh, str):
+            try:
+                crtsh = json.loads(crtsh)
+            except Exception:
+                crtsh = {}
+        archive = biz.get("archive") or {}
+        if isinstance(archive, str):
+            try:
+                archive = json.loads(archive)
+            except Exception:
+                archive = {}
+
+        validator = CrisisConsistency(
+            crisis_probability=biz.get("crisis_probability", 0),
+            health_score=biz.get("health_score", 50),
+            ssl_grade=biz.get("ssl_grade", "F"),
+            firebase_open=firebase.get("firebase_open", False),
+            firebase_detected=firebase.get("firebase_detected", False),
+            api_key_count=api_keys.get("api_key_count", 0),
+            breach_count=biz.get("breach_count", 0),
+            archive_sensitive_count=len(archive.get("archive_sensitive_files", [])),
+            crtsh_subdomain_count=crtsh.get("subdomain_count", 0),
+        )
+
+        biz["crisis_probability"] = validator.crisis_probability
+        biz["health_score"] = validator.health_score
+        biz["requires_review"] = validator.requires_review
+        biz["review_flags"] = validator.review_flags
+        return biz
+    except Exception as e:
+        logger.debug(f"  Consistency validator error: {e}")
+        biz["requires_review"] = True
+        biz["review_flags"] = [f"VALIDATOR_ERROR: {e}"]
+        return biz
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     result = analyze_domain("mmdc.ae", rating=4.5, review_count=120)
