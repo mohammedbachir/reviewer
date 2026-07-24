@@ -655,6 +655,16 @@ class CrisoraDaemon:
             "cvss_max": biz.get("cvss_max", 0),
             "requires_review": biz.get("requires_review", False),
             "review_flags": json.dumps(biz.get("review_flags", [])),
+            "social_presence_score": biz.get("social_presence_score", 0),
+            "social_platforms_found": json.dumps(biz.get("social_platforms_found", [])),
+            "linkedin_url": biz.get("linkedin_url", ""),
+            "facebook_url": biz.get("facebook_url", ""),
+            "yelp_url": biz.get("yelp_url", ""),
+            "bbb_url": biz.get("bbb_url", ""),
+            "bbb_rating": biz.get("bbb_rating", ""),
+            "bbb_accredited": biz.get("bbb_accredited", False),
+            "bbb_complaints": biz.get("bbb_complaints", 0),
+            "census_data": json.dumps(biz.get("census_data", {})),
         }
         with self._rate_limiters["supabase"]:
             resp = cffi_requests.post(

@@ -256,6 +256,16 @@ def _upsert_business(biz, target):
             "crisis_recommendations": json.dumps(biz.get("crisis_recommendations", [])),
             "cvss_severity": biz.get("cvss_severity", "NONE"),
             "cvss_max": biz.get("cvss_max", 0),
+            "social_presence_score": biz.get("social_presence_score", 0),
+            "social_platforms_found": json.dumps(biz.get("social_platforms_found", [])),
+            "linkedin_url": biz.get("linkedin_url", ""),
+            "facebook_url": biz.get("facebook_url", ""),
+            "yelp_url": biz.get("yelp_url", ""),
+            "bbb_url": biz.get("bbb_url", ""),
+            "bbb_rating": biz.get("bbb_rating", ""),
+            "bbb_accredited": biz.get("bbb_accredited", False),
+            "bbb_complaints": biz.get("bbb_complaints", 0),
+            "census_data": json.dumps(biz.get("census_data", {})),
         }
         resp = cffi_requests.post(
             f"{SUPABASE_URL}/rest/v1/businesses",
@@ -433,6 +443,40 @@ def _enrich_business(biz):
             biz["rating"] = reviews["rating"]
         if reviews.get("review_count"):
             biz["review_count"] = reviews["review_count"]
+
+    try:
+        from scraper.sources.social_discovery import discover_social_presence
+        social = discover_social_presence(biz.get("name", ""), biz.get("city", ""))
+        biz["social_presence_score"] = social.get("social_presence_score", 0)
+        biz["social_platforms_found"] = social.get("social_platforms_found", [])
+        if social.get("linkedin_url"):
+            biz["linkedin_url"] = social["linkedin_url"]
+        if social.get("facebook_url"):
+            biz["facebook_url"] = social["facebook_url"]
+        if social.get("yelp_url"):
+            biz["yelp_url"] = social["yelp_url"]
+        if social.get("bbb_url"):
+            biz["bbb_url"] = social["bbb_url"]
+    except Exception:
+        pass
+
+    try:
+        from scraper.sources.bbb_api import search_business as bbb_search
+        bbb = bbb_search(biz.get("name", ""), biz.get("city", ""))
+        if bbb.get("bbb_found"):
+            biz["bbb_rating"] = bbb.get("bbb_rating")
+            biz["bbb_accredited"] = bbb.get("bbb_accredited")
+            biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
+    except Exception:
+        pass
+
+    try:
+        from scraper.sources.census_api import get_city_demographics
+        census = get_city_demographics(biz.get("city", ""))
+        if census:
+            biz["census_data"] = census
+    except Exception:
+        pass
 
     temperature = _score_lead(biz)
     biz["lead_temperature"] = temperature

@@ -226,6 +226,16 @@ def run_scrape():
                 "tech_stack": biz.get("tech_stack", "[]"),
                 "dns_data": biz.get("dns_data", "{}"),
                 "page_speed": biz.get("page_speed", "{}"),
+                "social_presence_score": biz.get("social_presence_score", 0),
+                "social_platforms_found": json.dumps(biz.get("social_platforms_found", [])),
+                "linkedin_url": biz.get("linkedin_url", ""),
+                "facebook_url": biz.get("facebook_url", ""),
+                "yelp_url": biz.get("yelp_url", ""),
+                "bbb_url": biz.get("bbb_url", ""),
+                "bbb_rating": biz.get("bbb_rating", ""),
+                "bbb_accredited": biz.get("bbb_accredited", False),
+                "bbb_complaints": biz.get("bbb_complaints", 0),
+                "census_data": json.dumps(biz.get("census_data", {})),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             })
         except Exception as e:

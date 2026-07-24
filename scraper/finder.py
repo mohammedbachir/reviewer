@@ -568,6 +568,24 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
     except Exception as e:
         logger.error(f"DDG error: {e}")
 
+    # Source 4: Google Places API + DDG fallback (free)
+    try:
+        from scraper.sources.google_places import search_businesses as gp_search
+        gp_results = gp_search(city, business_type, limit)
+        for b in gp_results:
+            all_businesses.append({
+                "name": b.get("name", ""),
+                "address": b.get("address", ""),
+                "phone": b.get("phone", ""),
+                "website": b.get("website", ""),
+                "rating": b.get("google_rating"),
+                "review_count": b.get("google_reviews"),
+                "source": b.get("source", "google_places"),
+            })
+        logger.info(f"Google Places: found {len(gp_results)} results")
+    except Exception as e:
+        logger.error(f"Google Places error: {e}")
+
     # Deduplicate across all sources
     all_businesses = _deduplicate(all_businesses)
     logger.info(f"After dedup: {len(all_businesses)} unique businesses")
