@@ -748,6 +748,40 @@ class CrisoraDaemon:
         except Exception as e:
             log.debug(f"  Review error: {e}")
 
+        try:
+            from scraper.sources.social_discovery import discover_social_presence
+            social = discover_social_presence(biz.get("name", ""), biz.get("city", ""))
+            biz["social_presence_score"] = social.get("social_presence_score", 0)
+            biz["social_platforms_found"] = social.get("social_platforms_found", [])
+            if social.get("linkedin_url"):
+                biz["linkedin_url"] = social["linkedin_url"]
+            if social.get("facebook_url"):
+                biz["facebook_url"] = social["facebook_url"]
+            if social.get("yelp_url"):
+                biz["yelp_url"] = social["yelp_url"]
+            if social.get("bbb_url"):
+                biz["bbb_url"] = social["bbb_url"]
+        except Exception as e:
+            log.debug(f"  Social discovery error: {e}")
+
+        try:
+            from scraper.sources.bbb_api import search_business as bbb_search
+            bbb = bbb_search(biz.get("name", ""), biz.get("city", ""))
+            if bbb.get("bbb_found"):
+                biz["bbb_rating"] = bbb.get("bbb_rating")
+                biz["bbb_accredited"] = bbb.get("bbb_accredited")
+                biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
+        except Exception as e:
+            log.debug(f"  BBB error: {e}")
+
+        try:
+            from scraper.sources.census_api import get_city_demographics
+            census = get_city_demographics(biz.get("city", ""))
+            if census:
+                biz["census_data"] = census
+        except Exception as e:
+            log.debug(f"  Census error: {e}")
+
         biz["lead_temperature"] = score_lead(biz)
         biz["outreach_hook"] = generate_hook(biz, biz["lead_temperature"])
 
@@ -815,18 +849,20 @@ class CrisoraDaemon:
     # ── Run Once (Parallel) ─────────────────────────────────────
     def run_once(self):
         from scraper.finder import search_businesses
+        from exhaustion import SmartRotator
 
         self.check_tools_health()
 
-        # Step 1: Backfill incomplete data first
         backfilled = self.backfill_incomplete()
 
         t0 = time.time()
         targets = get_targets()
         state = load_state()
-        idx = (state["current_index"] + 1) % len(targets)
-        target = targets[idx]
-        city, sector = target["city"], target["sector"]
+        current_idx = state.get("current_index", 0)
+
+        rotator = SmartRotator()
+        target, idx = rotator.get_next(current_idx)
+        city, sector = target["city"], target.get("sector", target.get("category", ""))
 
         with self._lock:
             self._current_target = f"{city}/{sector}"
@@ -869,6 +905,11 @@ class CrisoraDaemon:
 
         elapsed = time.time() - t0
         print(f"  Done: {enriched} enriched, {skipped} skipped, {errors} errors in {elapsed:.1f}s")
+
+        try:
+            rotator.update_after_run(city, sector, enriched)
+        except Exception as e:
+            log.debug(f"  Exhaustion update failed: {e}")
 
         with self._lock:
             self._total_runs += 1

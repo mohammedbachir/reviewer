@@ -136,10 +136,16 @@ def run_scrape():
     """Main scrape function. Called by Vercel serverless."""
     start_time = time.time()
 
-    # Load targets and get current index
-    targets = _load_targets()
-    idx = _get_current_index() % len(targets)
-    target = targets[idx]
+    try:
+        sys.path.insert(0, ROOT)
+        from exhaustion import SmartRotator
+        rotator = SmartRotator(os.path.join(ROOT, "targets.json"))
+        current_idx = _get_current_index()
+        target, idx = rotator.get_next(current_idx)
+    except Exception:
+        targets = _load_targets()
+        idx = _get_current_index() % len(targets)
+        target = targets[idx]
 
     city = target["city"]
     sector = target["sector"]
@@ -243,6 +249,13 @@ def run_scrape():
     # 5. Advance to next target
     next_idx = (idx + 1) % len(targets)
     _update_index(next_idx, len(businesses))
+
+    try:
+        from exhaustion import SmartRotator
+        rotator = SmartRotator(os.path.join(ROOT, "targets.json"))
+        rotator.update_after_run(city, sector, len(businesses))
+    except Exception:
+        pass
 
     return {
         "status": "success",

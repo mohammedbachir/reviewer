@@ -1156,3 +1156,38 @@ def dismiss_review(biz_id):
         return {"ok": r.status_code in (200, 204)}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+# ════════════════════════════════════════════════════════════════
+# EXHAUSTION ROTATION STATUS
+# ════════════════════════════════════════════════════════════════
+
+def get_exhaustion_status():
+    try:
+        r = _sb_get("combo_exhaustion_status", "select=*&order=status.asc,freshness_rate.asc&limit=500")
+        combos = r.json() if r.status_code == 200 else []
+
+        active = sum(1 for c in combos if c.get("status") == "active")
+        cooling = sum(1 for c in combos if c.get("status") == "cooling_down")
+        exhausted = sum(1 for c in combos if c.get("status") == "exhausted")
+        total = len(combos)
+
+        with open(os.path.join(os.path.dirname(__file__), "targets.json")) as f:
+            raw = json.load(f)
+        all_targets = raw if isinstance(raw, list) else raw.get("targets", [])
+        untracked = len(all_targets) - total
+
+        return {
+            "combos": combos,
+            "summary": {
+                "active": active,
+                "cooling_down": cooling,
+                "exhausted": exhausted,
+                "untracked": untracked,
+                "total": total,
+                "all_targets": len(all_targets),
+            },
+        }
+    except Exception as e:
+        logger.error(f"Exhaustion status error: {e}")
+        return {"combos": [], "summary": {"active": 0, "cooling_down": 0, "exhausted": 0, "untracked": 0, "total": 0, "all_targets": 337}}

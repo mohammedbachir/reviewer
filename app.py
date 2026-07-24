@@ -28,28 +28,35 @@ def _get_target():
     with open(targets_path) as f:
         raw = json.load(f)
     targets = raw if isinstance(raw, list) else raw.get("targets", [])
-    # Normalize 'category' → 'sector' for backward compatibility
     for t in targets:
         if "sector" not in t and "category" in t:
             t["sector"] = t["category"]
+
     try:
-        from curl_cffi import requests as cffi_requests
-        resp = cffi_requests.get(
-            f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
-            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-            timeout=10,
-        )
-        row = resp.json()[0]
-        idx = (row["current_index"] + 1) % len(targets)
+        from exhaustion import SmartRotator
+        rotator = SmartRotator(targets_path)
+        try:
+            from curl_cffi import requests as cffi_requests
+            resp = cffi_requests.get(
+                f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
+                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                timeout=10,
+            )
+            row = resp.json()[0]
+            current_idx = row["current_index"]
+        except Exception:
+            current_idx = int(time.time()) % len(targets)
+
+        target, idx = rotator.get_next(current_idx)
     except Exception:
         idx = int(time.time()) % len(targets)
+        target = targets[idx]
 
-    target = targets[idx]
     try:
         from curl_cffi import requests as cffi_requests
         cffi_requests.patch(
             f"{SUPABASE_URL}/rest/v1/system_state?id=eq.1",
-            json={"current_index": idx, "last_target": f"{target['city']}/{target['sector']}"},
+            json={"current_index": idx, "last_target": f"{target['city']}/{target.get('sector', target.get('category', ''))}"},
             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "return=minimal"},
             timeout=10,
         )
@@ -564,7 +571,7 @@ class handler(BaseHTTPRequestHandler):
             self._respond(401, {"error": "Invalid password"})
 
     def _handle_dashboard_api(self, path, query):
-            from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security, get_crisis, get_osint_stats, get_osint_export, get_export_data, get_review_queue, approve_review, dismiss_review
+        from dashboard_api import verify_token, get_stats, get_algorithms, get_companies, get_company, get_analytics, get_cities, get_sectors, get_security, get_crisis, get_osint_stats, get_osint_export, get_export_data, get_review_queue, approve_review, dismiss_review, get_exhaustion_status
         token = query.get("token", [""])[0]
         if not verify_token(token):
             self._respond(401, {"error": "Unauthorized"})
@@ -610,6 +617,8 @@ class handler(BaseHTTPRequestHandler):
             elif path == "/api/dashboard/review-dismiss":
                 biz_id = query.get("id", [""])[0]
                 self._respond(200, dismiss_review(biz_id))
+            elif path == "/api/dashboard/exhaustion":
+                self._respond(200, get_exhaustion_status())
             elif path == "/api/dashboard/osint-export":
                 firebase = query.get("firebase", [""])[0]
                 archive_risk = query.get("archive_risk", [""])[0]

@@ -228,6 +228,7 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
     <button class="tab-btn" data-page="crisis">Crisis AI</button>
     <button class="tab-btn" data-page="review">Review Queue</button>
     <button class="tab-btn" data-page="algorithms">Algorithms</button>
+    <button class="tab-btn" data-page="exhaustion">Rotation</button>
     <button class="tab-btn" data-page="companies">Companies</button>
     <button class="tab-btn" data-page="ai">AI Advisor</button>
     <button class="tab-btn" data-page="export">Export</button>
@@ -507,6 +508,32 @@ tbody tr:hover{background:rgba(255,255,255,.04)}
         <div class="eng-footer-item">34 Sectors</div>
         <div class="eng-footer-sep">/</div>
         <div class="eng-footer-item">~1600 Records</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page" id="page-exhaustion">
+    <div class="stats-grid" id="exhaustion-stats"></div>
+    <div class="card">
+      <div class="page-header">
+        <h2>Target Rotation Status</h2>
+        <span style="color:var(--text-dim);font-size:13px">Real-time freshness monitoring per city/sector combo</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border)">
+              <th style="text-align:left;padding:10px 12px;color:var(--text-dim)">City</th>
+              <th style="text-align:left;padding:10px 12px;color:var(--text-dim)">Sector</th>
+              <th style="text-align:center;padding:10px 12px;color:var(--text-dim)">Freshness</th>
+              <th style="text-align:center;padding:10px 12px;color:var(--text-dim)">Runs</th>
+              <th style="text-align:center;padding:10px 12px;color:var(--text-dim)">Classification</th>
+              <th style="text-align:center;padding:10px 12px;color:var(--text-dim)">Status</th>
+              <th style="text-align:center;padding:10px 12px;color:var(--text-dim)">Next Check</th>
+            </tr>
+          </thead>
+          <tbody id="exhaustion-table"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -953,6 +980,7 @@ document.querySelectorAll('.tab-btn[data-page]').forEach(function(btn) {
     if (btn.dataset.page === 'osint') loadOSINT();
     if (btn.dataset.page === 'crisis') loadCrisis();
     if (btn.dataset.page === 'review') loadReviewQueue();
+    if (btn.dataset.page === 'exhaustion') loadExhaustion();
     if (btn.dataset.page === 'export') { loadExportFilters(); }
   });
 });
@@ -1546,6 +1574,43 @@ async function loadReviewQueue() {
 async function approveReview(id) {
   await api('review-approve?id=' + id);
   loadReviewQueue();
+}
+
+async function loadExhaustion() {
+  var data = await api('exhaustion');
+  if (!data) return;
+  var s = data.summary || {};
+  var statsHtml = '';
+  statsHtml += '<div class="stat-card"><div class="label">Active Combos</div><div class="value" style="color:var(--success)">' + (s.active||0) + '</div><div class="sub">Fresh targets available</div></div>';
+  statsHtml += '<div class="stat-card"><div class="label">Cooling Down</div><div class="value" style="color:var(--warn)">' + (s.cooling_down||0) + '</div><div class="sub">Temporary cooldown</div></div>';
+  statsHtml += '<div class="stat-card"><div class="label">Exhausted</div><div class="value" style="color:var(--accent)">' + (s.exhausted||0) + '</div><div class="sub">Deep cooldown</div></div>';
+  statsHtml += '<div class="stat-card"><div class="label">Untracked</div><div class="value" style="color:var(--info)">' + (s.untracked||0) + '</div><div class="sub">Never scanned yet</div></div>';
+  statsHtml += '<div class="stat-card"><div class="label">Total Targets</div><div class="value">' + (s.all_targets||0) + '</div><div class="sub">' + (s.total||0) + ' tracked</div></div>';
+  document.getElementById('exhaustion-stats').innerHTML = statsHtml;
+
+  var combos = data.combos || [];
+  var tbody = document.getElementById('exhaustion-table');
+  tbody.innerHTML = '';
+  combos.forEach(function(c) {
+    var fr = ((c.freshness_rate || 0) * 100).toFixed(0);
+    var frColor = c.status === 'active' ? 'var(--success)' : c.status === 'cooling_down' ? 'var(--warn)' : 'var(--accent)';
+    var cls = c.classification || 'insufficient_data';
+    var clsBadge = cls === 'insufficient_data' ? 'badge-cold' : cls === 'temporary' ? 'badge-success' : cls === 'deep' ? 'badge-warm' : 'badge-hot';
+    var statusBadge = c.status === 'active' ? 'badge-success' : c.status === 'cooling_down' ? 'badge-warm' : 'badge-hot';
+    var nextCheck = c.cooldown_expires_at ? new Date(c.cooldown_expires_at).toLocaleDateString() : '-';
+    tbody.innerHTML += '<tr style="border-bottom:1px solid var(--border)">' +
+      '<td style="padding:10px 12px;font-weight:600">' + esc(c.city||'') + '</td>' +
+      '<td style="padding:10px 12px">' + esc(c.sector||'') + '</td>' +
+      '<td style="padding:10px 12px;text-align:center"><span style="color:' + frColor + ';font-weight:700">' + fr + '%</span></td>' +
+      '<td style="padding:10px 12px;text-align:center">' + (c.total_discovered||0) + '</td>' +
+      '<td style="padding:10px 12px;text-align:center"><span class="badge ' + clsBadge + '">' + esc(cls) + '</span></td>' +
+      '<td style="padding:10px 12px;text-align:center"><span class="badge ' + statusBadge + '">' + esc(c.status||'') + '</span></td>' +
+      '<td style="padding:10px 12px;text-align:center;color:var(--text-dim)">' + nextCheck + '</td>' +
+      '</tr>';
+  });
+  if (!combos.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-dim)">No exhaustion data yet. Run the daemon to start tracking.</td></tr>';
+  }
 }
 
 function parseJSON(val) {
