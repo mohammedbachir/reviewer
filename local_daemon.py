@@ -30,6 +30,10 @@ socket.getaddrinfo = _patched_getaddrinfo
 
 from curl_cffi import requests as cffi_requests
 from steindamm import SyncSemaphore as _SyncSemaphoreBase
+from scraper.filters import (
+    extract_root_domain, calculate_lead_tier,
+    safe_ssl_grade, safe_health_score, should_skip_business,
+)
 
 def _make_semaphore(name, capacity):
     return _SyncSemaphoreBase.create(name=name, capacity=capacity)
@@ -127,9 +131,9 @@ def get_targets():
 # ════════════════════════════════════════════════════════════════
 
 def score_lead(biz):
-    ssl = biz.get("ssl_grade", "F")
-    rating = biz.get("rating", 0)
-    health = biz.get("health_score", 50)
+    ssl = safe_ssl_grade(biz.get("ssl_grade"))
+    rating = biz.get("rating", 0) or 0
+    health = safe_health_score(biz.get("health_score"))
     techs = biz.get("tech_stack", [])
     responds = biz.get("responds_to_reviews", False)
     sentiment = biz.get("sentiment", "neutral")
@@ -589,6 +593,7 @@ class CrisoraDaemon:
             "ssl_grade": biz.get("ssl_grade", ""),
             "tech_stack": tech,
             "lead_temperature": biz.get("lead_temperature", "COLD"),
+            "lead_tier": biz.get("lead_tier", "TIER_3"),
             "outreach_hook": biz.get("outreach_hook", ""),
             "email_confidence": biz.get("email_confidence", 0),
             "email_source": biz.get("email_source", ""),
@@ -788,6 +793,12 @@ class CrisoraDaemon:
 
     # ── Parallel Enrich + Save ──────────────────────────────────
     def _enrich_and_save_one(self, biz, target):
+        skip_reason = should_skip_business(biz)
+        if skip_reason:
+            name = biz.get("name", "?")[:40]
+            print(f"  [SKIP] {name} — {skip_reason}")
+            return None, "skip"
+
         if not biz.get("website") and not biz.get("email"):
             return None, "skip"
 
@@ -799,6 +810,7 @@ class CrisoraDaemon:
                 return None, "skip"
 
             result = self.enrich_business(biz)
+            result["lead_tier"] = calculate_lead_tier(result)
             self.upsert_business(result, target)
             elapsed = time.time() - t0
 
@@ -1014,6 +1026,24 @@ class CrisoraDaemon:
                 return True
         except Exception:
             pass
+
+        root_domain = extract_root_domain(biz.get("website", ""))
+        if root_domain:
+            try:
+                resp = cffi_requests.get(
+                    f"{SUPABASE_URL}/rest/v1/businesses?select=id,sector&website=like.*{root_domain}*&limit=5",
+                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                    timeout=5,
+                )
+                rows = resp.json()
+                if isinstance(rows, list) and len(rows) > 0:
+                    sector = target.get("sector", target.get("category", ""))
+                    for row in rows:
+                        if row.get("sector", "").lower() == sector.lower():
+                            return True
+            except Exception:
+                pass
+
         return False
 
     def _fix_dns(self):

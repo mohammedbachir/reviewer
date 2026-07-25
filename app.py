@@ -19,6 +19,13 @@ if ROOT_DIR not in sys.path:
 SCRAPE_SECRET = os.environ.get("SCRAPE_SECRET_KEY", "findleads2026")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+from scraper.filters import (
+    extract_root_domain, calculate_lead_tier,
+    safe_ssl_grade, safe_health_score, should_skip_business,
+)
 
 logger = logging.getLogger("app")
 
@@ -183,7 +190,7 @@ def _validate_phone(phone):
 
 
 def _is_duplicate(biz, city, sector):
-    """Check if business already exists in DB by website or phone."""
+    """Check if business already exists in DB by website, phone, or root domain."""
     import re as _re
     website = (biz.get("website") or "").strip().rstrip("/").replace("www.", "").lower()
     phone = biz.get("phone") or ""
@@ -208,9 +215,29 @@ def _is_duplicate(biz, city, sector):
             timeout=5,
         )
         rows = resp.json()
-        return isinstance(rows, list) and len(rows) > 0
+        if isinstance(rows, list) and len(rows) > 0:
+            return True
     except Exception:
-        return False
+        pass
+
+    root_domain = extract_root_domain(biz.get("website", ""))
+    if root_domain:
+        try:
+            from curl_cffi import requests as cffi_requests
+            resp = cffi_requests.get(
+                f"{SUPABASE_URL}/rest/v1/businesses?select=id,sector&website=like.*{root_domain}*&limit=5",
+                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                timeout=5,
+            )
+            rows = resp.json()
+            if isinstance(rows, list) and len(rows) > 0:
+                for row in rows:
+                    if row.get("sector", "").lower() == sector.lower():
+                        return True
+        except Exception:
+            pass
+
+    return False
 
 
 def _upsert_business(biz, target):
@@ -241,6 +268,7 @@ def _upsert_business(biz, target):
             "ssl_grade": biz.get("ssl_grade", ""),
             "tech_stack": tech,
             "lead_temperature": biz.get("lead_temperature", "COLD"),
+            "lead_tier": biz.get("lead_tier", "TIER_3"),
             "outreach_hook": biz.get("outreach_hook", ""),
             "email_confidence": biz.get("email_confidence", 0),
             "email_source": biz.get("email_source", ""),
@@ -280,9 +308,9 @@ def _upsert_business(biz, target):
 
 
 def _score_lead(biz):
-    ssl = biz.get("ssl_grade", "F")
-    rating = biz.get("rating", 0)
-    health = biz.get("health_score", 50)
+    ssl = safe_ssl_grade(biz.get("ssl_grade"))
+    rating = biz.get("rating", 0) or 0
+    health = safe_health_score(biz.get("health_score"))
     techs = biz.get("tech_stack", [])
     responds = biz.get("responds_to_reviews", False)
     sentiment = biz.get("sentiment", "neutral")
@@ -551,9 +579,13 @@ def run_scrape():
     for biz in businesses:
         if time.time() - t0 > HARD_DEADLINE:
             break
+        skip_reason = should_skip_business(biz)
+        if skip_reason:
+            continue
         if _is_duplicate(biz, city, sector):
             continue
         enriched = _enrich_business(biz)
+        enriched["lead_tier"] = calculate_lead_tier(enriched)
         _upsert_business(enriched, target)
         try:
             from curl_cffi import requests as cffi_requests

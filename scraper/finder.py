@@ -670,7 +670,7 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
             except Exception:
                 pass
 
-    # Filter out bad entries: directory emails, known bad domains, bad names
+    # Filter out bad entries: enterprise brands, garbage names, directory platforms
     bad_email_domains = [
         "birdeye.com", "loc8nearme.com", "universalsolardirect.com",
         "opendi.us", "us.mylocalservices.com", "brownbook.net",
@@ -682,36 +682,34 @@ def search_businesses(city: str, business_type: str, limit: int = 20) -> List[Di
         "placedigger.com", "localsearch.com",
     ]
     filtered = []
+    skip_stats = {}
     for biz in all_businesses:
         name = biz.get("name", "")
         email = biz.get("email", "")
         website = biz.get("website", "")
 
-        # Skip businesses with emails from known directory platforms
+        skip_reason = should_skip_business(biz)
+        if skip_reason:
+            skip_stats[skip_reason.split(":")[0]] = skip_stats.get(skip_reason.split(":")[0], 0) + 1
+            logger.info(f"  [SKIP] {name[:40]} — {skip_reason}")
+            continue
+
         if email:
             email_domain = email.split("@")[-1].lower() if "@" in email else ""
             if any(d in email_domain for d in bad_email_domains):
-                logger.info(f"  Filtered (directory email): {name} ({email})")
+                skip_stats["directory_email"] = skip_stats.get("directory_email", 0) + 1
                 continue
 
-        # Skip businesses with website from directory platforms
         if website:
             if any(d in website.lower() for d in bad_email_domains):
-                logger.info(f"  Filtered (directory website): {name} ({website})")
+                skip_stats["directory_website"] = skip_stats.get("directory_website", 0) + 1
                 continue
-
-        # Skip bad names
-        if not name or len(name) < 4:
-            continue
-        if name[0] in (",", ".", "-", "(", "["):
-            continue
-        name_lower = name.lower().strip()
-        if name_lower in ("reviews", "review", "rating", "ratings", "comments", "feedback", "no name"):
-            continue
 
         filtered.append(biz)
 
     all_businesses = filtered
+    if skip_stats:
+        logger.info(f"  Filter breakdown: {skip_stats}")
     logger.info(f"After quality filter: {len(all_businesses)} businesses")
 
     # Sort: businesses with website first, then by name
@@ -818,7 +816,6 @@ def _search_ddg(session, query: str, limit: int) -> List[Dict]:
 
         real_name = name
         try:
-            from curl_cffi import requests as cffi_requests
             _sess = cffi_requests.Session()
             details = _scrape_website_details(_sess, website)
             scraped_name = details.get("real_name", "")
