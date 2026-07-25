@@ -190,24 +190,22 @@ def _validate_phone(phone):
 
 
 def _is_duplicate(biz, city, sector):
-    """Check if business already exists in DB by website, phone, or root domain."""
-    import re as _re
-    website = (biz.get("website") or "").strip().rstrip("/").replace("www.", "").lower()
-    phone = biz.get("phone") or ""
-    phone_digits = _re.sub(r'[^0-9]', '', str(phone))
-    if len(phone_digits) == 11 and phone_digits.startswith("1"):
-        phone_digits = phone_digits[1:]
+    """Check if business already exists by normalized domain or E.164 phone."""
+    from scraper.filters import normalize_domain, normalize_phone
+    from curl_cffi import requests as cffi_requests
+
+    domain = normalize_domain(biz.get("website", ""))
+    phone_e164 = normalize_phone(biz.get("phone"))
 
     checks = []
-    if website:
-        checks.append(f"website=eq.{website}")
-    if len(phone_digits) == 10:
-        checks.append(f"phone=eq.{phone_digits}")
+    if domain:
+        checks.append(f"normalized_domain=eq.{domain}")
+    if phone_e164:
+        checks.append(f"phone=eq.{phone_e164}")
     if not checks:
         return False
 
     try:
-        from curl_cffi import requests as cffi_requests
         query = "|".join(checks)
         resp = cffi_requests.get(
             f"{SUPABASE_URL}/rest/v1/businesses?select=id&{query}&limit=1",
@@ -220,29 +218,13 @@ def _is_duplicate(biz, city, sector):
     except Exception:
         pass
 
-    root_domain = extract_root_domain(biz.get("website", ""))
-    if root_domain:
-        try:
-            from curl_cffi import requests as cffi_requests
-            resp = cffi_requests.get(
-                f"{SUPABASE_URL}/rest/v1/businesses?select=id,sector&website=like.*{root_domain}*&limit=5",
-                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-                timeout=5,
-            )
-            rows = resp.json()
-            if isinstance(rows, list) and len(rows) > 0:
-                for row in rows:
-                    if row.get("sector", "").lower() == sector.lower():
-                        return True
-        except Exception:
-            pass
-
     return False
 
 
 def _upsert_business(biz, target):
     try:
         from curl_cffi import requests as cffi_requests
+        from scraper.filters import normalize_domain, safe_review_count
         tech = biz.get("tech_stack", [])
         if isinstance(tech, list):
             tech = json.dumps(tech)
@@ -260,9 +242,10 @@ def _upsert_business(biz, target):
             "city": target["city"],
             "sector": target["sector"],
             "website": biz.get("website", ""),
+            "normalized_domain": normalize_domain(biz.get("website", "")),
             "phone": _validate_phone(biz.get("phone", "")),
             "rating": biz.get("rating"),
-            "review_count": biz.get("review_count"),
+            "review_count": safe_review_count(biz.get("review_count")),
             "health_score": biz.get("health_score"),
             "email": biz.get("email"),
             "ssl_grade": biz.get("ssl_grade", ""),

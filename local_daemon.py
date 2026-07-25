@@ -565,6 +565,7 @@ class CrisoraDaemon:
     # ── Upsert ──────────────────────────────────────────────────
     def upsert_business(self, biz, target):
         from scraper.osint_engine import validate_consistency
+        from scraper.filters import normalize_domain, safe_review_count
         biz = validate_consistency(biz)
 
         tech = biz.get("tech_stack", [])
@@ -584,10 +585,11 @@ class CrisoraDaemon:
             "city": target["city"],
             "sector": target["sector"],
             "website": biz.get("website", ""),
+            "normalized_domain": normalize_domain(biz.get("website", "")),
             "phone": biz.get("phone", ""),
             "address": biz.get("address", ""),
             "rating": biz.get("rating"),
-            "review_count": biz.get("review_count"),
+            "review_count": safe_review_count(biz.get("review_count")),
             "health_score": biz.get("health_score"),
             "email": biz.get("email"),
             "ssl_grade": biz.get("ssl_grade", ""),
@@ -998,18 +1000,19 @@ class CrisoraDaemon:
         return diag
 
     def _is_duplicate(self, biz, target):
-        website = (biz.get("website") or "").strip().rstrip("/").replace("www.", "").lower()
-        phone = biz.get("phone") or ""
-        import re as _re
-        phone_digits = _re.sub(r'[^0-9]', '', str(phone))
-        if len(phone_digits) == 11 and phone_digits.startswith("1"):
-            phone_digits = phone_digits[1:]
+        from scraper.filters import normalize_domain, normalize_phone
+
+        # Normalize domain for comparison
+        domain = normalize_domain(biz.get("website", ""))
+
+        # Normalize phone to E.164
+        phone_e164 = normalize_phone(biz.get("phone"))
 
         checks = []
-        if website:
-            checks.append(f"website=eq.{website}")
-        if len(phone_digits) == 10:
-            checks.append(f"phone=eq.{phone_digits}")
+        if domain:
+            checks.append(f"normalized_domain=eq.{domain}")
+        if phone_e164:
+            checks.append(f"phone=eq.{phone_e164}")
 
         if not checks:
             return False
@@ -1026,23 +1029,6 @@ class CrisoraDaemon:
                 return True
         except Exception:
             pass
-
-        root_domain = extract_root_domain(biz.get("website", ""))
-        if root_domain:
-            try:
-                resp = cffi_requests.get(
-                    f"{SUPABASE_URL}/rest/v1/businesses?select=id,sector&website=like.*{root_domain}*&limit=5",
-                    headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-                    timeout=5,
-                )
-                rows = resp.json()
-                if isinstance(rows, list) and len(rows) > 0:
-                    sector = target.get("sector", target.get("category", ""))
-                    for row in rows:
-                        if row.get("sector", "").lower() == sector.lower():
-                            return True
-            except Exception:
-                pass
 
         return False
 
