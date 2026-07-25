@@ -557,8 +557,9 @@ def run_scrape():
         _upsert_business(enriched, target)
         try:
             from curl_cffi import requests as cffi_requests
+            biz_name = enriched["name"]
             resp = cffi_requests.get(
-                f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{enriched["name"]}&city=eq.{city}&sector=eq.{sector}&limit=1",
+                f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{biz_name}&city=eq.{city}&sector=eq.{sector}&limit=1",
                 headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
                 timeout=5,
             )

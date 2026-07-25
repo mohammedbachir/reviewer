@@ -58,9 +58,11 @@ HEADERS = {
 
 STATE_FILE = os.path.join(ROOT_DIR, ".daemon_state.json")
 TOOLS_HEALTH_FILE = os.path.join(ROOT_DIR, ".tools_health.json")
-MAX_WORKERS = 20
+MAX_WORKERS = 10
+SEARCH_LIMIT = 15
 GRAPH_CACHE_TTL = 300  # 5 minutes
-STALL_TIMEOUT = 120    # 120 seconds = stall (increased for parallel ops)
+STALL_TIMEOUT = 300    # 5 minutes = stall (increased for slow cycles)
+CYCLE_TIMEOUT = 240    # 4 minutes max per cycle
 WATCHDOG_INTERVAL = 15 # check every 15 seconds
 BACKFILL_FIRST = True  # always backfill before adding new
 
@@ -403,7 +405,7 @@ class CrisoraDaemon:
     # ── Backfill Incomplete Businesses ───────────────────────────
     def backfill_incomplete(self):
         self._backfill_count = getattr(self, '_backfill_count', 0) + 1
-        if self._backfill_count % 3 != 1:
+        if self._backfill_count % 10 != 1:
             return 0
 
         if not hasattr(self, '_backfill_offset'):
@@ -467,7 +469,7 @@ class CrisoraDaemon:
         log.info(f"Backfill: {len(incomplete)} need update (scanned {scanned} from offset {self._backfill_offset})")
         backfilled = 0
 
-        for b in incomplete[:15]:
+        for b in incomplete[:5]:
             name = (b.get("name") or "")[:40]
             try:
                 biz = {
@@ -485,7 +487,7 @@ class CrisoraDaemon:
             except Exception as e:
                 log.warning(f"  Backfill enrich error for {name}: {e}")
 
-        log.info(f"Backfill complete: {backfilled}/{min(len(incomplete), 15)} updated")
+        log.info(f"Backfill complete: {backfilled}/{min(len(incomplete), 5)} updated")
         self._total_backfilled += backfilled
         return backfilled
     def get_graph_data(self):
@@ -829,6 +831,8 @@ class CrisoraDaemon:
         from scraper.finder import search_businesses
         from exhaustion import SmartRotator
 
+        cycle_start = time.time()
+
         self.check_tools_health()
 
         backfilled = self.backfill_incomplete()
@@ -854,7 +858,7 @@ class CrisoraDaemon:
         print(f"  RUN #{idx + 1}/{len(targets)}  |  {city} / {sector}")
         print(f"{'='*60}")
 
-        businesses = search_businesses(city, sector, 50)
+        businesses = search_businesses(city, sector, SEARCH_LIMIT)
         if not businesses:
             print(f"  [!] No businesses found. Skipping.")
             return
@@ -863,11 +867,18 @@ class CrisoraDaemon:
         skipped = 0
         errors = 0
 
+        def _submit_all(ex, biz_list):
+            submitted = {}
+            remaining = []
+            for biz in biz_list:
+                if time.time() - cycle_start > CYCLE_TIMEOUT:
+                    remaining.append(biz)
+                    continue
+                submitted[executor.submit(self._enrich_and_save_one, biz, target)] = biz
+            return submitted, remaining
+
         with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-            futures = {
-                executor.submit(self._enrich_and_save_one, biz, target): biz
-                for biz in businesses
-            }
+            futures, remaining = _submit_all(executor, businesses)
             for future in as_completed(futures):
                 result, status = future.result()
                 if status == "skip":
