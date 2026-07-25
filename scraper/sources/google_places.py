@@ -1,10 +1,8 @@
 """
-Google Maps Business Discovery — no API key needed.
-
-Uses DDG search to discover businesses listed on Google Maps.
-Falls back to Google Places API if key is available.
+Google Maps Business Discovery — uses SearXNG (self-hosted) with DDG fallback.
+No API key needed for SearXNG path. Falls back to Google Places API if key available.
 """
-import os, logging, time, re
+import os, logging, re
 from typing import Dict, List
 
 log = logging.getLogger("google_places")
@@ -17,42 +15,75 @@ except Exception:
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_PLACES_API_KEY", "")
 
-try:
-    from duckduckgo_search import DDGS
-    _HAS_DDGS = True
-except ImportError:
-    _HAS_DDGS = False
-
-try:
-    import requests as _req
-except ImportError:
-    from curl_cffi import requests as _req
-
 
 def search_businesses(city: str, sector: str, max_results: int = 20) -> List[Dict]:
     if GOOGLE_API_KEY:
         return _search_via_api(city, sector, max_results)
-    return _search_via_ddg(city, sector, max_results)
+    return _search_via_searxng(city, sector, max_results)
 
 
-def _search_via_ddg(city: str, sector: str, max_results: int = 20) -> List[Dict]:
-    if not _HAS_DDGS:
-        log.debug("duckduckgo-search not installed")
-        return []
-
-    query = f"{sector} in {city} google maps"
+def _search_via_searxng(city: str, sector: str, max_results: int = 20) -> List[Dict]:
     results = []
-
     try:
+        from scraper.searxng_search import search
+        query = f"{sector} in {city} google maps"
+        raw = search(query, max_results=min(max_results, 15))
+
+        for r in raw:
+            url = r.get("url", "")
+            title = r.get("title", "")
+            snippet = r.get("snippet", "")
+
+            if not title or not any(kw in url.lower() for kw in ["google.com/maps", "goo.gl/maps"]):
+                continue
+
+            biz = {
+                "name": title.split(" - ")[0].split(" | ")[0].strip(),
+                "address": _extract_address(snippet, city),
+                "google_url": url,
+                "source": "google_maps_searxng",
+            }
+
+            rating_match = re.search(r'(\d+\.?\d*)\s*(?:stars?|rating| reviews?)', snippet, re.IGNORECASE)
+            if rating_match:
+                try:
+                    biz["google_rating"] = float(rating_match.group(1))
+                except ValueError:
+                    pass
+
+            phone_match = re.search(r'(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})', snippet)
+            if phone_match:
+                biz["phone"] = phone_match.group(1)
+
+            if city.lower() in snippet.lower() or city.lower() in biz["name"].lower():
+                results.append(biz)
+
+            if len(results) >= max_results:
+                break
+
+    except Exception as e:
+        log.debug(f"SearXNG Google Maps search failed: {e}")
+
+    if not results:
+        results = _ddg_fallback(city, sector, max_results)
+
+    return results
+
+
+def _ddg_fallback(city: str, sector: str, max_results: int) -> List[Dict]:
+    """Fallback to DDG if SearXNG is down."""
+    try:
+        from duckduckgo_search import DDGS
+        query = f"{sector} in {city} google maps"
+        results = []
         with DDGS() as ddgs:
             for r in ddgs.text(query, max_results=min(max_results, 10)):
                 url = r.get("href", "")
                 title = r.get("title", "")
                 snippet = r.get("body", "")
 
-                if not title or "google" not in url.lower():
-                    if not any(kw in url.lower() for kw in ["google.com/maps", "goo.gl/maps"]):
-                        continue
+                if not title or not any(kw in url.lower() for kw in ["google.com/maps", "goo.gl/maps"]):
+                    continue
 
                 biz = {
                     "name": title.split(" - ")[0].split(" | ")[0].strip(),
@@ -77,11 +108,9 @@ def _search_via_ddg(city: str, sector: str, max_results: int = 20) -> List[Dict]
 
                 if len(results) >= max_results:
                     break
-
-    except Exception as e:
-        log.debug(f"DDG Google Maps search failed: {e}")
-
-    return results
+        return results
+    except Exception:
+        return []
 
 
 def _extract_address(snippet: str, city: str) -> str:
@@ -101,7 +130,12 @@ def _search_via_api(city: str, sector: str, max_results: int = 20) -> List[Dict]
     }
 
     try:
-        r = _req.get("https://maps.googleapis.com/maps/api/place/textsearch/json", params=params, timeout=15)
+        try:
+            from curl_cffi import requests as cffi_requests
+            r = cffi_requests.get("https://maps.googleapis.com/maps/api/place/textsearch/json", params=params, timeout=15)
+        except ImportError:
+            import requests
+            r = requests.get("https://maps.googleapis.com/maps/api/place/textsearch/json", params=params, timeout=15)
         data = r.json()
         if data.get("status") != "OK":
             log.debug(f"Google Places status: {data.get('status')}")
@@ -139,7 +173,12 @@ def get_place_details(place_id: str) -> Dict:
     }
 
     try:
-        r = _req.get("https://maps.googleapis.com/maps/api/place/details/json", params=params, timeout=15)
+        try:
+            from curl_cffi import requests as cffi_requests
+            r = cffi_requests.get("https://maps.googleapis.com/maps/api/place/details/json", params=params, timeout=15)
+        except ImportError:
+            import requests
+            r = requests.get("https://maps.googleapis.com/maps/api/place/details/json", params=params, timeout=15)
         data = r.json()
         if data.get("status") != "OK":
             return {}

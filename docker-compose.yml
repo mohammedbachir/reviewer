@@ -8,9 +8,42 @@ services:
     dns:
       - 8.8.8.8
       - 8.8.4.4
+    depends_on:
+      searxng:
+        condition: service_healthy
+    environment:
+      - SEARXNG_URL=http://searxng:8080
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
       interval: 60s
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  searxng:
+    image: searxng/searxng:latest
+    restart: unless-stopped
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./searxng-config:/etc/searxng:rw
+    environment:
+      - SEARXNG_BASE_URL=http://searxng:8080/
+      - SEARXNG_SECRET_KEY=crisora-secret-key-change-me
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"

@@ -19,9 +19,14 @@ from curl_cffi import requests as cffi_requests
 
 logger = logging.getLogger("osint")
 
+_shared_session = None
+
 
 def _create_session():
-    return cffi_requests.Session(impersonate="chrome120")
+    global _shared_session
+    if _shared_session is None:
+        _shared_session = cffi_requests.Session(impersonate="chrome120")
+    return _shared_session
 
 
 HEADERS = {

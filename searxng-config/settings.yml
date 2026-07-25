@@ -1,0 +1,71 @@
+use_default_settings: true
+
+general:
+  instance_name: "Crisora Search"
+  debug: false
+  privacypolicy_url: false
+  contact_url: false
+  enable_metrics: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "en"
+  formats:
+    - html
+    - json
+
+server:
+  port: 8080
+  bind_address: "0.0.0.0"
+  secret_key: "crisora-secret-key-change-me"
+  limiter: true
+  image_proxy: false
+  method: "GET"
+
+ui:
+  static_use_hash: true
+  default_theme: simple
+  query_in_title: true
+  infinite_scroll: true
+  center_alignment: false
+
+engines:
+  - name: google
+    engine: google
+    shortcut: go
+    disabled: false
+    use_mobile_ui: false
+
+  - name: bing
+    engine: bing
+    shortcut: bi
+    disabled: false
+
+  - name: duckduckgo
+    engine: duckduckgo
+    shortcut: ddg
+    disabled: false
+
+  - name: brave
+    engine: brave
+    shortcut: br
+    disabled: false
+    api_key: ""
+
+  - name: startpage
+    engine: startpage
+    shortcut: sp
+    disabled: false
+
+  - name: mojeek
+    engine: mojeek
+    shortcut: mj
+    disabled: false
+
+outgoing:
+  request_timeout: 5.0
+  max_request_timeout: 15.0
+  useragent_suffix: ""
+  pool_connections: 100
+  pool_maxsize: 20

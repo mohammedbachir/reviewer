@@ -58,10 +58,10 @@ HEADERS = {
 
 STATE_FILE = os.path.join(ROOT_DIR, ".daemon_state.json")
 TOOLS_HEALTH_FILE = os.path.join(ROOT_DIR, ".tools_health.json")
-MAX_WORKERS = 5
+MAX_WORKERS = 20
 GRAPH_CACHE_TTL = 300  # 5 minutes
-STALL_TIMEOUT = 60     # 60 seconds = stall
-WATCHDOG_INTERVAL = 10 # check every 10 seconds
+STALL_TIMEOUT = 120    # 120 seconds = stall (increased for parallel ops)
+WATCHDOG_INTERVAL = 15 # check every 15 seconds
 BACKFILL_FIRST = True  # always backfill before adding new
 
 
@@ -272,10 +272,10 @@ class CrisoraDaemon:
             "internetdb": CircuitBreaker("internetdb", failure_threshold=3, cooldown=300),
         }
         self._rate_limiters = {
-            "certspotter": _make_semaphore("certspotter", capacity=2),
-            "crtsh": _make_semaphore("crtsh", capacity=1),
-            "internetdb": _make_semaphore("internetdb", capacity=3),
-            "supabase": _make_semaphore("supabase", capacity=5),
+            "certspotter": _make_semaphore("certspotter", capacity=8),
+            "crtsh": _make_semaphore("crtsh", capacity=5),
+            "internetdb": _make_semaphore("internetdb", capacity=10),
+            "supabase": _make_semaphore("supabase", capacity=15),
         }
 
     def get_status(self):
@@ -384,13 +384,20 @@ class CrisoraDaemon:
         except Exception:
             health["dns"] = False
 
+        # SearXNG
+        try:
+            from scraper.searxng_search import health_check as searxng_health
+            health["searxng"] = searxng_health()
+        except Exception:
+            health["searxng"] = False
+
         self._tools_health = health
         self._tools_health_time = time.time()
 
         ok = sum(1 for k, v in health.items() if isinstance(v, bool) and v)
         total = sum(1 for k, v in health.items() if isinstance(v, bool))
         cb_states = {k: v.get_state() for k, v in self._circuit_breakers.items()}
-        log.info(f"Tools health: {ok}/{total} OK | certspotter={health.get('certspotter')} crtsh={health.get('crtsh')} dns={health.get('dns')} | circuits={cb_states}")
+        log.info(f"Tools health: {ok}/{total} OK | searxng={health.get('searxng')} certspotter={health.get('certspotter')} crtsh={health.get('crtsh')} dns={health.get('dns')} | circuits={cb_states}")
         return health
 
     # ── Backfill Incomplete Businesses ───────────────────────────
@@ -648,12 +655,8 @@ class CrisoraDaemon:
         except Exception:
             return []
 
-    # ── Enrichment (per business) ───────────────────────────────
+    # ── Enrichment (per business) — Parallel Steps ──────────────
     def enrich_business(self, biz):
-        from scraper.email_finder import find_best_email
-        from scraper.osint_engine import analyze_domain
-        from scraper.review_engine import analyze_reviews
-
         website = biz.get("website", "")
         domain = ""
         if website:
@@ -662,8 +665,9 @@ class CrisoraDaemon:
             except Exception:
                 pass
 
-        if website:
+        def _run_email():
             try:
+                from scraper.email_finder import find_best_email
                 result = find_best_email(website, biz.get("name", ""))
                 if result.get("email"):
                     biz["email"] = result["email"]
@@ -674,10 +678,12 @@ class CrisoraDaemon:
             except Exception as e:
                 log.warning(f"  Email error: {e}")
 
-        if domain:
+        def _run_osint():
+            if not domain:
+                return
             try:
-                with self._rate_limiters["internetdb"]:
-                    osint = analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
+                from scraper.osint_engine import analyze_domain
+                osint = analyze_domain(domain, biz.get("rating", 0), biz.get("review_count", 0))
                 biz["health_score"] = osint["health_score"]
                 biz["ssl_grade"] = osint["ssl_grade"]
                 biz["tech_stack"] = osint["tech_stack"]
@@ -690,50 +696,69 @@ class CrisoraDaemon:
             except Exception as e:
                 log.warning(f"  OSINT error: {e}")
 
-        try:
-            rv = analyze_reviews(biz.get("name", ""), biz.get("city", ""), website)
-            biz["sentiment"] = rv.get("sentiment", "neutral")
-            biz["responds_to_reviews"] = rv.get("responds_to_reviews", False)
-            if rv.get("rating") and not biz.get("rating"):
-                biz["rating"] = rv["rating"]
-            if rv.get("review_count") and not biz.get("review_count"):
-                biz["review_count"] = rv["review_count"]
-        except Exception as e:
-            log.warning(f"  Review error: {e}")
+        def _run_reviews():
+            try:
+                from scraper.review_engine import analyze_reviews
+                rv = analyze_reviews(biz.get("name", ""), biz.get("city", ""), website)
+                biz["sentiment"] = rv.get("sentiment", "neutral")
+                biz["responds_to_reviews"] = rv.get("responds_to_reviews", False)
+                if rv.get("rating") and not biz.get("rating"):
+                    biz["rating"] = rv["rating"]
+                if rv.get("review_count") and not biz.get("review_count"):
+                    biz["review_count"] = rv["review_count"]
+            except Exception as e:
+                log.warning(f"  Review error: {e}")
 
-        try:
-            from scraper.sources.social_discovery import discover_social_presence
-            social = discover_social_presence(biz.get("name", ""), biz.get("city", ""))
-            biz["social_presence_score"] = social.get("social_presence_score", 0)
-            biz["social_platforms_found"] = social.get("social_platforms_found", [])
-            if social.get("linkedin_url"):
-                biz["linkedin_url"] = social["linkedin_url"]
-            if social.get("facebook_url"):
-                biz["facebook_url"] = social["facebook_url"]
-            if social.get("yelp_url"):
-                biz["yelp_url"] = social["yelp_url"]
-            if social.get("bbb_url"):
-                biz["bbb_url"] = social["bbb_url"]
-        except Exception as e:
-            log.warning(f"  Social discovery error: {e}")
+        def _run_social():
+            try:
+                from scraper.sources.social_discovery import discover_social_presence
+                social = discover_social_presence(biz.get("name", ""), biz.get("city", ""))
+                biz["social_presence_score"] = social.get("social_presence_score", 0)
+                biz["social_platforms_found"] = social.get("social_platforms_found", [])
+                if social.get("linkedin_url"):
+                    biz["linkedin_url"] = social["linkedin_url"]
+                if social.get("facebook_url"):
+                    biz["facebook_url"] = social["facebook_url"]
+                if social.get("yelp_url"):
+                    biz["yelp_url"] = social["yelp_url"]
+                if social.get("bbb_url"):
+                    biz["bbb_url"] = social["bbb_url"]
+            except Exception as e:
+                log.warning(f"  Social discovery error: {e}")
 
-        try:
-            from scraper.sources.bbb_api import search_business as bbb_search
-            bbb = bbb_search(biz.get("name", ""), biz.get("city", ""))
-            if bbb.get("bbb_found"):
-                biz["bbb_rating"] = bbb.get("bbb_rating")
-                biz["bbb_accredited"] = bbb.get("bbb_accredited")
-                biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
-        except Exception as e:
-            log.warning(f"  BBB error: {e}")
+        def _run_bbb():
+            try:
+                from scraper.sources.bbb_api import search_business as bbb_search
+                bbb = bbb_search(biz.get("name", ""), biz.get("city", ""))
+                if bbb.get("bbb_found"):
+                    biz["bbb_rating"] = bbb.get("bbb_rating")
+                    biz["bbb_accredited"] = bbb.get("bbb_accredited")
+                    biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
+            except Exception as e:
+                log.warning(f"  BBB error: {e}")
 
-        try:
-            from scraper.sources.census_api import get_city_demographics
-            census = get_city_demographics(biz.get("city", ""))
-            if census:
-                biz["census_data"] = census
-        except Exception as e:
-            log.warning(f"  Census error: {e}")
+        def _run_census():
+            try:
+                from scraper.sources.census_api import get_city_demographics
+                census = get_city_demographics(biz.get("city", ""))
+                if census:
+                    biz["census_data"] = census
+            except Exception as e:
+                log.warning(f"  Census error: {e}")
+
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            futures = []
+            futures.append(ex.submit(_run_email))
+            futures.append(ex.submit(_run_osint))
+            futures.append(ex.submit(_run_reviews))
+            futures.append(ex.submit(_run_social))
+            futures.append(ex.submit(_run_bbb))
+            futures.append(ex.submit(_run_census))
+            for f in as_completed(futures):
+                try:
+                    f.result()
+                except Exception:
+                    pass
 
         biz["lead_temperature"] = score_lead(biz)
         biz["outreach_hook"] = generate_hook(biz, biz["lead_temperature"])
@@ -829,7 +854,7 @@ class CrisoraDaemon:
         print(f"  RUN #{idx + 1}/{len(targets)}  |  {city} / {sector}")
         print(f"{'='*60}")
 
-        businesses = search_businesses(city, sector, 5)
+        businesses = search_businesses(city, sector, 50)
         if not businesses:
             print(f"  [!] No businesses found. Skipping.")
             return

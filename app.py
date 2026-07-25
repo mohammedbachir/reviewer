@@ -410,13 +410,41 @@ def _enrich_business(biz):
         except Exception:
             return {}
 
-    with ThreadPoolExecutor(max_workers=3) as ex:
+    def _do_social():
+        from scraper.sources.social_discovery import discover_social_presence
+        try:
+            return discover_social_presence(biz.get("name", ""), biz.get("city", ""))
+        except Exception:
+            return {}
+
+    def _do_bbb():
+        from scraper.sources.bbb_api import search_business as bbb_search
+        try:
+            return bbb_search(biz.get("name", ""), biz.get("city", ""))
+        except Exception:
+            return {}
+
+    def _do_census():
+        from scraper.sources.census_api import get_city_demographics
+        try:
+            return get_city_demographics(biz.get("city", ""))
+        except Exception:
+            return None
+
+    with ThreadPoolExecutor(max_workers=6) as ex:
         f_email = ex.submit(_do_email) if website else None
         f_osint = ex.submit(_do_osint) if domain else None
         f_reviews = ex.submit(_do_reviews) if biz.get("name") else None
-        email_result = f_email.result(timeout=8) if f_email else {}
-        osint = f_osint.result(timeout=8) if f_osint else {}
-        reviews = f_reviews.result(timeout=8) if f_reviews else {}
+        f_social = ex.submit(_do_social) if biz.get("name") else None
+        f_bbb = ex.submit(_do_bbb) if biz.get("name") else None
+        f_census = ex.submit(_do_census) if biz.get("city") else None
+
+        email_result = f_email.result(timeout=10) if f_email else {}
+        osint = f_osint.result(timeout=10) if f_osint else {}
+        reviews = f_reviews.result(timeout=10) if f_reviews else {}
+        social = f_social.result(timeout=10) if f_social else {}
+        bbb = f_bbb.result(timeout=8) if f_bbb else {}
+        census = f_census.result(timeout=5) if f_census else None
 
     if email_result.get("email"):
         biz["email"] = email_result["email"]
@@ -444,9 +472,7 @@ def _enrich_business(biz):
         if reviews.get("review_count"):
             biz["review_count"] = reviews["review_count"]
 
-    try:
-        from scraper.sources.social_discovery import discover_social_presence
-        social = discover_social_presence(biz.get("name", ""), biz.get("city", ""))
+    if social:
         biz["social_presence_score"] = social.get("social_presence_score", 0)
         biz["social_platforms_found"] = social.get("social_platforms_found", [])
         if social.get("linkedin_url"):
@@ -457,26 +483,14 @@ def _enrich_business(biz):
             biz["yelp_url"] = social["yelp_url"]
         if social.get("bbb_url"):
             biz["bbb_url"] = social["bbb_url"]
-    except Exception:
-        pass
 
-    try:
-        from scraper.sources.bbb_api import search_business as bbb_search
-        bbb = bbb_search(biz.get("name", ""), biz.get("city", ""))
-        if bbb.get("bbb_found"):
-            biz["bbb_rating"] = bbb.get("bbb_rating")
-            biz["bbb_accredited"] = bbb.get("bbb_accredited")
-            biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
-    except Exception:
-        pass
+    if bbb and bbb.get("bbb_found"):
+        biz["bbb_rating"] = bbb.get("bbb_rating")
+        biz["bbb_accredited"] = bbb.get("bbb_accredited")
+        biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
 
-    try:
-        from scraper.sources.census_api import get_city_demographics
-        census = get_city_demographics(biz.get("city", ""))
-        if census:
-            biz["census_data"] = census
-    except Exception:
-        pass
+    if census:
+        biz["census_data"] = census
 
     temperature = _score_lead(biz)
     biz["lead_temperature"] = temperature
@@ -521,44 +535,58 @@ def _log_scan_run(city, sector, businesses_found, emails_found, osint_scanned, d
 def run_scrape():
     from scraper.finder import search_businesses
     t0 = time.time()
-    HARD_DEADLINE = 22
+    HARD_DEADLINE = 55
     target = _get_target()
     city, sector = target["city"], target["sector"]
-    businesses = search_businesses(city, sector, 1)
+    businesses = search_businesses(city, sector, 5)
     if not businesses:
         _log_scan_run(city, sector, 0, 0, 0, time.time() - t0, "no_results")
         return {"status": "no_results", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
-    biz = businesses[0]
-    if _is_duplicate(biz, city, sector):
-        return {"status": "duplicate", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
-    if time.time() - t0 > HARD_DEADLINE:
-        _log_scan_run(city, sector, 0, 0, 0, time.time() - t0, "timeout")
-        return {"status": "timeout", "target": f"{city} / {sector}", "elapsed_seconds": round(time.time() - t0, 1)}
-    enriched = _enrich_business(biz)
-    _upsert_business(enriched, target)
-    try:
-        from curl_cffi import requests as cffi_requests
-        resp = cffi_requests.get(
-            f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{enriched['name']}&city=eq.{city}&sector=eq.{sector}&limit=1",
-            headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
-            timeout=5,
-        )
-        rows = resp.json()
-        if rows:
-            _save_snapshot(rows[0]["id"], enriched)
-    except Exception:
-        pass
-    has_email = 1 if enriched.get("email") else 0
-    _log_scan_run(city, sector, 1, has_email, 1, time.time() - t0, "completed")
+
+    results = []
+    emails_found = 0
+    osint_scanned = 0
+    processed = 0
+
+    for biz in businesses:
+        if time.time() - t0 > HARD_DEADLINE:
+            break
+        if _is_duplicate(biz, city, sector):
+            continue
+        enriched = _enrich_business(biz)
+        _upsert_business(enriched, target)
+        try:
+            from curl_cffi import requests as cffi_requests
+            resp = cffi_requests.get(
+                f"{SUPABASE_URL}/rest/v1/businesses?select=id&name=eq.{enriched["name"]}&city=eq.{city}&sector=eq.{sector}&limit=1",
+                headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
+                timeout=5,
+            )
+            rows = resp.json()
+            if rows:
+                _save_snapshot(rows[0]["id"], enriched)
+        except Exception:
+            pass
+        if enriched.get("email"):
+            emails_found += 1
+        osint_scanned += 1
+        processed += 1
+        results.append({
+            "business_name": enriched.get("name", ""),
+            "email": enriched.get("email", ""),
+            "lead_temperature": enriched.get("lead_temperature", ""),
+            "health_score": enriched.get("health_score", 0),
+            "crisis_risk_level": enriched.get("crisis_risk_level", "UNKNOWN"),
+            "crisis_probability": enriched.get("crisis_probability", 0),
+        })
+
+    _log_scan_run(city, sector, processed, emails_found, osint_scanned, time.time() - t0, "completed")
     return {
         "status": "completed",
         "target": f"{city} / {sector}",
-        "business_name": enriched.get("name", ""),
-        "email": enriched.get("email", ""),
-        "lead_temperature": enriched.get("lead_temperature", ""),
-        "health_score": enriched.get("health_score", 0),
-        "crisis_risk_level": enriched.get("crisis_risk_level", "UNKNOWN"),
-        "crisis_probability": enriched.get("crisis_probability", 0),
+        "businesses_processed": processed,
+        "emails_found": emails_found,
+        "results": results,
         "elapsed_seconds": round(time.time() - t0, 1),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
