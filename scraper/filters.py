@@ -296,12 +296,13 @@ def should_skip_business(biz: dict) -> str:
 
 def calculate_lead_tier(biz: dict) -> str:
     """
-    TIER 1 (Premium):   valid email AND valid phone AND (HOT or WARM)
-    TIER 2 (Standard):  valid email OR valid phone
+    TIER 1 (Premium):   valid email AND has phone AND (HOT or WARM)
+    TIER 2 (Standard):  valid email OR has phone
     TIER 3 (Unqualified): neither
     """
     email_ok = is_valid_email(biz.get("email"))
-    phone_ok = bool(normalize_phone(biz.get("phone")))
+    phone_raw = (biz.get("phone") or "").strip()
+    phone_ok = bool(phone_raw and len(phone_raw) >= 7)
     temp = biz.get("lead_temperature", "COLD")
 
     if email_ok and phone_ok and temp in ("HOT", "WARM"):
