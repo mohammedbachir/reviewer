@@ -257,7 +257,7 @@ def _upsert_business(biz, target):
             "cvss_severity": biz.get("cvss_severity", "NONE"),
             "cvss_max": biz.get("cvss_max", 0),
             "social_presence_score": biz.get("social_presence_score", 0),
-            "social_platforms_found": json.dumps(biz.get("social_platforms_found", [])),
+            "social_platforms_found": biz.get("social_platforms_found", []),
             "linkedin_url": biz.get("linkedin_url", ""),
             "facebook_url": biz.get("facebook_url", ""),
             "yelp_url": biz.get("yelp_url", ""),
@@ -265,10 +265,10 @@ def _upsert_business(biz, target):
             "bbb_rating": biz.get("bbb_rating", ""),
             "bbb_accredited": biz.get("bbb_accredited", False),
             "bbb_complaints": biz.get("bbb_complaints", 0),
-            "census_data": json.dumps(biz.get("census_data", {})),
+            "census_data": biz.get("census_data", {}),
         }
         resp = cffi_requests.post(
-            f"{SUPABASE_URL}/rest/v1/businesses",
+            f"{SUPABASE_URL}/rest/v1/businesses?on_conflict=name,city,sector",
             json=data,
             headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Prefer": "resolution=merge-duplicates"},
             timeout=10,

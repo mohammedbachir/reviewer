@@ -82,6 +82,57 @@ def _daemon_loop():
         time.sleep(1)
 
 
+@app.route("/debug/sources")
+def debug_sources():
+    import json
+    results = {}
+
+    # Test census
+    try:
+        from scraper.sources.census_api import get_city_demographics
+        c = get_city_demographics("Houston")
+        results["census_houston"] = c
+        results["census_houston_type"] = type(c).__name__
+        results["census_houston_empty"] = not bool(c)
+    except Exception as e:
+        results["census_error"] = str(e)
+
+    # Test social
+    try:
+        from scraper.sources.social_discovery import discover_social_presence
+        s = discover_social_presence("Greig Motors", "Houston")
+        results["social"] = s
+    except Exception as e:
+        results["social_error"] = str(e)
+
+    # Test BBB
+    try:
+        from scraper.sources.bbb_api import search_business as bbb_search
+        b = bbb_search("Greig Motors", "Houston")
+        results["bbb"] = b
+    except Exception as e:
+        results["bbb_error"] = str(e)
+
+    # Test full enrichment on a simple biz
+    try:
+        from local_daemon import _get_daemon
+        daemon = _get_daemon()
+        test_biz = {"name": "TestEnrich", "city": "Houston", "sector": "Car Dealer", "website": "https://example.com"}
+        result = daemon.enrich_business(test_biz)
+        results["enrich_census_data"] = result.get("census_data")
+        results["enrich_social_score"] = result.get("social_presence_score")
+        results["enrich_bbb_rating"] = result.get("bbb_rating")
+        results["enrich_census_data_type"] = type(result.get("census_data")).__name__
+    except Exception as e:
+        results["enrich_error"] = str(e)
+
+    # Check env vars
+    results["env_CENSUS_API_KEY"] = bool(os.environ.get("CENSUS_API_KEY"))
+    results["env_GOOGLE_PLACES_API_KEY"] = bool(os.environ.get("GOOGLE_PLACES_API_KEY"))
+
+    return jsonify(results)
+
+
 def main():
     port = int(os.environ.get("PORT", 8080))
 

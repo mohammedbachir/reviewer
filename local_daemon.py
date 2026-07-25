@@ -395,148 +395,90 @@ class CrisoraDaemon:
 
     # ── Backfill Incomplete Businesses ───────────────────────────
     def backfill_incomplete(self):
-        health = self.check_tools_health()
-        available_tools = [k for k, v in health.items() if isinstance(v, bool) and v]
-
-        if not available_tools:
-            log.warning("No tools available. Skipping backfill.")
+        self._backfill_count = getattr(self, '_backfill_count', 0) + 1
+        if self._backfill_count % 3 != 1:
             return 0
 
-        incomplete = []
+        if not hasattr(self, '_backfill_offset'):
+            self._backfill_offset = 0
+        if not hasattr(self, '_backfill_total_scanned'):
+            self._backfill_total_scanned = 0
 
-        # Fetch businesses with potentially incomplete data
-        offset = 0
-        while True:
+        incomplete = []
+        scanned = 0
+        MAX_SCAN = 500
+        while scanned < MAX_SCAN:
             try:
                 r = cffi_requests.get(
-                    f"{SUPABASE_URL}/rest/v1/businesses?select=id,name,website,firebase,crtsh,api_keys,archive,sherlock&website=not.is.null&order=id.desc&limit=100&offset={offset}",
+                    f"{SUPABASE_URL}/rest/v1/businesses?select=id,name,city,sector,website,phone,social_presence_score,census_data,bbb_rating&website=not.is.null&order=id.desc&limit=100&offset={self._backfill_offset}",
                     headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"},
                     timeout=30
                 )
                 batch = r.json()
                 if not batch:
+                    self._backfill_offset = 0
                     break
+                scanned += len(batch)
                 for b in batch:
                     needs_backfill = False
-
-                    crtsh = b.get("crtsh") or {}
-                    if isinstance(crtsh, str):
-                        try: crtsh = json.loads(crtsh)
-                        except: crtsh = {}
-                    if not crtsh.get("checked") and "certspotter" in available_tools:
+                    if b.get("social_presence_score") is None:
                         needs_backfill = True
-
-                    firebase = b.get("firebase") or {}
-                    if isinstance(firebase, str):
-                        try: firebase = json.loads(firebase)
-                        except: firebase = {}
-                    if not firebase and "firebase" not in str(b.get("id", "")):
+                    census = b.get("census_data")
+                    census_empty = False
+                    if not census:
+                        census_empty = True
+                    elif isinstance(census, str):
+                        try:
+                            parsed = json.loads(census)
+                            census_empty = not parsed
+                        except Exception:
+                            census_empty = True
+                    elif isinstance(census, dict):
+                        census_empty = not census
+                    if census_empty:
                         needs_backfill = True
-
-                    api_keys = b.get("api_keys") or {}
-                    if isinstance(api_keys, str):
-                        try: api_keys = json.loads(api_keys)
-                        except: api_keys = {}
-                    if not api_keys:
+                    if b.get("bbb_rating") is None:
                         needs_backfill = True
-
                     if needs_backfill:
                         incomplete.append(b)
-
+                self._backfill_offset += len(batch)
                 if len(batch) < 100:
+                    self._backfill_offset = 0
                     break
-                offset += 100
             except Exception as e:
                 log.error(f"Backfill fetch error: {e}")
                 break
 
+        self._backfill_total_scanned += scanned
+
         if not incomplete:
-            log.info("No incomplete businesses found. All data is complete.")
+            if self._backfill_offset == 0:
+                log.info(f"Backfill: all {self._backfill_total_scanned} businesses checked, none need update")
+                self._backfill_total_scanned = 0
             return 0
 
-        log.info(f"Backfill: {len(incomplete)} businesses need data update")
+        log.info(f"Backfill: {len(incomplete)} need update (scanned {scanned} from offset {self._backfill_offset})")
         backfilled = 0
 
-        for b in incomplete[:20]:
-            biz_id = b["id"]
-            name = (b.get("name") or "")[:30]
-            website = b.get("website", "")
-
+        for b in incomplete[:15]:
+            name = (b.get("name") or "")[:40]
             try:
-                from urllib.parse import urlparse
-                parsed = urlparse(website)
-                domain = parsed.netloc or parsed.path
-                if domain.startswith("www."):
-                    domain = domain[4:]
-                domain = domain.split("/")[0].split(":")[0]
-            except Exception:
-                continue
+                biz = {
+                    "name": b["name"],
+                    "city": b.get("city", ""),
+                    "sector": b.get("sector", ""),
+                    "website": b.get("website", ""),
+                    "phone": b.get("phone", ""),
+                }
+                result = self.enrich_business(biz)
+                self.upsert_business(result, biz)
+                backfilled += 1
+                log.info(f"  [BACKFILL] {name} | social={result.get('social_presence_score', 0)} bbb={result.get('bbb_rating', '-')} census={bool(result.get('census_data'))}")
+                time.sleep(0.5)
+            except Exception as e:
+                log.warning(f"  Backfill enrich error for {name}: {e}")
 
-            if not domain or "." not in domain:
-                continue
-
-            patch = {}
-
-            crtsh = b.get("crtsh") or {}
-            if isinstance(crtsh, str):
-                try: crtsh = json.loads(crtsh)
-                except: crtsh = {}
-            if not crtsh.get("checked") and "certspotter" in available_tools:
-                try:
-                    from scraper.osint_engine import check_subdomains_emails
-                    crtsh_data = check_subdomains_emails(domain)
-                    patch["crtsh"] = crtsh_data
-                except Exception as e:
-                    log.debug(f"  Backfill crtsh error for {name}: {e}")
-
-            firebase = b.get("firebase") or {}
-            if isinstance(firebase, str):
-                try: firebase = json.loads(firebase)
-                except: firebase = {}
-            if not firebase:
-                try:
-                    from scraper.osint_engine import check_firebase_exposure
-                    session = cffi_requests.Session(impersonate="chrome120")
-                    resp = session.get(f"https://{domain}", timeout=5, allow_redirects=True)
-                    html = resp.text if resp.status_code == 200 else ""
-                    firebase_data = check_firebase_exposure(domain, html)
-                    if firebase_data.get("firebase_detected") or firebase_data.get("firebase_open"):
-                        patch["firebase"] = firebase_data
-                except Exception:
-                    pass
-
-            api_keys = b.get("api_keys") or {}
-            if isinstance(api_keys, str):
-                try: api_keys = json.loads(api_keys)
-                except: api_keys = {}
-            if not api_keys:
-                try:
-                    from scraper.osint_engine import extract_api_keys
-                    session = cffi_requests.Session(impersonate="chrome120")
-                    resp = session.get(f"https://{domain}", timeout=5, allow_redirects=True)
-                    html = resp.text if resp.status_code == 200 else ""
-                    api_data = extract_api_keys(html, domain)
-                    if api_data.get("key_count", 0) > 0:
-                        patch["api_keys"] = api_data
-                except Exception:
-                    pass
-
-            if patch:
-                try:
-                    r = cffi_requests.patch(
-                        f"{SUPABASE_URL}/rest/v1/businesses?id=eq.{biz_id}",
-                        json=patch,
-                        headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}", "Content-Type": "application/json"},
-                        timeout=15
-                    )
-                    if r.status_code in (200, 204):
-                        backfilled += 1
-                        log.info(f"  [BACKFILL] {name} | updated {list(patch.keys())}")
-                    time.sleep(1)
-                except Exception as e:
-                    log.debug(f"  Backfill patch error for {name}: {e}")
-
-        log.info(f"Backfill complete: {backfilled}/{len(incomplete)} updated")
+        log.info(f"Backfill complete: {backfilled}/{min(len(incomplete), 15)} updated")
         self._total_backfilled += backfilled
         return backfilled
     def get_graph_data(self):
@@ -664,11 +606,12 @@ class CrisoraDaemon:
             "bbb_rating": biz.get("bbb_rating", ""),
             "bbb_accredited": biz.get("bbb_accredited", False),
             "bbb_complaints": biz.get("bbb_complaints", 0),
-            "census_data": json.dumps(biz.get("census_data", {})),
+            "census_data": biz.get("census_data", {}),
+            "social_platforms_found": biz.get("social_platforms_found", []),
         }
         with self._rate_limiters["supabase"]:
             resp = cffi_requests.post(
-                f"{SUPABASE_URL}/rest/v1/businesses",
+                f"{SUPABASE_URL}/rest/v1/businesses?on_conflict=name,city,sector",
                 json=data,
                 headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
                 timeout=10,
@@ -729,7 +672,7 @@ class CrisoraDaemon:
                 biz["breach_count"] = result.get("breach_count", 0)
                 biz["breach_names"] = result.get("breach_names", [])
             except Exception as e:
-                log.debug(f"  Email error: {e}")
+                log.warning(f"  Email error: {e}")
 
         if domain:
             try:
@@ -745,7 +688,7 @@ class CrisoraDaemon:
                 biz["security_headers"] = osint.get("security_headers", {})
                 biz["abuseipdb"] = osint.get("abuseipdb", {})
             except Exception as e:
-                log.debug(f"  OSINT error: {e}")
+                log.warning(f"  OSINT error: {e}")
 
         try:
             rv = analyze_reviews(biz.get("name", ""), biz.get("city", ""), website)
@@ -756,7 +699,7 @@ class CrisoraDaemon:
             if rv.get("review_count") and not biz.get("review_count"):
                 biz["review_count"] = rv["review_count"]
         except Exception as e:
-            log.debug(f"  Review error: {e}")
+            log.warning(f"  Review error: {e}")
 
         try:
             from scraper.sources.social_discovery import discover_social_presence
@@ -772,7 +715,7 @@ class CrisoraDaemon:
             if social.get("bbb_url"):
                 biz["bbb_url"] = social["bbb_url"]
         except Exception as e:
-            log.debug(f"  Social discovery error: {e}")
+            log.warning(f"  Social discovery error: {e}")
 
         try:
             from scraper.sources.bbb_api import search_business as bbb_search
@@ -782,7 +725,7 @@ class CrisoraDaemon:
                 biz["bbb_accredited"] = bbb.get("bbb_accredited")
                 biz["bbb_complaints"] = bbb.get("bbb_complaints", 0)
         except Exception as e:
-            log.debug(f"  BBB error: {e}")
+            log.warning(f"  BBB error: {e}")
 
         try:
             from scraper.sources.census_api import get_city_demographics
@@ -790,7 +733,7 @@ class CrisoraDaemon:
             if census:
                 biz["census_data"] = census
         except Exception as e:
-            log.debug(f"  Census error: {e}")
+            log.warning(f"  Census error: {e}")
 
         biz["lead_temperature"] = score_lead(biz)
         biz["outreach_hook"] = generate_hook(biz, biz["lead_temperature"])
@@ -812,7 +755,7 @@ class CrisoraDaemon:
             if new_model_b64:
                 self._save_model_state(new_model_b64)
         except Exception as e:
-            log.debug(f"  Crisis prediction skipped: {e}")
+            log.warning(f"  Crisis prediction skipped: {e}")
 
         return biz
 
@@ -919,7 +862,7 @@ class CrisoraDaemon:
         try:
             rotator.update_after_run(city, sector, enriched)
         except Exception as e:
-            log.debug(f"  Exhaustion update failed: {e}")
+            log.warning(f"  Exhaustion update failed: {e}")
 
         with self._lock:
             self._total_runs += 1

@@ -82,7 +82,8 @@ def _supabase_patch(table: str, match: dict, data: dict):
 
 def _supabase_upsert(table: str, data: dict):
     """UPSERT to Supabase."""
-    url = f"{SUPABASE_URL}/rest/v1/{table}"
+    conflict = f"?on_conflict=name,city,sector" if table == "businesses" else ""
+    url = f"{SUPABASE_URL}/rest/v1/{table}{conflict}"
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}",
@@ -227,7 +228,7 @@ def run_scrape():
                 "dns_data": biz.get("dns_data", "{}"),
                 "page_speed": biz.get("page_speed", "{}"),
                 "social_presence_score": biz.get("social_presence_score", 0),
-                "social_platforms_found": json.dumps(biz.get("social_platforms_found", [])),
+                "social_platforms_found": biz.get("social_platforms_found", []),
                 "linkedin_url": biz.get("linkedin_url", ""),
                 "facebook_url": biz.get("facebook_url", ""),
                 "yelp_url": biz.get("yelp_url", ""),
@@ -235,7 +236,7 @@ def run_scrape():
                 "bbb_rating": biz.get("bbb_rating", ""),
                 "bbb_accredited": biz.get("bbb_accredited", False),
                 "bbb_complaints": biz.get("bbb_complaints", 0),
-                "census_data": json.dumps(biz.get("census_data", {})),
+                "census_data": biz.get("census_data", {}),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             })
         except Exception as e:
